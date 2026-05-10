@@ -1,7 +1,7 @@
 // api/analyse.js
-// KI-Analyse mit Google Gemini — kostenlos, kein Guthaben nötig
+// KI-Analyse mit Google Gemini — CommonJS Format für Vercel
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
