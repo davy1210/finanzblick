@@ -1,7 +1,7 @@
 // api/search.js
-// Sucht nach Assets via Yahoo Finance — läuft sicher auf Vercel
+// Sucht nach Assets via Yahoo Finance — CommonJS Format für Vercel
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
 
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: 'Yahoo Finance nicht erreichbar', details: e.message });
   }
-}
+};
 
 function translateType(t) {
   const map = { EQUITY:'Aktie', ETF:'ETF', CRYPTOCURRENCY:'Krypto', INDEX:'Index', MUTUALFUND:'Fonds', CURRENCY:'Währung' };
