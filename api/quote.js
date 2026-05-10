@@ -1,7 +1,7 @@
 // api/quote.js
-// Holt echte Kursdaten + Tages-Chart von Yahoo Finance
+// Holt echte Kursdaten + Tages-Chart von Yahoo Finance — CommonJS Format
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
 
@@ -9,9 +9,8 @@ export default async function handler(req, res) {
   if (!symbol) return res.status(400).json({ error: 'Kein Symbol' });
 
   try {
-    // 1. Kursdaten (aktueller Preis, Änderung etc.)
-    const quoteUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1h&range=1d&lang=de`;
-    const response = await fetch(quoteUrl, {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1h&range=1d&lang=de`;
+    const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const data = await response.json();
@@ -22,11 +21,10 @@ export default async function handler(req, res) {
     const closes = result.indicators?.quote?.[0]?.close || [];
     const timestamps = result.timestamp || [];
 
-    // Chart-Punkte aufbereiten (null-Werte filtern)
     const chartData = timestamps
       .map((t, i) => ({ time: t, price: closes[i] }))
       .filter(p => p.price != null)
-      .slice(-12); // letzte 12 Stunden
+      .slice(-12);
 
     const currentPrice = meta.regularMarketPrice;
     const prevClose = meta.previousClose || meta.chartPreviousClose;
@@ -50,10 +48,9 @@ export default async function handler(req, res) {
         return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       }),
       exchange: meta.exchangeName || '',
-      type: meta.instrumentType || '',
     });
 
   } catch (e) {
     res.status(500).json({ error: 'Fehler beim Laden', details: e.message });
   }
-}
+};
