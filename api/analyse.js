@@ -11,21 +11,18 @@ module.exports = async function handler(req, res) {
     ? `gestiegen (+${Math.abs(changePct).toFixed(2)}%)`
     : `gefallen (-${Math.abs(changePct).toFixed(2)}%)`;
 
-  // News als Kontext für die KI
   const newsKontext = news && news.length > 0
-    ? `\n\nAktuelle News zu ${asset}:\n` + news.map(n => `- ${n.title}`).join('\n')
+    ? '\n\nAktuelle News:\n' + news.map(n => `- ${n.title}`).join('\n')
     : '';
 
   let systemPrompt, userPrompt;
 
   if (frage) {
-    // Nutzer stellt eigene Frage
     systemPrompt = 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Keine Anlageberatung.';
-    userPrompt = `${asset} steht bei ${price} und ist heute ${richtung}.${newsKontext}\n\nFrage des Nutzers: "${frage}"\n\nBeantworte die Frage einfach auf Deutsch für Einsteiger. Max. 3 Absätze.`;
+    userPrompt = `${asset} steht bei ${price} und ist heute ${richtung}.${newsKontext}\n\nFrage: "${frage}"\n\nBeantworte einfach auf Deutsch für Einsteiger. Max. 3 Absätze.`;
   } else {
-    // Automatische Analyse beim Asset öffnen
-    systemPrompt = 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Keine Anlageberatung. Strukturiere deine Antwort immer exakt in drei Abschnitte mit diesen Überschriften: WARUM, AUSBLICK';
-    userPrompt = `${asset} steht bei ${price} und ist heute ${richtung}.${newsKontext}\n\nErstelle eine kurze Analyse auf Deutsch für Börsen-Einsteiger:\n\nWARUM: Erkläre in 2-3 Sätzen warum sich ${asset} gerade so bewegt. Beziehe die aktuellen News ein falls vorhanden.\n\nAUSBLICK: Erkläre in 2-3 Sätzen was als nächstes passieren könnte und worauf Anleger achten sollten.\n\nKeine Anlageberatung — nur Bildung und Information.`;
+    systemPrompt = 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Keine Anlageberatung. Strukturiere deine Antwort exakt mit den Überschriften WARUM und AUSBLICK.';
+    userPrompt = `${asset} steht bei ${price} und ist heute ${richtung}.${newsKontext}\n\nWARUM: Erkläre in 2-3 Sätzen warum sich ${asset} gerade so bewegt. Beziehe aktuelle News ein falls vorhanden.\n\nAUSBLICK: Erkläre in 2-3 Sätzen was als nächstes passieren könnte.\n\nKeine Anlageberatung.`;
   }
 
   const body = JSON.stringify({
@@ -66,7 +63,6 @@ module.exports = async function handler(req, res) {
       request.end();
     });
 
-    // Antwort aufteilen in WARUM und AUSBLICK
     if (!frage) {
       const warumMatch = text.match(/WARUM[:\s]*([\s\S]*?)(?=AUSBLICK|$)/i);
       const ausblickMatch = text.match(/AUSBLICK[:\s]*([\s\S]*?)$/i);
