@@ -379,9 +379,13 @@ async function loadNews(assetName){
 }
 function renderNews(data){
   const articles=data.articles||[];
-  if(!articles.length)return;
-  const stand=new Date(data.cachedAt);
+  const stand=data.cachedAt?new Date(data.cachedAt):new Date();
   document.getElementById('news-stand').textContent='Stand: '+stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+  if(!articles.length){
+    document.getElementById('news-panel').innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">Keine spezifischen News gefunden.</div>';
+    document.getElementById('news-section').style.display='block';
+    return;
+  }
   let html='';
   articles.forEach(function(a){
     const badge=sentimentBadge(a.sentiment||'neutral');
