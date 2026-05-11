@@ -54,6 +54,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .pos{background:#DCFCE7;color:#15803D}
 .neg{background:#FEE2E2;color:#B91C1C}
 .mini-spark{height:38px;margin-top:10px}
+.chart-wrap{position:relative;margin-bottom:0}
+.chart-range-btns{display:flex;gap:4px;margin-bottom:12px}
+.range-btn{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:var(--font);color:var(--muted);background:var(--bg);transition:all .15s}
+.range-btn.active{background:var(--text);color:#fff}
+.chart-hover-info{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;min-height:32px}
+.hover-price{font-size:24px;font-weight:700;letter-spacing:-0.5px;font-family:var(--font)}
+.hover-chg{font-size:13px;font-weight:600;padding:3px 8px;border-radius:6px}
 .detail-panel{background:var(--white);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:16px;box-shadow:var(--shadow)}
 .detail-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
 .d-symbol{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
@@ -61,7 +68,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .d-price{font-size:36px;font-weight:700;letter-spacing:-1.5px;line-height:1}
 .d-chg{font-size:14px;font-weight:700;padding:5px 12px;border-radius:9px;display:inline-block;margin-top:8px}
 .d-meta{font-size:12px;color:var(--muted);text-align:right;line-height:1.8;flex-shrink:0}
-.chart-box{height:140px;margin-bottom:20px}
+.chart-box{height:160px;margin-bottom:0}
 .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat-box{flex:1;min-width:80px;background:var(--bg);border-radius:10px;padding:10px 12px}
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
@@ -160,7 +167,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
       </div>
       <div class="d-meta" id="d-meta"></div>
     </div>
-    <div class="chart-box"><canvas id="mainChart"></canvas></div>
+    <div class="chart-hover-info">
+      <div class="hover-price" id="hover-price" id="d-price-display">—</div>
+      <div class="hover-chg pos" id="hover-chg">—</div>
+    </div>
+    <div class="chart-range-btns">
+      <button class="range-btn active" onclick="changeRange('1T',this)">1T</button>
+      <button class="range-btn" onclick="changeRange('1W',this)">1W</button>
+      <button class="range-btn" onclick="changeRange('1M',this)">1M</button>
+      <button class="range-btn" onclick="changeRange('6M',this)">6M</button>
+      <button class="range-btn" onclick="changeRange('1J',this)">1J</button>
+      <button class="range-btn" onclick="changeRange('5J',this)">5J</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="mainChart"></canvas>
+    </div>
     <div class="stats-row" id="stats-row"></div>
     <div id="auto-analyse">
       <div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>
@@ -330,6 +351,11 @@ async function selectSymbol(symbol,name){
   document.getElementById('d-chg').textContent='Lädt...';
   document.getElementById('d-chg').className='d-chg';
   document.getElementById('auto-analyse').innerHTML='<div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
+  // Reset Zeitraum auf 1T
+  currentRange='1T';
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  const firstBtn=document.querySelector('.range-btn');
+  if(firstBtn)firstBtn.classList.add('active');
   document.querySelectorAll('.asset-card').forEach(c=>c.classList.remove('active'));
   const card=document.getElementById('ac-'+symbol.replace(/[^a-zA-Z0-9]/g,'_'));
   if(card)card.classList.add('active');
@@ -339,15 +365,29 @@ async function selectSymbol(symbol,name){
 }
 
 // QUOTE
-async function loadQuote(symbol){
-  const cached=cGet('q_'+symbol);
+let currentRange='1T';
+
+async function loadQuote(symbol, range){
+  range = range || currentRange || '1T';
+  const cacheKey='q_'+symbol+'_'+range;
+  const cached=cGet(cacheKey);
   if(cached){currentData=cached;renderQuote(cached,symbol);return;}
   try{
-    const r=await fetch('/api/quote?symbol='+encodeURIComponent(symbol));
+    const r=await fetch('/api/quote?symbol='+encodeURIComponent(symbol)+'&range='+range);
     const data=await r.json();
     if(data.error)return;
-    currentData=data; cSet('q_'+symbol,data); renderQuote(data,symbol);
+    currentData=data; cSet(cacheKey,data); renderQuote(data,symbol);
   }catch(e){}
+}
+
+async function changeRange(range, btn){
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRange = range;
+  if(!currentSymbol) return;
+  // Reset chart
+  document.getElementById('hover-price').textContent='Lädt...';
+  await loadQuote(currentSymbol, range);
 }
 function renderQuote(data,symbol){
   document.getElementById('d-symbol').textContent=symbol;
@@ -356,6 +396,14 @@ function renderQuote(data,symbol){
   const c=document.getElementById('d-chg');
   c.textContent=(data.isPos?'▲ +':'▼ ')+Math.abs(data.changePct).toFixed(2)+'% heute';
   c.className='d-chg '+(data.isPos?'pos':'neg');
+  // Hover Info initialisieren
+  const hp=document.getElementById('hover-price');
+  const hc=document.getElementById('hover-chg');
+  hp.textContent=fmtPrice(data.price,data.currency);
+  const pct=(data.rangeChangePct||data.changePct||0);
+  const pos=(data.rangeChange||data.change||0)>=0;
+  hc.textContent=(pos?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'%';
+  hc.className='hover-chg '+(pos?'pos':'neg');
   const now=new Date();
   document.getElementById('d-meta').innerHTML='<span>'+now.toLocaleDateString('de-DE',{day:'numeric',month:'long'})+'</span><span>'+now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr</span>';
   document.getElementById('stats-row').innerHTML='<div class="stat-box"><div class="stat-label">Tageshoch</div><div class="stat-val">'+fmtPrice(data.high,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Tagestief</div><div class="stat-val">'+fmtPrice(data.low,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Volumen</div><div class="stat-val">'+fmtVol(data.volume)+'</div></div><div class="stat-box"><div class="stat-label">Währung</div><div class="stat-val">'+(data.currency||'USD')+'</div></div>';
@@ -445,8 +493,87 @@ function drawSpark(id,chartData,isPos){
 function drawMainChart(data){
   const ctx=document.getElementById('mainChart').getContext('2d');
   const color=data.isPos?'#10B981':'#EF4444';
+  const currency=data.currency||'USD';
+  const firstPrice=data.chartData&&data.chartData[0]?data.chartData[0]:data.price;
   if(mainChart)mainChart.destroy();
-  mainChart=new Chart(ctx,{type:'line',data:{labels:data.chartTimes||[],datasets:[{data:data.chartData||[],borderColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,backgroundColor:function(ctx){var g=ctx.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,data.isPos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');return g;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F1F5F9',padding:10,callbacks:{label:function(c){return ' '+(c.parsed.y?c.parsed.y.toLocaleString('de-DE'):'');} }}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:11},callback:function(v){return v?v.toLocaleString('de-DE'):''}},position:'right'}}}});
+  mainChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:data.chartTimes||[],
+      datasets:[{
+        data:data.chartData||[],
+        borderColor:color,
+        borderWidth:2,
+        pointRadius:0,
+        pointHoverRadius:6,
+        pointHoverBackgroundColor:color,
+        pointHoverBorderColor:'#fff',
+        pointHoverBorderWidth:2,
+        tension:.3,
+        fill:true,
+        backgroundColor:function(ctx){
+          var g=ctx.chart.ctx.createLinearGradient(0,0,0,160);
+          g.addColorStop(0,data.isPos?'rgba(16,185,129,0.12)':'rgba(239,68,68,0.12)');
+          g.addColorStop(1,'rgba(255,255,255,0)');
+          return g;
+        }
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          enabled:false,
+          external:function(context){
+            const tooltip=context.tooltip;
+            const hp=document.getElementById('hover-price');
+            const hc=document.getElementById('hover-chg');
+            if(tooltip.opacity===0){
+              // Reset zu aktuellem Preis
+              hp.textContent=fmtPrice(data.price,currency);
+              const pct=data.rangeChangePct||data.changePct||0;
+              const pos=(data.rangeChange||data.change||0)>=0;
+              hc.textContent=(pos?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'%';
+              hc.className='hover-chg '+(pos?'pos':'neg');
+              return;
+            }
+            if(tooltip.dataPoints&&tooltip.dataPoints[0]){
+              const hoverPrice=tooltip.dataPoints[0].parsed.y;
+              const hoverChange=hoverPrice-firstPrice;
+              const hoverPct=(hoverChange/firstPrice)*100;
+              const hpos=hoverChange>=0;
+              hp.textContent=fmtPrice(hoverPrice,currency);
+              hc.textContent=(hpos?'▲ +':'▼ ')+Math.abs(hoverPct).toFixed(2)+'%';
+              hc.className='hover-chg '+(hpos?'pos':'neg');
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{
+            color:'#9CA3AF',
+            font:{size:11},
+            maxTicksLimit:6,
+            maxRotation:0
+          }
+        },
+        y:{
+          grid:{color:'#F3F4F6'},
+          ticks:{
+            color:'#9CA3AF',
+            font:{size:11},
+            callback:function(v){return v?v.toLocaleString('de-DE'):''}
+          },
+          position:'right'
+        }
+      }
+    }
+  });
 }
 
 // GRID
