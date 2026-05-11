@@ -98,6 +98,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .news-source{font-size:11px;font-weight:600;color:var(--blue)}
 .news-time{font-size:11px;color:#9CA3AF}
 .news-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.news-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;width:fit-content;margin-bottom:4px}
+.badge-bullish{background:#DCFCE7;color:#15803D}
+.badge-bearish{background:#FEE2E2;color:#B91C1C}
+.badge-neutral{background:#F3F4F6;color:#6B7280}
 
 /* KI ADDON */
 .ai-addon{background:#FAF5FF;border:1px solid #DDD6FE;border-radius:14px;padding:18px;box-shadow:var(--shadow)}
@@ -332,7 +336,8 @@ async function doSearch(q){
         <div class="sr-icon">${r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'📈':'📊'}</div>
         <div><div class="sr-name">${r.name}</div><div class="sr-type">${r.symbol} · ${r.type}</div></div>
         <div class="sr-right">${r.exchange||''}</div>
-      </div>`).join('');
+      </div>`;
+  }).join('');
   }catch(e){searchResults.innerHTML='<div class="sr-empty">Suche nicht verfügbar</div>';}
   searchSpinner.classList.remove('show');
 }
@@ -471,15 +476,19 @@ function renderNews(data){
   if(!articles.length) return;
   const stand=new Date(data.cachedAt);
   document.getElementById('news-stand').textContent=`Stand: ${stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr`;
-  document.getElementById('news-panel').innerHTML=articles.map(a=>`
-    <div class="news-item">
+  document.getElementById('news-panel').innerHTML=articles.map(a=>{
+    const s=a.sentiment||'neutral';
+    const badge=s==='bullish'?'<span class="news-badge badge-bullish">↑ Bullisch</span>':s==='bearish'?'<span class="news-badge badge-bearish">↓ Bärisch</span>':'<span class="news-badge badge-neutral">→ Neutral</span>';
+    return `<div class="news-item">
+      ${badge}
       <a class="news-item-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
       <div class="news-meta">
         <span class="news-source">${a.source}</span>
         <span class="news-time">${timeAgo(a.publishedAt)}</span>
       </div>
       ${a.description?`<div class="news-desc">${a.description.slice(0,120)}...</div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
   document.getElementById('news-section').style.display='block';
 }
 
@@ -545,7 +554,8 @@ async function buildGrid(){
       <div class="ac-price" id="price-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}">—</div>
       <div id="chg-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
       <div class="mini-spark"><canvas id="spark-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}"></canvas></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   await Promise.all(PINNED.map(async p=>{
     try{
@@ -574,7 +584,8 @@ function buildEvents(){
           ${e.assets.map(a=>`<span class="ev-asset">${a}</span>`).join('')}
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderGloss(items){
