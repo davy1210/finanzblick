@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { asset, price, changePct, isPos, frage } = req.body;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   const richtung = isPos
     ? `gestiegen (+${Math.abs(changePct).toFixed(2)}%)`
@@ -16,19 +16,21 @@ module.exports = async function handler(req, res) {
     : `${asset} steht bei ${price} und ist heute ${richtung}. Erkläre auf Deutsch für Börsen-Einsteiger warum und was man wissen sollte. Max. 3 Absätze, keine Anlageberatung.`;
 
   const body = JSON.stringify({
-    model: 'claude-3-haiku-20240307',
+    model: 'llama3-8b-8192',
     max_tokens: 800,
-    messages: [{ role: 'user', content: userPrompt }]
+    messages: [
+      { role: 'system', content: 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Keine Anlageberatung.' },
+      { role: 'user', content: userPrompt }
+    ]
   });
 
   const options = {
-    hostname: 'api.anthropic.com',
-    path: '/v1/messages',
+    hostname: 'api.groq.com',
+    path: '/openai/v1/chat/completions',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Length': Buffer.byteLength(body)
     }
   };
@@ -42,7 +44,7 @@ module.exports = async function handler(req, res) {
           try {
             const parsed = JSON.parse(data);
             if (parsed.error) return reject(new Error(parsed.error.message));
-            resolve(parsed.content?.[0]?.text || 'Keine Antwort erhalten.');
+            resolve(parsed.choices?.[0]?.message?.content || 'Keine Antwort erhalten.');
           } catch(e) { reject(e); }
         });
       });
