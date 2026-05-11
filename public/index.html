@@ -388,7 +388,8 @@ async function loadNews(assetName){
   const cached=cGet(ck);
   if(cached){currentNews=cached.articles||[];renderNews(cached);return;}
   try{
-    const r=await fetch('/api/news?asset='+encodeURIComponent(assetName));
+    const sym=currentSymbol||'';
+    const r=await fetch('/api/news?asset='+encodeURIComponent(assetName)+'&symbol='+encodeURIComponent(sym));
     const data=await r.json();
     currentNews=data.articles||[];
     cSet(ck,data); renderNews(data);
