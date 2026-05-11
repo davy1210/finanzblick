@@ -202,8 +202,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 <script>
 const CACHE_MS = 4*60*60*1000;
 const MEM = {};
-function cGet(k){const e=MEM[k];if(!e||Date.now()-e.t>CACHE_MS)return null;return e.d;}
-function cSet(k,d){MEM[k]={d,t:Date.now()};}
+function cGet(k){
+  // Erst localStorage prüfen
+  try {
+    const raw = localStorage.getItem('fb_'+k);
+    if(raw) {
+      const e = JSON.parse(raw);
+      if(Date.now()-e.t < CACHE_MS) return e.d;
+      localStorage.removeItem('fb_'+k);
+    }
+  } catch(err) {}
+  // Dann Memory-Cache
+  const e=MEM[k];
+  if(!e||Date.now()-e.t>CACHE_MS)return null;
+  return e.d;
+}
+function cSet(k,d){
+  MEM[k]={d,t:Date.now()};
+  try { localStorage.setItem('fb_'+k, JSON.stringify({d,t:Date.now()})); } catch(err) {}
+}
 
 const PINNED=[
   {symbol:'^GDAXI',label:'DAX',icon:'🇩🇪'},
