@@ -67,13 +67,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .stat-val{font-size:14px;font-weight:700}
 .analyse-loading{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg);border-radius:12px;font-size:13px;color:var(--muted);margin-bottom:10px}
-.exp-box{border-radius:13px;padding:16px 18px;margin-bottom:10px;border-left:4px solid}
-.exp-box.why{background:#EFF6FF;border-color:#3B82F6}
-.exp-box.out{background:#FFFBEB;border-color:#F59E0B}
-.exp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.exp-box.why .exp-label{color:#1D4ED8}
-.exp-box.out .exp-label{color:#92400E}
-.exp-text{font-size:13px;line-height:1.7;color:#374151}
+.exp-box{border-radius:12px;padding:18px 20px;margin-bottom:10px;background:var(--white);border:1px solid var(--border);box-shadow:var(--shadow)}
+.exp-box.why{border-top:3px solid #111827}
+.exp-box.out{border-top:3px solid #6B7280}
+.exp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;color:var(--muted)}
+.exp-box.why .exp-label{color:#111827}
+.exp-box.out .exp-label{color:#6B7280}
+.exp-text{font-size:14px;line-height:1.75;color:#1F2937;font-weight:400}
 .cache-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);color:var(--muted)}
 .news-section{margin-bottom:16px}
 .news-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -379,7 +379,9 @@ async function loadAutoAnalyse(name){
 }
 function renderAnalyse(data,fromCache){
   const badge=fromCache?'<span class="cache-badge">gecacht</span>':'';
-  document.getElementById('auto-analyse').innerHTML='<div class="exp-box why"><div class="exp-label"><span>💡 Warum bewegt sich das?</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div><div class="exp-box out"><div class="exp-label"><span>🔭 Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>';
+  document.getElementById('auto-analyse').innerHTML=
+    '<div class="exp-box why"><div class="exp-label"><span>Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div>'+
+    '<div class="exp-box out"><div class="exp-label"><span>Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>';
 }
 
 // NEWS
