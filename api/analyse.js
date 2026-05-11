@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 800,
         system: 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Erkläre Fachbegriffe kurz. Gib keine konkrete Anlageberatung — formuliere immer als allgemeine Information und Bildung.',
         messages: [{ role: 'user', content: prompt }]
