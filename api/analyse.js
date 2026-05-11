@@ -1,50 +1,58 @@
-// api/analyse.js
-// KI-Analyse mit Claude (Anthropic) — CommonJS Format für Vercel
+const https = require('https');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
   const { asset, price, changePct, isPos, frage } = req.body;
-  if (!asset) return res.status(400).json({ error: 'Kein Asset' });
-
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API-Key nicht konfiguriert' });
 
   const richtung = isPos
     ? `gestiegen (+${Math.abs(changePct).toFixed(2)}%)`
-    : `gefallen (${Math.abs(changePct).toFixed(2)}%)`;
+    : `gefallen (-${Math.abs(changePct).toFixed(2)}%)`;
 
-  const prompt = frage
-    ? `${asset} steht aktuell bei ${price} und ist heute ${richtung}. Der Nutzer fragt: "${frage}". Beantworte das einfach und verständlich auf Deutsch für Börsen-Einsteiger. Max. 3 Absätze. Keine Anlageberatung — nur Information.`
-    : `${asset} steht aktuell bei ${price} und ist heute ${richtung}. Erkläre auf einfachem Deutsch für Privatanleger-Einsteiger: 1. Warum könnte sich ${asset} gerade so bewegen? 2. Was sollten Einsteiger jetzt wissen? Max. 3 kurze Absätze. Keine Anlageberatung — nur Bildung und Information.`;
+  const userPrompt = frage
+    ? `${asset} steht bei ${price} und ist heute ${richtung}. Frage: "${frage}". Erkläre auf Deutsch für Einsteiger, max. 3 Absätze, keine Anlageberatung.`
+    : `${asset} steht bei ${price} und ist heute ${richtung}. Erkläre auf Deutsch für Börsen-Einsteiger warum und was man wissen sollte. Max. 3 Absätze, keine Anlageberatung.`;
+
+  const body = JSON.stringify({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 800,
+    messages: [{ role: 'user', content: userPrompt }]
+  });
+
+  const options = {
+    hostname: 'api.anthropic.com',
+    path: '/v1/messages',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Length': Buffer.byteLength(body)
+    }
+  };
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 800,
-        system: 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Erkläre Fachbegriffe kurz. Gib keine konkrete Anlageberatung — formuliere immer als allgemeine Information und Bildung.',
-        messages: [{ role: 'user', content: prompt }]
-      })
+    const text = await new Promise((resolve, reject) => {
+      const request = https.request(options, (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.error) return reject(new Error(parsed.error.message));
+            resolve(parsed.content?.[0]?.text || 'Keine Antwort erhalten.');
+          } catch(e) { reject(e); }
+        });
+      });
+      request.on('error', reject);
+      request.write(body);
+      request.end();
     });
 
-    const data = await response.json();
-
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
-    }
-
-    const text = data.content?.map(c => c.text || '').join('') || 'Keine Antwort erhalten.';
     res.status(200).json({ antwort: text });
-
-  } catch (e) {
-    res.status(500).json({ error: 'KI nicht erreichbar', details: e.message });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
   }
 };
