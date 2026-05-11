@@ -81,7 +81,7 @@ function filterNews(articles, asset) {
     keywords.some(kw => (a.title + ' ' + (a.description || '')).toLowerCase().includes(kw))
   );
 
-  return relevant.length > 0 ? relevant.slice(0, 5) : articles.slice(0, 3);
+  return relevant.length > 0 ? relevant.slice(0, 5) : articles.slice(0, 5);
 }
 
 // ── HANDLER ───────────────────────────────────────────────────────────────
