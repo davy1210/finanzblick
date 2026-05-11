@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     : `${asset} steht bei ${price} und ist heute ${richtung}. Erkläre auf Deutsch für Börsen-Einsteiger warum und was man wissen sollte. Max. 3 Absätze, keine Anlageberatung.`;
 
   const body = JSON.stringify({
-    model: 'llama3-8b-8192',
+    model: 'llama-3.1-8b-instant',
     max_tokens: 800,
     messages: [
       { role: 'system', content: 'Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. Antworte immer auf Deutsch, einfach und klar. Keine Anlageberatung.' },
