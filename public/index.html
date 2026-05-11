@@ -34,7 +34,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .search-spinner.show{display:block}
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.search-results{position:absolute;top:calc(100%+6px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:100;display:none;max-height:340px;overflow-y:auto}
+.search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:100;display:none;max-height:340px;overflow-y:auto}
 .search-results.open{display:block}
 .sr-item{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .12s;border-bottom:1px solid var(--border)}
 .sr-item:last-child{border-bottom:none}
@@ -73,16 +73,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .stat-val{font-size:14px;font-weight:700}
 
-/* AUTO ANALYSE BOXES */
-.auto-analyse{margin-bottom:16px}
+/* ANALYSE */
 .analyse-loading{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg);border-radius:12px;font-size:13px;color:var(--muted);margin-bottom:10px}
 .exp-box{border-radius:13px;padding:16px 18px;margin-bottom:10px;border-left:4px solid}
 .exp-box.why{background:#EFF6FF;border-color:#3B82F6}
 .exp-box.out{background:#FFFBEB;border-color:#F59E0B}
-.exp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.exp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 .exp-box.why .exp-label{color:#1D4ED8}
 .exp-box.out .exp-label{color:#92400E}
 .exp-text{font-size:13px;line-height:1.7;color:#374151}
+.cache-badge{font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);color:var(--muted)}
 
 /* NEWS */
 .news-section{margin-bottom:16px}
@@ -101,7 +101,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 
 /* KI ADDON */
 .ai-addon{background:#FAF5FF;border:1px solid #DDD6FE;border-radius:14px;padding:18px;box-shadow:var(--shadow)}
-.ai-addon-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--purple);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.ai-addon-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--purple);margin-bottom:10px}
 .ai-hint{font-size:12px;color:#9CA3AF;margin-bottom:10px}
 .ai-row{display:flex;gap:8px;margin-bottom:10px}
 .ai-input{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #DDD6FE;font-family:var(--font);font-size:13px;outline:none;color:var(--text)}
@@ -111,7 +111,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .ai-response{font-size:13px;line-height:1.75;color:#374151;display:none;padding-top:12px;border-top:1px solid #DDD6FE;white-space:pre-line}
 .ai-response.show{display:block}
 
-/* LOADING */
 .loading-dots{display:inline-flex;gap:4px;align-items:center}
 .loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:ld .9s infinite}
 .loading-dots span:nth-child(2){animation-delay:.15s}
@@ -140,7 +139,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .gloss-card:hover{border-color:var(--blue)}
 .gloss-term{font-size:15px;font-weight:700;color:var(--blue);margin-bottom:5px}
 .gloss-def{font-size:13px;color:var(--muted);line-height:1.65}
-
 .disc{font-size:11px;color:#9CA3AF;text-align:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--white);line-height:1.6;margin-top:8px}
 </style>
 </head>
@@ -155,7 +153,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   </div>
 </nav>
 
-<!-- MÄRKTE -->
 <div id="page-dash" class="page active">
   <div class="sec-title">Märkte im Überblick</div>
   <div class="sec-sub">Suche nach jeder Aktie, ETF, Krypto oder Rohstoff weltweit</div>
@@ -183,15 +180,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="chart-box"><canvas id="mainChart"></canvas></div>
     <div class="stats-row" id="stats-row"></div>
 
-    <!-- AUTOMATISCHE ANALYSE -->
-    <div class="auto-analyse" id="auto-analyse">
-      <div class="analyse-loading" id="analyse-loading">
+    <div id="auto-analyse">
+      <div class="analyse-loading">
         <span class="loading-dots"><span></span><span></span><span></span></span>
         Analyse wird geladen...
       </div>
     </div>
 
-    <!-- NEWS -->
     <div class="news-section" id="news-section" style="display:none">
       <div class="news-header">
         <div class="news-title-row">📰 Aktuelle News</div>
@@ -200,10 +195,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
       <div class="news-panel" id="news-panel"></div>
     </div>
 
-    <!-- KI ADDON -->
     <div class="ai-addon">
       <div class="ai-addon-label">✦ Eigene Frage stellen</div>
-      <div class="ai-hint">Hast du eine spezifische Frage? z.B. "Ist das ein guter Einstieg?" oder "Was bedeutet das für mein Portfolio?"</div>
+      <div class="ai-hint">z.B. "Ist das ein guter Einstieg?" oder "Was bedeutet das für mein Portfolio?"</div>
       <div class="ai-row">
         <input class="ai-input" id="ai-input" placeholder="Deine Frage..." onkeydown="if(event.key==='Enter')askAI()">
         <button class="ai-btn" id="ai-btn" onclick="askAI()">Fragen ✦</button>
@@ -213,14 +207,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   </div>
 </div>
 
-<!-- EREIGNISSE -->
 <div id="page-events" class="page">
   <div class="sec-title">Kommende Ereignisse</div>
   <div class="sec-sub">Was passiert bald — und wie könnte es die Märkte bewegen?</div>
   <div id="ev-list"></div>
 </div>
 
-<!-- WISSEN -->
 <div id="page-wissen" class="page">
   <div class="sec-title">Finanz-Wörterbuch</div>
   <div class="sec-sub">Begriffe einfach erklärt — ohne Fachchinesisch</div>
@@ -228,9 +220,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div id="gloss-list"></div>
 </div>
 
-<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten: Yahoo Finance. News: NewsAPI.</div>
+<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten: Yahoo Finance · News: GNews · KI: Groq</div>
 
 <script>
+// ── BROWSER CACHE ────────────────────────────────────────────────────────
+const CACHE_MS = 4 * 60 * 60 * 1000; // 4 Stunden
+const memCache = {}; // { key: { data, time } }
+
+function cacheGet(key) {
+  const entry = memCache[key];
+  if (!entry) return null;
+  if (Date.now() - entry.time > CACHE_MS) return null;
+  return entry.data;
+}
+function cacheSet(key, data) {
+  memCache[key] = { data, time: Date.now() };
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────
 const PINNED = [
   {symbol:'^GDAXI',label:'DAX',icon:'🇩🇪'},
   {symbol:'BTC-USD',label:'Bitcoin',icon:'₿'},
@@ -243,33 +250,34 @@ const PINNED = [
 ];
 
 const EVENTS=[
-  {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Hohe Inflation → Fed erhöht Zinsen → Aktien fallen. Niedrige Inflation → mögliche Zinssenkung → Aktien steigen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
-  {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung = gut für Aktien. Zinserhöhung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
+  {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Hohe Inflation → Fed erhöht Zinsen → Aktien fallen. Niedrige Inflation → Zinssenkung möglich → Aktien steigen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
+  {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung wäre positiv für Aktien. Zinserhöhung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
   {day:'28',mon:'Mai',title:'Nvidia Quartalszahlen',desc:'Erwartungen sehr hoch. Enttäuschung → starke Rückgänge. Überraschung → neue Allzeithochs.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Nvidia','Nasdaq']},
-  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Fed erhöht Zinsen. Zu wenige → Konjunktursorgen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
+  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Fed erhöht Zinsen. Zu wenige → Konjunktursorgen. Beides bewegt Märkte.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
   {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Kurse 3–6 Monate nach dem Halving. Keine Garantie.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
 ];
 
 const GLOSSARY=[
-  {term:'ETF',def:'Ein Fonds, der automatisch viele Aktien kauft — z.B. alle DAX-Firmen. Ideal für Einsteiger: günstig, breit gestreut.'},
+  {term:'ETF',def:'Ein Fonds der automatisch viele Aktien kauft. Ideal für Einsteiger: günstig und breit gestreut.'},
   {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Höhere Zinsen → Kredite teurer → Aktien fallen oft.'},
   {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet. Bärisch = fallende Kurse erwartet.'},
   {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel. Mehr Volatilität = mehr Chance und Risiko.'},
-  {term:'Dividende',def:'Unternehmensgewinn wird direkt an Aktionäre ausgezahlt — wie Miete auf dein Kapital.'},
+  {term:'Dividende',def:'Unternehmensgewinn der direkt an Aktionäre ausgezahlt wird — wie Miete auf dein Kapital.'},
   {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. Ziel der EZB: 2% pro Jahr.'},
-  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Wer breit streut, verliert weniger wenn eine Anlage einbricht.'},
+  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Wer breit streut verliert weniger wenn eine Anlage einbricht.'},
   {term:'Marktkapitalisierung',def:'Kurs × alle Aktien = Gesamtwert des Unternehmens.'},
   {term:'Halving',def:'Bei Bitcoin wird alle 4 Jahre die Menge neuer Coins halbiert. Weniger Angebot → Preis steigt historisch.'},
   {term:'Unterstützung & Widerstand',def:'Kursniveaus wo der Kurs oft stoppt. Unterstützung = Boden. Widerstand = Decke.'}
 ];
 
+// ── STATE ─────────────────────────────────────────────────────────────────
 let currentSymbol = null;
 let currentData = null;
 let currentNews = [];
 let mainChart = null;
 let searchTimeout = null;
 
-// ── NAVIGATION ──────────────────────────────────────────────────────────
+// ── NAVIGATION ────────────────────────────────────────────────────────────
 function gotoPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(b=>b.classList.remove('active'));
@@ -277,7 +285,7 @@ function gotoPage(id,el){
   el.classList.add('active');
 }
 
-// ── FORMAT ──────────────────────────────────────────────────────────────
+// ── FORMAT ────────────────────────────────────────────────────────────────
 function fmtPrice(p,currency){
   if(!p&&p!==0) return '—';
   const sym=currency==='EUR'?'€':currency==='GBP'?'£':'$';
@@ -298,7 +306,7 @@ function timeAgo(iso){
   return `vor ${Math.round(diff/1440)} Tagen`;
 }
 
-// ── SEARCH ──────────────────────────────────────────────────────────────
+// ── SEARCH ────────────────────────────────────────────────────────────────
 const searchInput=document.getElementById('search-input');
 const searchResults=document.getElementById('search-results');
 const searchSpinner=document.getElementById('search-spinner');
@@ -332,10 +340,10 @@ async function doSearch(q){
 function closeSearch(){searchResults.classList.remove('open');searchInput.value='';}
 document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))closeSearch();});
 
-// ── SELECT ASSET ────────────────────────────────────────────────────────
-async function selectSymbol(symbol,name){
-  currentSymbol=symbol;
-  currentNews=[];
+// ── SELECT ASSET ──────────────────────────────────────────────────────────
+async function selectSymbol(symbol, name){
+  currentSymbol = symbol;
+  currentNews = [];
   document.getElementById('detail-panel').style.display='block';
   document.getElementById('news-section').style.display='none';
   document.getElementById('ai-resp').classList.remove('show');
@@ -343,8 +351,6 @@ async function selectSymbol(symbol,name){
   document.getElementById('ai-input').value='';
   document.getElementById('ai-btn').disabled=false;
   document.getElementById('ai-btn').textContent='Fragen ✦';
-
-  // Reset
   document.getElementById('d-symbol').textContent=symbol;
   document.getElementById('d-name').textContent=name||'Wird geladen...';
   document.getElementById('d-price').textContent='—';
@@ -358,21 +364,25 @@ async function selectSymbol(symbol,name){
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 
   // Alles parallel laden
-  const assetName=name||symbol;
   await Promise.all([
     loadQuote(symbol),
-    loadNews(assetName),
-    loadAutoAnalyse(symbol, assetName)
+    loadNews(name||symbol),
   ]);
+  // Analyse nach Quote laden (braucht Kursdaten)
+  await loadAutoAnalyse(name||symbol);
 }
 
-// ── QUOTE ───────────────────────────────────────────────────────────────
+// ── QUOTE ─────────────────────────────────────────────────────────────────
 async function loadQuote(symbol){
+  // Browser-Cache prüfen
+  const cached = cacheGet('quote_'+symbol);
+  if(cached){ currentData=cached; renderQuote(cached,symbol); return; }
   try{
     const r=await fetch(`/api/quote?symbol=${encodeURIComponent(symbol)}`);
     const data=await r.json();
     if(data.error) return;
     currentData=data;
+    cacheSet('quote_'+symbol, data);
     renderQuote(data,symbol);
   }catch(e){}
 }
@@ -394,14 +404,17 @@ function renderQuote(data,symbol){
   drawMainChart(data);
 }
 
-// ── AUTO ANALYSE ────────────────────────────────────────────────────────
-async function loadAutoAnalyse(symbol, name){
+// ── AUTO ANALYSE ──────────────────────────────────────────────────────────
+async function loadAutoAnalyse(name){
+  // Browser-Cache prüfen
+  const cacheKey = 'analyse_'+name;
+  const cached = cacheGet(cacheKey);
+  if(cached){
+    renderAnalyse(cached, true);
+    return;
+  }
   try{
-    const quoteData=currentData||{price:'—',changePct:0,isPos:true};
-    // Kurz warten bis Quote geladen
-    await new Promise(r=>setTimeout(r,800));
     const cd=currentData||{price:'—',changePct:0,isPos:true};
-
     const r=await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -409,56 +422,68 @@ async function loadAutoAnalyse(symbol, name){
         asset:name,
         price:fmtPrice(cd.price,cd?.currency),
         changePct:cd.changePct||0,
-        isPos:cd.isPos||true,
+        isPos:cd.isPos!==undefined?cd.isPos:true,
         news:currentNews.slice(0,3)
       })
     });
     const data=await r.json();
     if(data.error) throw new Error(data.error);
-
-    document.getElementById('auto-analyse').innerHTML=`
-      <div class="exp-box why">
-        <div class="exp-label">💡 Warum bewegt sich das?</div>
-        <div class="exp-text">${data.warum||'Keine Analyse verfügbar.'}</div>
-      </div>
-      <div class="exp-box out">
-        <div class="exp-label">🔭 Ausblick</div>
-        <div class="exp-text">${data.ausblick||'Keine Analyse verfügbar.'}</div>
-      </div>`;
+    cacheSet(cacheKey, data);
+    renderAnalyse(data, false);
   }catch(e){
     document.getElementById('auto-analyse').innerHTML=`
       <div class="exp-box why">
         <div class="exp-label">💡 Analyse</div>
-        <div class="exp-text" style="color:var(--muted)">Analyse konnte nicht geladen werden. Stelle eine eigene Frage unten.</div>
+        <div class="exp-text" style="color:var(--muted)">Analyse nicht verfügbar. Stelle eine eigene Frage unten.</div>
       </div>`;
   }
 }
 
-// ── NEWS ────────────────────────────────────────────────────────────────
+function renderAnalyse(data, fromCache){
+  const badge = fromCache ? '<span class="cache-badge">gecacht</span>' : '';
+  document.getElementById('auto-analyse').innerHTML=`
+    <div class="exp-box why">
+      <div class="exp-label"><span>💡 Warum bewegt sich das?</span>${badge}</div>
+      <div class="exp-text">${data.warum||'Keine Analyse verfügbar.'}</div>
+    </div>
+    <div class="exp-box out">
+      <div class="exp-label"><span>🔭 Ausblick</span></div>
+      <div class="exp-text">${data.ausblick||'Keine Analyse verfügbar.'}</div>
+    </div>`;
+}
+
+// ── NEWS ──────────────────────────────────────────────────────────────────
 async function loadNews(assetName){
+  const cacheKey = 'news_'+assetName;
+  const cached = cacheGet(cacheKey);
+  if(cached){ currentNews=cached.articles||[]; renderNews(cached); return; }
   try{
     const r=await fetch(`/api/news?asset=${encodeURIComponent(assetName)}`);
     const data=await r.json();
-    const articles=data.articles||[];
-    currentNews=articles;
-    if(!articles.length) return;
-
-    const stand=new Date(data.cachedAt);
-    document.getElementById('news-stand').textContent=`Stand: ${stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr`;
-    document.getElementById('news-panel').innerHTML=articles.map(a=>`
-      <div class="news-item">
-        <a class="news-item-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
-        <div class="news-meta">
-          <span class="news-source">${a.source}</span>
-          <span class="news-time">${timeAgo(a.publishedAt)}</span>
-        </div>
-        ${a.description?`<div class="news-desc">${a.description.slice(0,120)}...</div>`:''}
-      </div>`).join('');
-    document.getElementById('news-section').style.display='block';
+    currentNews=data.articles||[];
+    cacheSet(cacheKey, data);
+    renderNews(data);
   }catch(e){}
 }
 
-// ── KI FRAGE ────────────────────────────────────────────────────────────
+function renderNews(data){
+  const articles=data.articles||[];
+  if(!articles.length) return;
+  const stand=new Date(data.cachedAt);
+  document.getElementById('news-stand').textContent=`Stand: ${stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr`;
+  document.getElementById('news-panel').innerHTML=articles.map(a=>`
+    <div class="news-item">
+      <a class="news-item-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
+      <div class="news-meta">
+        <span class="news-source">${a.source}</span>
+        <span class="news-time">${timeAgo(a.publishedAt)}</span>
+      </div>
+      ${a.description?`<div class="news-desc">${a.description.slice(0,120)}...</div>`:''}
+    </div>`).join('');
+  document.getElementById('news-section').style.display='block';
+}
+
+// ── KI FRAGE ──────────────────────────────────────────────────────────────
 async function askAI(){
   if(!currentSymbol) return;
   const btn=document.getElementById('ai-btn');
@@ -478,7 +503,7 @@ async function askAI(){
         asset:cd.name||currentSymbol,
         price:fmtPrice(cd.price,cd?.currency),
         changePct:cd.changePct||0,
-        isPos:cd.isPos||true,
+        isPos:cd.isPos!==undefined?cd.isPos:true,
         frage,
         news:currentNews.slice(0,3)
       })
@@ -496,7 +521,7 @@ async function askAI(){
   }
 }
 
-// ── CHART ───────────────────────────────────────────────────────────────
+// ── CHART ─────────────────────────────────────────────────────────────────
 function drawSpark(id,chartData,isPos){
   const el=document.getElementById('spark-'+id);
   if(!el) return;
@@ -507,10 +532,10 @@ function drawMainChart(data){
   const ctx=document.getElementById('mainChart').getContext('2d');
   const color=data.isPos?'#10B981':'#EF4444';
   if(mainChart) mainChart.destroy();
-  mainChart=new Chart(ctx,{type:'line',data:{labels:data.chartTimes||[],datasets:[{data:data.chartData||[],borderColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,data.isPos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');return g}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F1F5F9',padding:10}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:11},callback:v=>v?.toLocaleString('de-DE')},position:'right'}}}});
+  mainChart=new Chart(ctx,{type:'line',data:{labels:data.chartTimes||[],datasets:[{data:data.chartData||[],borderColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,data.isPos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');return g}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F1F5F9',padding:10,callbacks:{label:c=>' '+c.parsed.y?.toLocaleString('de-DE')}}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:11},callback:v=>v?.toLocaleString('de-DE')},position:'right'}}}});
 }
 
-// ── GRID ────────────────────────────────────────────────────────────────
+// ── GRID ──────────────────────────────────────────────────────────────────
 async function buildGrid(){
   const grid=document.getElementById('asset-grid');
   grid.innerHTML=PINNED.map(p=>`
@@ -524,10 +549,11 @@ async function buildGrid(){
 
   await Promise.all(PINNED.map(async p=>{
     try{
-      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(p.symbol)}`);
-      const data=await r.json();
-      if(data.error) return;
       const id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
+      const cached=cacheGet('quote_'+p.symbol);
+      const data=cached||(await (await fetch(`/api/quote?symbol=${encodeURIComponent(p.symbol)}`)).json());
+      if(!cached) cacheSet('quote_'+p.symbol,data);
+      if(data.error) return;
       document.getElementById('price-'+id).textContent=fmtPrice(data.price,data.currency);
       document.getElementById('chg-'+id).innerHTML=`<span class="ac-chg ${data.isPos?'pos':'neg'}">${data.isPos?'▲':'▼'} ${Math.abs(data.changePct).toFixed(2)}%</span>`;
       drawSpark(id,data.chartData||[],data.isPos);
@@ -535,7 +561,7 @@ async function buildGrid(){
   }));
 }
 
-// ── EVENTS & GLOSSARY ───────────────────────────────────────────────────
+// ── EVENTS & GLOSSARY ─────────────────────────────────────────────────────
 function buildEvents(){
   document.getElementById('ev-list').innerHTML=EVENTS.map(e=>`
     <div class="ev-card">
@@ -559,7 +585,7 @@ function filterGloss(q){
   renderGloss(q?GLOSSARY.filter(g=>g.term.toLowerCase().includes(q.toLowerCase())||g.def.toLowerCase().includes(q.toLowerCase())):GLOSSARY);
 }
 
-// ── INIT ────────────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────
 buildGrid();
 buildEvents();
 renderGloss(GLOSSARY);
