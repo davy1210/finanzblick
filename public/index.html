@@ -14,16 +14,12 @@
   --shadow:0 1px 4px rgba(0,0,0,0.07);--font:'Plus Jakarta Sans',sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
-
-/* NAV */
 .nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:20;box-shadow:var(--shadow)}
 .logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
 .logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#1DB954,#0066FF);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
 .nav-links{display:flex;gap:4px}
 .nl{padding:8px 14px;border-radius:9px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:none;font-family:var(--font);transition:all .15s}
 .nl.active{background:var(--bg);color:var(--text);font-weight:600}
-
-/* PAGES */
 .page{display:none;padding:24px;max-width:960px;margin:0 auto}
 .page.active{display:block}
 .sec-title{font-size:20px;font-weight:700;margin-bottom:4px}
@@ -38,26 +34,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .search-spinner.show{display:block}
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:100;display:none;max-height:340px;overflow-y:auto}
+.search-results{position:absolute;top:calc(100%+6px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:100;display:none;max-height:340px;overflow-y:auto}
 .search-results.open{display:block}
 .sr-item{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .12s;border-bottom:1px solid var(--border)}
 .sr-item:last-child{border-bottom:none}
 .sr-item:hover{background:#F0F6FF}
-.sr-icon{width:38px;height:38px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;font-weight:700;color:var(--muted)}
-.sr-info .sr-name{font-size:14px;font-weight:600}
-.sr-info .sr-type{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px}
-.sr-right{margin-left:auto;text-align:right;font-size:12px;color:var(--muted)}
+.sr-icon{width:38px;height:38px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sr-name{font-size:14px;font-weight:600}
+.sr-type{font-size:11px;color:var(--muted);margin-top:2px}
+.sr-right{margin-left:auto;font-size:12px;color:var(--muted)}
 .sr-empty{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 
-/* PINNED ASSETS */
+/* GRID */
 .pinned-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px}
 .asset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:24px}
-.asset-card{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:16px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow);position:relative}
-.asset-card:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,102,255,0.1)}
+.asset-card{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:16px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow)}
+.asset-card:hover{border-color:var(--blue);transform:translateY(-2px)}
 .asset-card.active{border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,102,255,0.08)}
-.asset-card.loading-card::after{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);animation:shimmer 1.2s infinite}
-@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-.ac-symbol{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ac-symbol{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .ac-name{font-size:12px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ac-price{font-size:19px;font-weight:700;letter-spacing:-.5px;margin-bottom:5px}
 .ac-chg{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block}
@@ -73,30 +67,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .d-price{font-size:36px;font-weight:700;letter-spacing:-1.5px;line-height:1}
 .d-chg{font-size:14px;font-weight:700;padding:5px 12px;border-radius:9px;display:inline-block;margin-top:8px}
 .d-meta{font-size:12px;color:var(--muted);text-align:right;line-height:1.8;flex-shrink:0}
-.d-meta span{display:block}
 .chart-box{height:140px;margin-bottom:20px}
-
-/* LOADING SKELETON */
-.skeleton{background:linear-gradient(90deg,#F3F4F6 25%,#E5E7EB 50%,#F3F4F6 75%);background-size:200% 100%;animation:shimmer2 1.2s infinite;border-radius:6px}
-@keyframes shimmer2{0%{background-position:200% 0}100%{background-position:-200% 0}}
-
-/* STATS ROW */
 .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat-box{flex:1;min-width:80px;background:var(--bg);border-radius:10px;padding:10px 12px}
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .stat-val{font-size:14px;font-weight:700}
 
-/* PILLS */
-.feature-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.feat-pill{padding:8px 15px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font);transition:all .15s;display:flex;align-items:center;gap:6px}
-.feat-pill.why{background:#EFF6FF;color:#1D4ED8}.feat-pill.why.on{background:#1D4ED8;color:#fff}
-.feat-pill.out{background:#FFFBEB;color:#92400E}.feat-pill.out.on{background:#D97706;color:#fff}
-.feat-pill.news{background:#F0FDF4;color:#166534}.feat-pill.news.on{background:#16A34A;color:#fff}
-.feat-pill.ai{background:#FAF5FF;color:#6B21A8}.feat-pill.ai.on{background:var(--purple);color:#fff}
-
-/* BOXES */
-.exp-box{border-radius:13px;padding:16px 18px;margin-bottom:12px;display:none;border-left:4px solid}
-.exp-box.show{display:block}
+/* AUTO ANALYSE BOXES */
+.auto-analyse{margin-bottom:16px}
+.analyse-loading{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg);border-radius:12px;font-size:13px;color:var(--muted);margin-bottom:10px}
+.exp-box{border-radius:13px;padding:16px 18px;margin-bottom:10px;border-left:4px solid}
 .exp-box.why{background:#EFF6FF;border-color:#3B82F6}
 .exp-box.out{background:#FFFBEB;border-color:#F59E0B}
 .exp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
@@ -105,36 +85,39 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .exp-text{font-size:13px;line-height:1.7;color:#374151}
 
 /* NEWS */
-.news-panel{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow);display:none;margin-bottom:12px}
-.news-panel.show{display:block}
+.news-section{margin-bottom:16px}
+.news-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.news-title-row{font-size:14px;font-weight:700}
+.news-stand{font-size:11px;color:var(--muted)}
+.news-panel{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
 .news-item{padding:13px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px}
 .news-item:last-child{border-bottom:none;padding-bottom:0}
-.news-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;width:fit-content}
-.badge-bullish{background:#DCFCE7;color:#15803D}
-.badge-bearish{background:#FEE2E2;color:#B91C1C}
-.badge-neutral{background:#F3F4F6;color:#6B7280}
-.news-title{font-size:13px;font-weight:600}
-.news-why{font-size:12px;color:var(--muted);line-height:1.55}
+.news-item-title{font-size:13px;font-weight:600;color:var(--text);text-decoration:none;display:block}
+.news-item-title:hover{color:var(--blue)}
+.news-meta{display:flex;align-items:center;gap:8px}
+.news-source{font-size:11px;font-weight:600;color:var(--blue)}
 .news-time{font-size:11px;color:#9CA3AF}
+.news-desc{font-size:12px;color:var(--muted);line-height:1.5}
 
-/* AI BOX */
-.ai-box{border-radius:13px;padding:16px 18px;margin-bottom:12px;background:#FAF5FF;border-left:4px solid var(--purple);display:none}
-.ai-box.show{display:block}
-.ai-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#6B21A8;margin-bottom:12px}
+/* KI ADDON */
+.ai-addon{background:#FAF5FF;border:1px solid #DDD6FE;border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.ai-addon-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--purple);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.ai-hint{font-size:12px;color:#9CA3AF;margin-bottom:10px}
 .ai-row{display:flex;gap:8px;margin-bottom:10px}
-.ai-input{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #DDD6FE;font-family:var(--font);font-size:13px;outline:none;color:var(--text);background:#fff}
+.ai-input{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #DDD6FE;font-family:var(--font);font-size:13px;outline:none;color:var(--text)}
 .ai-input:focus{border-color:var(--purple)}
-.ai-btn{padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,var(--purple),#4F46E5);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;transition:opacity .15s}
-.ai-btn:hover{opacity:.88}
+.ai-btn{padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,var(--purple),#4F46E5);color:#fff;font-family:var(--font);font-size:13px;font-weight:600;border:none;cursor:pointer;white-space:nowrap}
 .ai-btn:disabled{opacity:.5;cursor:not-allowed}
-.ai-hint{font-size:11px;color:#9CA3AF;margin-bottom:10px}
-.ai-response{font-size:13px;line-height:1.75;color:#374151;display:none;padding-top:12px;border-top:1px solid rgba(124,58,237,0.15);white-space:pre-line}
+.ai-response{font-size:13px;line-height:1.75;color:#374151;display:none;padding-top:12px;border-top:1px solid #DDD6FE;white-space:pre-line}
 .ai-response.show{display:block}
+
+/* LOADING */
 .loading-dots{display:inline-flex;gap:4px;align-items:center}
 .loading-dots span{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:ld .9s infinite}
 .loading-dots span:nth-child(2){animation-delay:.15s}
 .loading-dots span:nth-child(3){animation-delay:.3s}
 @keyframes ld{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+.analyse-loading .loading-dots span{background:var(--muted)}
 
 /* EVENTS */
 .ev-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;display:flex;gap:18px;box-shadow:var(--shadow)}
@@ -153,16 +136,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 /* WISSEN */
 .wiss-search{width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);font-family:var(--font);font-size:14px;background:var(--white);margin-bottom:16px;outline:none;transition:border-color .15s}
 .wiss-search:focus{border-color:var(--blue)}
-.gloss-card{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow);transition:border-color .15s}
+.gloss-card{background:var(--white);border:1.5px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow)}
 .gloss-card:hover{border-color:var(--blue)}
 .gloss-term{font-size:15px;font-weight:700;color:var(--blue);margin-bottom:5px}
 .gloss-def{font-size:13px;color:var(--muted);line-height:1.65}
 
 .disc{font-size:11px;color:#9CA3AF;text-align:center;padding:16px 24px;border-top:1px solid var(--border);background:var(--white);line-height:1.6;margin-top:8px}
-
-/* ERROR */
-.error-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:12px 16px;font-size:13px;color:#B91C1C;margin-bottom:12px;display:none}
-.error-box.show{display:block}
 </style>
 </head>
 <body>
@@ -181,22 +160,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div class="sec-title">Märkte im Überblick</div>
   <div class="sec-sub">Suche nach jeder Aktie, ETF, Krypto oder Rohstoff weltweit</div>
 
-  <!-- SEARCH -->
   <div class="search-wrap" id="search-wrap">
     <span class="search-icon">🔍</span>
-    <input class="search-input" id="search-input" placeholder="z.B. Apple, Bitcoin, DAX, Volkswagen, Gold..." autocomplete="off">
+    <input class="search-input" id="search-input" placeholder="z.B. Apple, Bitcoin, DAX, Volkswagen..." autocomplete="off">
     <div class="search-spinner" id="search-spinner"><div class="spinner"></div></div>
     <div class="search-results" id="search-results"></div>
   </div>
 
-  <!-- PINNED -->
   <div class="pinned-title">Beliebte Assets</div>
   <div class="asset-grid" id="asset-grid"></div>
 
-  <!-- ERROR -->
-  <div class="error-box" id="error-box"></div>
-
-  <!-- DETAIL -->
   <div class="detail-panel" id="detail-panel" style="display:none">
     <div class="detail-top">
       <div>
@@ -210,32 +183,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="chart-box"><canvas id="mainChart"></canvas></div>
     <div class="stats-row" id="stats-row"></div>
 
-    <div class="feature-row">
-      <button class="feat-pill why on" id="pill-why" onclick="toggleFeat('why',this)">💡 Warum?</button>
-      <button class="feat-pill out" id="pill-out" onclick="toggleFeat('out',this)">🔭 Ausblick</button>
-      <button class="feat-pill news" id="pill-news" onclick="toggleFeat('news',this)">📰 News</button>
-      <button class="feat-pill ai" id="pill-ai" onclick="toggleFeat('ai',this)">✦ KI-Analyse</button>
+    <!-- AUTOMATISCHE ANALYSE -->
+    <div class="auto-analyse" id="auto-analyse">
+      <div class="analyse-loading" id="analyse-loading">
+        <span class="loading-dots"><span></span><span></span><span></span></span>
+        Analyse wird geladen...
+      </div>
     </div>
 
-    <div class="exp-box why show" id="feat-why">
-      <div class="exp-label">💡 Warum bewegt sich das?</div>
-      <div class="exp-text" id="why-text">Wähle ein Asset um die Erklärung zu sehen.</div>
+    <!-- NEWS -->
+    <div class="news-section" id="news-section" style="display:none">
+      <div class="news-header">
+        <div class="news-title-row">📰 Aktuelle News</div>
+        <div class="news-stand" id="news-stand"></div>
+      </div>
+      <div class="news-panel" id="news-panel"></div>
     </div>
-    <div class="exp-box out" id="feat-out">
-      <div class="exp-label">🔭 Ausblick</div>
-      <div class="exp-text" id="out-text"></div>
-    </div>
-    <div class="news-panel" id="feat-news">
-      <div style="font-size:14px;font-weight:700;margin-bottom:14px">📰 Aktuelle News & ihr Einfluss</div>
-      <div id="news-list"></div>
-    </div>
-    <div class="ai-box" id="feat-ai">
-      <div class="ai-label">✦ KI-Analyse — Frag einfach drauf los</div>
+
+    <!-- KI ADDON -->
+    <div class="ai-addon">
+      <div class="ai-addon-label">✦ Eigene Frage stellen</div>
+      <div class="ai-hint">Hast du eine spezifische Frage? z.B. "Ist das ein guter Einstieg?" oder "Was bedeutet das für mein Portfolio?"</div>
       <div class="ai-row">
-        <input class="ai-input" id="ai-input" placeholder="z.B. Warum fällt das gerade? Ist das ein guter Einstieg?" onkeydown="if(event.key==='Enter')askAI()">
+        <input class="ai-input" id="ai-input" placeholder="Deine Frage..." onkeydown="if(event.key==='Enter')askAI()">
         <button class="ai-btn" id="ai-btn" onclick="askAI()">Fragen ✦</button>
       </div>
-      <div class="ai-hint">Oder klicke einfach "Fragen" ohne Text für eine allgemeine Analyse.</div>
       <div class="ai-response" id="ai-resp"></div>
     </div>
   </div>
@@ -256,66 +228,48 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div id="gloss-list"></div>
 </div>
 
-<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten von Yahoo Finance.</div>
+<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten: Yahoo Finance. News: NewsAPI.</div>
 
 <script>
-// ── KONFIGURATION ─────────────────────────────────────────────────────────
-// Im lokalen Test: simulierte Daten. Auf Vercel: echte API-Calls.
-const IS_VERCEL = window.location.hostname !== '127.0.0.1' && !window.location.protocol.startsWith('file');
-
-// Pinned Assets (werden beim Start geladen)
 const PINNED = [
-  { symbol: '^GDAXI', label: 'DAX', icon: '🇩🇪' },
-  { symbol: 'BTC-USD', label: 'Bitcoin', icon: '₿' },
-  { symbol: 'NVDA', label: 'Nvidia', icon: '🟢' },
-  { symbol: 'GC=F', label: 'Gold', icon: '🥇' },
-  { symbol: '^GSPC', label: 'S&P 500', icon: '🇺🇸' },
-  { symbol: 'AAPL', label: 'Apple', icon: '🍎' },
-  { symbol: 'ETH-USD', label: 'Ethereum', icon: '⟠' },
-  { symbol: 'TSLA', label: 'Tesla', icon: '⚡' },
+  {symbol:'^GDAXI',label:'DAX',icon:'🇩🇪'},
+  {symbol:'BTC-USD',label:'Bitcoin',icon:'₿'},
+  {symbol:'NVDA',label:'Nvidia',icon:'🟢'},
+  {symbol:'GC=F',label:'Gold',icon:'🥇'},
+  {symbol:'^GSPC',label:'S&P 500',icon:'🇺🇸'},
+  {symbol:'AAPL',label:'Apple',icon:'🍎'},
+  {symbol:'ETH-USD',label:'Ethereum',icon:'⟠'},
+  {symbol:'TSLA',label:'Tesla',icon:'⚡'},
 ];
 
-// Fallback-Daten für lokalen Test (ohne Vercel)
-const FALLBACK = {
-  '^GDAXI': { price: 18432, changePct: -0.8, isPos: false, currency: 'EUR', high: 18580, low: 18410, volume: 82000000, chartData: [18520,18490,18505,18480,18460,18475,18450,18432], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Der DAX fällt heute, weil neue US-Zölle auf EU-Waren Exportkonzerne wie VW und BASF belasten. Anleger verkaufen vorsichtshalber.', out: 'Die Fed-Protokolle am Mittwoch werden richtungsweisend. Hawkische Signale könnten weiteren Druck bedeuten.', news: [{type:'bearish',title:'US verschärft Zölle auf EU-Stahl',why:'Exportfirmen verlieren Gewinn.',time:'vor 2 Std.'},{type:'neutral',title:'EZB hält Zinsen stabil',why:'Keine Überraschung.',time:'vor 4 Std.'},{type:'bullish',title:'ifo-Geschäftsklima positiv',why:'Stimmung besser als erwartet.',time:'vor 6 Std.'}] },
-  'BTC-USD': { price: 103240, changePct: 2.1, isPos: true, currency: 'USD', high: 104100, low: 100800, volume: 28000000000, chartData: [100800,101200,101000,101800,102300,102100,102800,103240], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Bitcoin steigt, weil der US-Kongress einem Krypto-Regulierungsrahmen zugestimmt hat. Mehr Sicherheit = mehr Investoren.', out: 'Unterstützung bei $97.000. Hält dieser Level, sehen manche Analysten Potenzial Richtung $110.000.', news: [{type:'bullish',title:'US-Kongress stimmt Krypto-Rahmen zu',why:'Klare Regeln = mehr institutionelles Kapital.',time:'vor 1 Std.'},{type:'bullish',title:'BlackRock kauft weitere 8.000 BTC',why:'Starkes Vertrauenssignal.',time:'vor 3 Std.'}] },
-  'NVDA': { price: 924.5, changePct: 1.4, isPos: true, currency: 'USD', high: 930, low: 908, volume: 45000000, chartData: [910,912,909,915,918,920,919,924.5], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Nvidia legt zu, weil Microsoft $80 Mrd. in KI-Rechenzentren investiert. Nvidia liefert die Chips dafür.', out: 'Quartalszahlen am 28. Mai. Hohe Erwartungen — Enttäuschung kann starke Rückgänge auslösen.', news: [{type:'bullish',title:'Microsoft investiert $80 Mrd. in KI',why:'Direkte Mehrnachfrage nach Nvidia-GPUs.',time:'vor 1 Std.'},{type:'bearish',title:'China-Exportkontrolle für KI-Chips',why:'Nvidia verliert Einnahmen aus China.',time:'vor 5 Std.'}] },
-  'GC=F': { price: 2368, changePct: -0.3, isPos: false, currency: 'USD', high: 2382, low: 2360, volume: 180000, chartData: [2375,2372,2376,2370,2368,2371,2365,2368], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Gold fällt leicht wegen eines stärkeren US-Dollars. Dollar hoch = Gold teurer für andere Länder = weniger Nachfrage.', out: 'Bei Krisen oder Rezessionsangst würde Gold schnell wieder stark steigen. Aktuell stabiler Markt = Gegendruck.', news: [{type:'bearish',title:'US-Dollar auf 3-Monats-Hoch',why:'Weniger Goldnachfrage aus Nicht-Dollar-Ländern.',time:'vor 2 Std.'},{type:'bullish',title:'Zentralbanken kaufen Rekordmengen',why:'China & Indien kaufen aggressiv.',time:'vor 5 Std.'}] },
-  '^GSPC': { price: 5214, changePct: 0.3, isPos: true, currency: 'USD', high: 5230, low: 5190, volume: 3200000000, chartData: [5190,5195,5200,5198,5205,5210,5208,5214], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Der S&P 500 legt leicht zu, getrieben von starken Tech-Zahlen. Nvidia und Microsoft ziehen den Index hoch.', out: 'US-Inflationsdaten am 14. Mai werden entscheidend. Hohe Inflation könnte die Rally stoppen.', news: [{type:'bullish',title:'Tech-Sektor mit starken Quartalszahlen',why:'Microsoft und Alphabet übertreffen Erwartungen.',time:'vor 2 Std.'}] },
-  'AAPL': { price: 198.4, changePct: 0.6, isPos: true, currency: 'USD', high: 199.5, low: 196.2, volume: 52000000, chartData: [196,196.5,197,196.8,197.5,198,197.8,198.4], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Apple steigt auf Berichte über starke Nachfrage nach den KI-Features in iOS 19.', out: 'Quartalszahlen Ende Juli. Services und Apple Pay wachsen stark — stützt den Kurs langfristig.', news: [{type:'bullish',title:'iOS 19 KI-Features überzeugen',why:'Starke Nutzernachfrage erwartet.',time:'vor 3 Std.'}] },
-  'ETH-USD': { price: 3842, changePct: 1.8, isPos: true, currency: 'USD', high: 3880, low: 3770, volume: 15000000000, chartData: [3770,3780,3790,3800,3810,3825,3835,3842], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Ethereum steigt mit Bitcoin. Wachsendes DeFi-Volumen treibt die Nachfrage nach ETH zusätzlich.', out: 'Das "Pectra"-Update könnte Transaktionskosten senken — bullisch für langfristige Nutzung.', news: [{type:'bullish',title:'DeFi-Volumen auf 12-Monats-Hoch',why:'Mehr Nutzung = mehr ETH-Nachfrage.',time:'vor 2 Std.'}] },
-  'TSLA': { price: 176.3, changePct: -1.2, isPos: false, currency: 'USD', high: 180, low: 175, volume: 95000000, chartData: [180,179,178.5,177,176.5,177,176.8,176.3], chartTimes: ['9:00','10:00','11:00','12:00','13:00','14:00','15:00','15:42'], why: 'Tesla fällt, weil Verkaufszahlen aus China enttäuscht haben. BYD gewinnt Marktanteile.', out: 'Quartalszahlen Ende Juli. Elon Musks politisches Engagement könnte Markenbild beeinflussen.', news: [{type:'bearish',title:'China-Verkäufe enttäuschen',why:'BYD wächst — Druck auf Tesla.',time:'vor 1 Std.'}] },
-};
-
-const EVENTS = [
-  {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Wie stark stiegen die Preise? Hohe Inflation → Fed erhöht Zinsen → Aktien fallen. Niedrige Inflation → mögliche Zinssenkung → Aktien steigen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
-  {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung = gut für Aktien. Zinserhöhung oder keine Änderung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
-  {day:'28',mon:'Mai',title:'Nvidia Quartalszahlen',desc:'Erwartungen sehr hoch. Enttäuschung → starke Rückgänge. Überraschung → neue Allzeithochs möglich.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Nvidia','Nasdaq']},
-  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Fed erhöht Zinsen. Zu wenige → Konjunktursorgen. Beides bewegt Märkte stark.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
-  {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Bitcoin-Kurse 3–6 Monate nach dem Halving. Keine Garantie, aber viele Analysten sind optimistisch.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
+const EVENTS=[
+  {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Hohe Inflation → Fed erhöht Zinsen → Aktien fallen. Niedrige Inflation → mögliche Zinssenkung → Aktien steigen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
+  {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung = gut für Aktien. Zinserhöhung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
+  {day:'28',mon:'Mai',title:'Nvidia Quartalszahlen',desc:'Erwartungen sehr hoch. Enttäuschung → starke Rückgänge. Überraschung → neue Allzeithochs.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Nvidia','Nasdaq']},
+  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Fed erhöht Zinsen. Zu wenige → Konjunktursorgen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
+  {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Kurse 3–6 Monate nach dem Halving. Keine Garantie.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
 ];
 
-const GLOSSARY = [
-  {term:'ETF (Exchange Traded Fund)',def:'Ein Fonds, der automatisch viele Aktien kauft — z.B. alle DAX-Firmen. Ideal für Einsteiger: günstig, breit gestreut, wenig Aufwand.'},
-  {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Höhere Zinsen → Kredite teurer → Aktien fallen oft. Niedrige Zinsen → Wachstum → Kurse steigen oft.'},
-  {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet (Bulle stößt nach oben). Bärisch = fallende Kurse erwartet (Bär schlägt nach unten).'},
-  {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel. Staatsanleihen: niedrig. Mehr Volatilität = mehr Chance und mehr Risiko.'},
-  {term:'Dividende',def:'Unternehmensgewinn wird direkt an Aktionäre ausgezahlt — wie Miete auf dein Kapital. Typisch für stabile Großunternehmen.'},
-  {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. Ziel der EZB: 2% pro Jahr. Zu viel Inflation → Zinserhöhungen → Märkte unter Druck.'},
-  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Wer breit streut (ETFs, verschiedene Länder), verliert weniger wenn eine Anlage einbricht.'},
-  {term:'Marktkapitalisierung',def:'Kurs × alle Aktien = Gesamtwert des Unternehmens. Apple: über 3 Billionen Dollar. Das wäre der theoretische Kaufpreis.'},
-  {term:'Halving (Bitcoin)',def:'Alle 4 Jahre wird die Menge neuer Bitcoins halbiert. Weniger Angebot bei gleicher Nachfrage → Preis steigt historisch.'},
-  {term:'Unterstützung & Widerstand',def:'Kursniveaus wo der Kurs oft stoppt. Unterstützung = Boden. Widerstand = Decke. Durchbruch = oft weitere Bewegung.'}
+const GLOSSARY=[
+  {term:'ETF',def:'Ein Fonds, der automatisch viele Aktien kauft — z.B. alle DAX-Firmen. Ideal für Einsteiger: günstig, breit gestreut.'},
+  {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Höhere Zinsen → Kredite teurer → Aktien fallen oft.'},
+  {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet. Bärisch = fallende Kurse erwartet.'},
+  {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel. Mehr Volatilität = mehr Chance und Risiko.'},
+  {term:'Dividende',def:'Unternehmensgewinn wird direkt an Aktionäre ausgezahlt — wie Miete auf dein Kapital.'},
+  {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. Ziel der EZB: 2% pro Jahr.'},
+  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Wer breit streut, verliert weniger wenn eine Anlage einbricht.'},
+  {term:'Marktkapitalisierung',def:'Kurs × alle Aktien = Gesamtwert des Unternehmens.'},
+  {term:'Halving',def:'Bei Bitcoin wird alle 4 Jahre die Menge neuer Coins halbiert. Weniger Angebot → Preis steigt historisch.'},
+  {term:'Unterstützung & Widerstand',def:'Kursniveaus wo der Kurs oft stoppt. Unterstützung = Boden. Widerstand = Decke.'}
 ];
 
-// ── STATE ─────────────────────────────────────────────────────────────────
-let currentData = null;
 let currentSymbol = null;
+let currentData = null;
+let currentNews = [];
 let mainChart = null;
 let searchTimeout = null;
-let activePills = {why:true,out:false,news:false,ai:false};
 
-// ── NAVIGATION ────────────────────────────────────────────────────────────
+// ── NAVIGATION ──────────────────────────────────────────────────────────
 function gotoPage(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nl').forEach(b=>b.classList.remove('active'));
@@ -323,265 +277,265 @@ function gotoPage(id,el){
   el.classList.add('active');
 }
 
-// ── FORMAT HELPERS ────────────────────────────────────────────────────────
-function fmtPrice(p, currency) {
-  if(!p && p!==0) return '—';
-  const sym = currency==='EUR'?'€':currency==='GBP'?'£':'$';
-  if(p > 10000) return sym + p.toLocaleString('de-DE',{maximumFractionDigits:0});
-  if(p > 100)   return sym + p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
-  return sym + p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4});
+// ── FORMAT ──────────────────────────────────────────────────────────────
+function fmtPrice(p,currency){
+  if(!p&&p!==0) return '—';
+  const sym=currency==='EUR'?'€':currency==='GBP'?'£':'$';
+  if(p>10000) return sym+p.toLocaleString('de-DE',{maximumFractionDigits:0});
+  if(p>100) return sym+p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return sym+p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4});
 }
 function fmtVol(v){
   if(!v) return '—';
   if(v>1e9) return (v/1e9).toFixed(1)+'B';
   if(v>1e6) return (v/1e6).toFixed(1)+'M';
-  if(v>1e3) return (v/1e3).toFixed(1)+'K';
   return v;
 }
-
-// ── FETCH QUOTE ───────────────────────────────────────────────────────────
-async function fetchQuote(symbol) {
-  if (!IS_VERCEL) {
-    // Lokaler Test: Fallback-Daten
-    await new Promise(r=>setTimeout(r,600));
-    return FALLBACK[symbol] || null;
-  }
-  const r = await fetch(`/api/quote?symbol=${encodeURIComponent(symbol)}`);
-  if(!r.ok) throw new Error('Quote nicht verfügbar');
-  return await r.json();
+function timeAgo(iso){
+  const diff=(Date.now()-new Date(iso))/1000/60;
+  if(diff<60) return `vor ${Math.round(diff)} Min.`;
+  if(diff<1440) return `vor ${Math.round(diff/60)} Std.`;
+  return `vor ${Math.round(diff/1440)} Tagen`;
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────
-const searchInput = document.getElementById('search-input');
-const searchResults = document.getElementById('search-results');
-const searchSpinner = document.getElementById('search-spinner');
+// ── SEARCH ──────────────────────────────────────────────────────────────
+const searchInput=document.getElementById('search-input');
+const searchResults=document.getElementById('search-results');
+const searchSpinner=document.getElementById('search-spinner');
 
-searchInput.addEventListener('input', e => {
+searchInput.addEventListener('input',e=>{
   clearTimeout(searchTimeout);
-  const q = e.target.value.trim();
-  if(!q){ searchResults.classList.remove('open'); return; }
-  searchTimeout = setTimeout(()=>doSearch(q), 350);
+  const q=e.target.value.trim();
+  if(!q){searchResults.classList.remove('open');return;}
+  searchTimeout=setTimeout(()=>doSearch(q),350);
 });
 
-async function doSearch(q) {
+async function doSearch(q){
   searchSpinner.classList.add('show');
-  searchResults.innerHTML = '<div class="sr-empty">Suche...</div>';
+  searchResults.innerHTML='<div class="sr-empty">Suche...</div>';
   searchResults.classList.add('open');
-
-  try {
-    let results;
-    if(!IS_VERCEL){
-      // Lokaler Test: durch Fallback-Daten filtern
-      await new Promise(r=>setTimeout(r,400));
-      results = PINNED.filter(p=>p.label.toLowerCase().includes(q.toLowerCase())||p.symbol.toLowerCase().includes(q.toLowerCase()))
-        .map(p=>({symbol:p.symbol,name:p.label,type:'Asset',exchange:''}));
-    } else {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      const data = await r.json();
-      results = data.results || [];
-    }
-
-    if(!results.length){
-      searchResults.innerHTML='<div class="sr-empty">Keine Ergebnisse für "'+q+'"</div>';
-      return;
-    }
-    searchResults.innerHTML = results.map(r=>`
+  try{
+    const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const data=await r.json();
+    const results=data.results||[];
+    if(!results.length){searchResults.innerHTML='<div class="sr-empty">Keine Ergebnisse</div>';return;}
+    searchResults.innerHTML=results.map(r=>`
       <div class="sr-item" onclick="selectSymbol('${r.symbol}','${r.name.replace(/'/g,"\\'")}');closeSearch()">
         <div class="sr-icon">${r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'📈':'📊'}</div>
-        <div class="sr-info">
-          <div class="sr-name">${r.name}</div>
-          <div class="sr-type">${r.symbol} · ${r.type}</div>
-        </div>
+        <div><div class="sr-name">${r.name}</div><div class="sr-type">${r.symbol} · ${r.type}</div></div>
         <div class="sr-right">${r.exchange||''}</div>
       </div>`).join('');
-  } catch(e){
-    searchResults.innerHTML='<div class="sr-empty">Suche nicht verfügbar</div>';
-  }
+  }catch(e){searchResults.innerHTML='<div class="sr-empty">Suche nicht verfügbar</div>';}
   searchSpinner.classList.remove('show');
 }
 
-function closeSearch(){
-  searchResults.classList.remove('open');
-  searchInput.value='';
-}
+function closeSearch(){searchResults.classList.remove('open');searchInput.value='';}
+document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))closeSearch();});
 
-document.addEventListener('click',e=>{
-  if(!document.getElementById('search-wrap').contains(e.target)) closeSearch();
-});
-
-// ── SELECT ASSET ──────────────────────────────────────────────────────────
-async function selectSymbol(symbol, name) {
-  currentSymbol = symbol;
-  showError('');
+// ── SELECT ASSET ────────────────────────────────────────────────────────
+async function selectSymbol(symbol,name){
+  currentSymbol=symbol;
+  currentNews=[];
   document.getElementById('detail-panel').style.display='block';
-
-  // Reset UI
-  document.getElementById('d-symbol').textContent = symbol;
-  document.getElementById('d-name').textContent = name||'Wird geladen...';
-  document.getElementById('d-price').textContent = '—';
-  document.getElementById('d-chg').textContent = 'Lädt...';
-  document.getElementById('d-chg').className = 'd-chg';
-  document.getElementById('why-text').textContent = 'Analyse wird geladen...';
-  document.getElementById('out-text').textContent = '';
-  document.getElementById('news-list').innerHTML = '';
+  document.getElementById('news-section').style.display='none';
   document.getElementById('ai-resp').classList.remove('show');
   document.getElementById('ai-resp').textContent='';
   document.getElementById('ai-input').value='';
+  document.getElementById('ai-btn').disabled=false;
+  document.getElementById('ai-btn').textContent='Fragen ✦';
 
-  // Karte markieren
+  // Reset
+  document.getElementById('d-symbol').textContent=symbol;
+  document.getElementById('d-name').textContent=name||'Wird geladen...';
+  document.getElementById('d-price').textContent='—';
+  document.getElementById('d-chg').textContent='Lädt...';
+  document.getElementById('d-chg').className='d-chg';
+  document.getElementById('auto-analyse').innerHTML='<div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
+
   document.querySelectorAll('.asset-card').forEach(c=>c.classList.remove('active'));
-  const card = document.getElementById('ac-'+symbol.replace(/[^a-zA-Z0-9]/g,'_'));
+  const card=document.getElementById('ac-'+symbol.replace(/[^a-zA-Z0-9]/g,'_'));
   if(card) card.classList.add('active');
-
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 
-  try {
-    const data = await fetchQuote(symbol);
-    if(!data) { showError('Kursdaten nicht verfügbar für '+symbol); return; }
-    currentData = data;
-    renderDetail(data, symbol, name);
-  } catch(e) {
-    showError('Fehler beim Laden: '+e.message);
+  // Alles parallel laden
+  const assetName=name||symbol;
+  await Promise.all([
+    loadQuote(symbol),
+    loadNews(assetName),
+    loadAutoAnalyse(symbol, assetName)
+  ]);
+}
+
+// ── QUOTE ───────────────────────────────────────────────────────────────
+async function loadQuote(symbol){
+  try{
+    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(symbol)}`);
+    const data=await r.json();
+    if(data.error) return;
+    currentData=data;
+    renderQuote(data,symbol);
+  }catch(e){}
+}
+
+function renderQuote(data,symbol){
+  document.getElementById('d-symbol').textContent=symbol;
+  document.getElementById('d-name').textContent=data.name||symbol;
+  document.getElementById('d-price').textContent=fmtPrice(data.price,data.currency);
+  const chgEl=document.getElementById('d-chg');
+  chgEl.textContent=(data.isPos?'▲ +':'▼ ')+Math.abs(data.changePct).toFixed(2)+'% heute';
+  chgEl.className='d-chg '+(data.isPos?'pos':'neg');
+  const now=new Date();
+  document.getElementById('d-meta').innerHTML=`<span>${now.toLocaleDateString('de-DE',{day:'numeric',month:'long'})}</span><span>${now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr</span>`;
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-box"><div class="stat-label">Tageshoch</div><div class="stat-val">${fmtPrice(data.high,data.currency)}</div></div>
+    <div class="stat-box"><div class="stat-label">Tagestief</div><div class="stat-val">${fmtPrice(data.low,data.currency)}</div></div>
+    <div class="stat-box"><div class="stat-label">Volumen</div><div class="stat-val">${fmtVol(data.volume)}</div></div>
+    <div class="stat-box"><div class="stat-label">Währung</div><div class="stat-val">${data.currency||'USD'}</div></div>`;
+  drawMainChart(data);
+}
+
+// ── AUTO ANALYSE ────────────────────────────────────────────────────────
+async function loadAutoAnalyse(symbol, name){
+  try{
+    const quoteData=currentData||{price:'—',changePct:0,isPos:true};
+    // Kurz warten bis Quote geladen
+    await new Promise(r=>setTimeout(r,800));
+    const cd=currentData||{price:'—',changePct:0,isPos:true};
+
+    const r=await fetch('/api/analyse',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        asset:name,
+        price:fmtPrice(cd.price,cd?.currency),
+        changePct:cd.changePct||0,
+        isPos:cd.isPos||true,
+        news:currentNews.slice(0,3)
+      })
+    });
+    const data=await r.json();
+    if(data.error) throw new Error(data.error);
+
+    document.getElementById('auto-analyse').innerHTML=`
+      <div class="exp-box why">
+        <div class="exp-label">💡 Warum bewegt sich das?</div>
+        <div class="exp-text">${data.warum||'Keine Analyse verfügbar.'}</div>
+      </div>
+      <div class="exp-box out">
+        <div class="exp-label">🔭 Ausblick</div>
+        <div class="exp-text">${data.ausblick||'Keine Analyse verfügbar.'}</div>
+      </div>`;
+  }catch(e){
+    document.getElementById('auto-analyse').innerHTML=`
+      <div class="exp-box why">
+        <div class="exp-label">💡 Analyse</div>
+        <div class="exp-text" style="color:var(--muted)">Analyse konnte nicht geladen werden. Stelle eine eigene Frage unten.</div>
+      </div>`;
   }
 }
 
-function renderDetail(data, symbol, name) {
-  const currency = data.currency || 'USD';
-  document.getElementById('d-symbol').textContent = symbol;
-  document.getElementById('d-name').textContent = data.name || name;
-  document.getElementById('d-price').textContent = fmtPrice(data.price, currency);
+// ── NEWS ────────────────────────────────────────────────────────────────
+async function loadNews(assetName){
+  try{
+    const r=await fetch(`/api/news?asset=${encodeURIComponent(assetName)}`);
+    const data=await r.json();
+    const articles=data.articles||[];
+    currentNews=articles;
+    if(!articles.length) return;
 
-  const chgEl = document.getElementById('d-chg');
-  const pct = data.changePct;
-  chgEl.textContent = (data.isPos?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'% heute';
-  chgEl.className = 'd-chg '+(data.isPos?'pos':'neg');
-
-  const now = new Date();
-  document.getElementById('d-meta').innerHTML = `
-    <span>${now.toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</span>
-    <span>${now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr</span>
-    <span style="color:#9CA3AF;font-size:11px">${IS_VERCEL?'Live-Daten':'Beispieldaten'}</span>`;
-
-  // Stats
-  document.getElementById('stats-row').innerHTML = `
-    <div class="stat-box"><div class="stat-label">Tageshoch</div><div class="stat-val">${fmtPrice(data.high,currency)}</div></div>
-    <div class="stat-box"><div class="stat-label">Tagestief</div><div class="stat-val">${fmtPrice(data.low,currency)}</div></div>
-    <div class="stat-box"><div class="stat-label">Volumen</div><div class="stat-val">${fmtVol(data.volume)}</div></div>
-    <div class="stat-box"><div class="stat-label">Währung</div><div class="stat-val">${currency}</div></div>`;
-
-  // Chart
-  drawMainChart(data);
-
-  // Why/Outlook
-  document.getElementById('why-text').textContent = data.why || `${data.name||symbol} ist heute ${data.isPos?'gestiegen':'gefallen'}. Klicke auf "KI-Analyse" für eine detaillierte Erklärung.`;
-  document.getElementById('out-text').textContent = data.out || 'Aktiviere die KI-Analyse für einen Ausblick.';
-
-  // News
-  buildNews(data.news || []);
+    const stand=new Date(data.cachedAt);
+    document.getElementById('news-stand').textContent=`Stand: ${stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})} Uhr`;
+    document.getElementById('news-panel').innerHTML=articles.map(a=>`
+      <div class="news-item">
+        <a class="news-item-title" href="${a.url}" target="_blank" rel="noopener">${a.title}</a>
+        <div class="news-meta">
+          <span class="news-source">${a.source}</span>
+          <span class="news-time">${timeAgo(a.publishedAt)}</span>
+        </div>
+        ${a.description?`<div class="news-desc">${a.description.slice(0,120)}...</div>`:''}
+      </div>`).join('');
+    document.getElementById('news-section').style.display='block';
+  }catch(e){}
 }
 
-// ── CHART ─────────────────────────────────────────────────────────────────
-function drawSpark(id, chartData, isPos) {
-  const el = document.getElementById('spark-'+id);
-  if(!el) return;
-  const ctx = el.getContext('2d');
-  new Chart(ctx,{type:'line',data:{labels:chartData.map((_,i)=>i),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:.4,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:400}}});
-}
-
-function drawMainChart(data) {
-  const ctx = document.getElementById('mainChart').getContext('2d');
-  const color = data.isPos?'#10B981':'#EF4444';
-  if(mainChart) mainChart.destroy();
-  mainChart = new Chart(ctx,{type:'line',data:{labels:data.chartTimes||[],datasets:[{data:data.chartData||[],borderColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,data.isPos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');return g}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F1F5F9',padding:10,callbacks:{label:c=>' '+c.parsed.y?.toLocaleString('de-DE')}}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:11},callback:v=>v?.toLocaleString('de-DE')},position:'right'}}}});
-}
-
-// ── NEWS ──────────────────────────────────────────────────────────────────
-function buildNews(news) {
-  document.getElementById('news-list').innerHTML = news.length ? news.map(n=>`
-    <div class="news-item">
-      <span class="news-badge badge-${n.type}">${n.type==='bullish'?'↑ Bullisch':n.type==='bearish'?'↓ Bärisch':'→ Neutral'}</span>
-      <div class="news-title">${n.title}</div>
-      <div class="news-why">💬 ${n.why}</div>
-      <div class="news-time">${n.time}</div>
-    </div>`).join('')
-    : '<div style="font-size:13px;color:var(--muted);padding:8px 0">Aktiviere die KI-Analyse für eine Nachrichteneinschätzung.</div>';
-}
-
-// ── PILLS ─────────────────────────────────────────────────────────────────
-function toggleFeat(feat,btn){
-  activePills[feat]=!activePills[feat];
-  btn.classList.toggle('on',activePills[feat]);
-  document.getElementById('feat-'+feat).classList.toggle('show',activePills[feat]);
-}
-
-// ── KI ANALYSE ────────────────────────────────────────────────────────────
+// ── KI FRAGE ────────────────────────────────────────────────────────────
 async function askAI(){
-  if(!currentSymbol){ alert('Bitte zuerst ein Asset auswählen.'); return; }
+  if(!currentSymbol) return;
   const btn=document.getElementById('ai-btn');
   const resp=document.getElementById('ai-resp');
   const frage=document.getElementById('ai-input').value.trim();
+  if(!frage) return;
   btn.disabled=true;
   btn.innerHTML='<span class="loading-dots"><span></span><span></span><span></span></span>';
   resp.classList.add('show');
   resp.textContent='';
-
-  try {
-    let text;
-    if(!IS_VERCEL){
-      // Lokaler Test: simulierte Antwort
-      await new Promise(r=>setTimeout(r,1000));
-      const d = currentData;
-      text = frage
-        ? `Zu deiner Frage "${frage}":\n\n${d?.why||'Lade zuerst ein Asset.'}\n\nHinweis: Das ist allgemeine Marktinformation — keine Anlageberatung.`
-        : `${d?.name||currentSymbol} — KI-Analyse\n\n${d?.why||''}\n\n${d?.out||''}\n\nHinweis: Diese Analyse dient der Bildung. Keine Anlageberatung.`;
-    } else {
-      const r = await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:currentData?.name||currentSymbol,price:fmtPrice(currentData?.price,currentData?.currency),changePct:currentData?.changePct,isPos:currentData?.isPos,frage})});
-      const d = await r.json();
-      text = d.antwort || 'Keine Antwort erhalten.';
-    }
-
-    // Streaming-Effekt
+  try{
+    const cd=currentData||{price:'—',changePct:0,isPos:true};
+    const r=await fetch('/api/analyse',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        asset:cd.name||currentSymbol,
+        price:fmtPrice(cd.price,cd?.currency),
+        changePct:cd.changePct||0,
+        isPos:cd.isPos||true,
+        frage,
+        news:currentNews.slice(0,3)
+      })
+    });
+    const data=await r.json();
+    const text=data.antwort||'Keine Antwort erhalten.';
     let i=0;
     const iv=setInterval(()=>{
-      resp.textContent+=text[i]; i++;
-      if(i>=text.length){clearInterval(iv);btn.disabled=false;btn.textContent='Neue Frage ✦';}
+      resp.textContent+=text[i];i++;
+      if(i>=text.length){clearInterval(iv);btn.disabled=false;btn.textContent='Fragen ✦';}
     },12);
-  } catch(e){
-    resp.textContent='Verbindungsfehler — bitte erneut versuchen.';
+  }catch(e){
+    resp.textContent='Verbindungsfehler.';
     btn.disabled=false;btn.textContent='Fragen ✦';
   }
 }
 
-// ── PINNED GRID ───────────────────────────────────────────────────────────
+// ── CHART ───────────────────────────────────────────────────────────────
+function drawSpark(id,chartData,isPos){
+  const el=document.getElementById('spark-'+id);
+  if(!el) return;
+  new Chart(el.getContext('2d'),{type:'line',data:{labels:chartData.map((_,i)=>i),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:.4,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:400}}});
+}
+
+function drawMainChart(data){
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  const color=data.isPos?'#10B981':'#EF4444';
+  if(mainChart) mainChart.destroy();
+  mainChart=new Chart(ctx,{type:'line',data:{labels:data.chartTimes||[],datasets:[{data:data.chartData||[],borderColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,tension:.4,fill:true,backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,data.isPos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)');g.addColorStop(1,'rgba(255,255,255,0)');return g}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1E293B',titleColor:'#94A3B8',bodyColor:'#F1F5F9',padding:10}},scales:{x:{grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{grid:{color:'#F3F4F6'},ticks:{color:'#9CA3AF',font:{size:11},callback:v=>v?.toLocaleString('de-DE')},position:'right'}}}});
+}
+
+// ── GRID ────────────────────────────────────────────────────────────────
 async function buildGrid(){
-  const grid = document.getElementById('asset-grid');
-  grid.innerHTML = PINNED.map(p=>`
-    <div class="asset-card loading-card" id="ac-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}" onclick="selectSymbol('${p.symbol}','${p.label}')">
+  const grid=document.getElementById('asset-grid');
+  grid.innerHTML=PINNED.map(p=>`
+    <div class="asset-card" id="ac-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}" onclick="selectSymbol('${p.symbol}','${p.label}')">
       <div class="ac-symbol">${p.icon} ${p.symbol}</div>
       <div class="ac-name">${p.label}</div>
-      <div class="ac-price skeleton" style="height:24px;width:80px;margin-bottom:6px">&nbsp;</div>
-      <div class="skeleton" style="height:18px;width:60px">&nbsp;</div>
+      <div class="ac-price" id="price-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}">—</div>
+      <div id="chg-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}"></div>
       <div class="mini-spark"><canvas id="spark-${p.symbol.replace(/[^a-zA-Z0-9]/g,'_')}"></canvas></div>
     </div>`).join('');
 
-  // Alle Pinned parallel laden
-  await Promise.all(PINNED.map(async p => {
-    try {
-      const data = await fetchQuote(p.symbol);
-      if(!data) return;
-      const id = p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
-      const card = document.getElementById('ac-'+id);
-      if(!card) return;
-      card.classList.remove('loading-card');
-      card.querySelector('.ac-price').className='ac-price';
-      card.querySelector('.ac-price').textContent=fmtPrice(data.price,data.currency);
-      card.querySelector('.skeleton:not(.ac-price)').outerHTML=`<span class="ac-chg ${data.isPos?'pos':'neg'}">${data.isPos?'▲':'▼'} ${Math.abs(data.changePct).toFixed(2)}%</span>`;
-      drawSpark(id, data.chartData||[], data.isPos);
-    } catch(e){ /* still show card, just without data */ }
+  await Promise.all(PINNED.map(async p=>{
+    try{
+      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(p.symbol)}`);
+      const data=await r.json();
+      if(data.error) return;
+      const id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
+      document.getElementById('price-'+id).textContent=fmtPrice(data.price,data.currency);
+      document.getElementById('chg-'+id).innerHTML=`<span class="ac-chg ${data.isPos?'pos':'neg'}">${data.isPos?'▲':'▼'} ${Math.abs(data.changePct).toFixed(2)}%</span>`;
+      drawSpark(id,data.chartData||[],data.isPos);
+    }catch(e){}
   }));
 }
 
-// ── EVENTS ────────────────────────────────────────────────────────────────
+// ── EVENTS & GLOSSARY ───────────────────────────────────────────────────
 function buildEvents(){
   document.getElementById('ev-list').innerHTML=EVENTS.map(e=>`
     <div class="ev-card">
@@ -597,29 +551,18 @@ function buildEvents(){
     </div>`).join('');
 }
 
-// ── GLOSSARY ──────────────────────────────────────────────────────────────
 function renderGloss(items){
   document.getElementById('gloss-list').innerHTML=items.map(g=>`
-    <div class="gloss-card">
-      <div class="gloss-term">${g.term}</div>
-      <div class="gloss-def">${g.def}</div>
-    </div>`).join('');
+    <div class="gloss-card"><div class="gloss-term">${g.term}</div><div class="gloss-def">${g.def}</div></div>`).join('');
 }
 function filterGloss(q){
   renderGloss(q?GLOSSARY.filter(g=>g.term.toLowerCase().includes(q.toLowerCase())||g.def.toLowerCase().includes(q.toLowerCase())):GLOSSARY);
 }
 
-// ── ERROR ─────────────────────────────────────────────────────────────────
-function showError(msg){
-  const el=document.getElementById('error-box');
-  el.textContent=msg; el.classList.toggle('show',!!msg);
-}
-
-// ── INIT ──────────────────────────────────────────────────────────────────
+// ── INIT ────────────────────────────────────────────────────────────────
 buildGrid();
 buildEvents();
 renderGloss(GLOSSARY);
-document.getElementById('feat-why').classList.add('show');
 </script>
 </body>
 </html>
