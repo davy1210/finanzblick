@@ -666,6 +666,11 @@ function drawMainChart(data){
             var r=axis.max-axis.min;
             axis.min=axis.min-r*0.03;
             axis.max=axis.max+r*0.03;
+          },
+          afterBuildTicks:function(axis){
+            var min=axis.min,max=axis.max,range=max-min,step=range/7;
+            axis.ticks=[];
+            for(var i=0;i<=7;i++){axis.ticks.push({value:min+step*i});}
           }
         }
       }
