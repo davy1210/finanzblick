@@ -666,7 +666,37 @@ function drawMainChart(data){
       }
     }
   });
-}'+e.title+'</div><div class="ev-desc">'+e.desc+'</div><div class="ev-tags"><span class="ev-impact '+e.impCls+'">⚡ '+e.impact+'</span>'+e.assets.map(function(a){return '<span class="ev-asset">'+a+'</span>';}).join('')+'</div></div></div>';
+}
+
+// GRID
+async function buildGrid(){
+  var grid=document.getElementById('asset-grid');
+  grid.innerHTML=PINNED.map(function(p){
+    var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
+    return '<div class="asset-card" id="ac-'+id+'" onclick="selectSymbol(''+p.symbol+'',''+p.label+'')"><div class="ac-symbol">'+p.icon+' '+p.symbol+'</div><div class="ac-name">'+p.label+'</div><div class="ac-price" id="price-'+id+'">—</div><div id="chg-'+id+'"></div><div class="mini-spark"><canvas id="spark-'+id+'"></canvas></div></div>';
+  }).join('');
+  PINNED.forEach(async function(p){
+    try{
+      var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
+      var cached=cGet('q_'+p.symbol+'_1T');
+      var data=cached;
+      if(!data){
+        var r=await fetch('/api/quote?symbol='+encodeURIComponent(p.symbol)+'&range=1T');
+        data=await r.json();
+        if(!data.error) cSet('q_'+p.symbol+'_1T',data);
+      }
+      if(!data||data.error) return;
+      document.getElementById('price-'+id).textContent=fmtPrice(data.price,data.currency);
+      document.getElementById('chg-'+id).innerHTML='<span class="ac-chg '+(data.isPos?'pos':'neg')+'">'+(data.isPos?'▲':'▼')+' '+Math.abs(data.changePct).toFixed(2)+'%</span>';
+      drawSpark(id,data.chartData||[],data.isPos);
+    }catch(e){}
+  });
+}
+
+// EVENTS
+function buildEvents(){
+  document.getElementById('ev-list').innerHTML=EVENTS.map(function(e){
+    return '<div class="ev-card"><div class="ev-date"><div class="ev-day">'+e.day+'</div><div class="ev-mon">'+e.mon+'</div></div><div class="ev-body"><div class="ev-title">'+e.title+'</div><div class="ev-desc">'+e.desc+'</div><div class="ev-tags"><span class="ev-impact '+e.impCls+'">⚡ '+e.impact+'</span>'+e.assets.map(function(a){return '<span class="ev-asset">'+a+'</span>';}).join('')+'</div></div></div>';
   }).join('');
 }
 
