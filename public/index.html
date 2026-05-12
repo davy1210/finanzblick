@@ -651,10 +651,31 @@ function drawMainChart(data){
           grid:{color:'rgba(0,0,0,0.05)',lineWidth:1},
           border:{display:false},
           position:'right',
+          beforeBuildTicks:function(axis){
+            // Manuell 7 gleichmässige Ticks berechnen
+            var min=axis.min, max=axis.max;
+            var range=max-min;
+            var step=range/6;
+            // Schöne runde Zahl für step
+            var mag=Math.pow(10,Math.floor(Math.log10(step)));
+            var nice=[1,2,2.5,5,10];
+            var niceStep=mag;
+            for(var i=0;i<nice.length;i++){
+              if(nice[i]*mag>=step){niceStep=nice[i]*mag;break;}
+            }
+            var tickMin=Math.floor(min/niceStep)*niceStep;
+            var tickMax=Math.ceil(max/niceStep)*niceStep;
+            axis.min=tickMin;
+            axis.max=tickMax;
+            var ticks=[];
+            for(var v=tickMin;v<=tickMax+niceStep*0.01;v+=niceStep){
+              ticks.push({value:Math.round(v*1000)/1000});
+            }
+            axis.ticks=ticks;
+          },
           ticks:{
             color:'#9CA3AF',
             font:{size:11},
-            maxTicksLimit:9,
             callback:function(v){
               if(v===null||v===undefined) return '';
               if(Math.abs(v)>=1000000) return (v/1000000).toFixed(1).replace('.',',')+' M';
