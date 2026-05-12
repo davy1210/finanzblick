@@ -8,11 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#F5F7FA;--white:#fff;--border:#E8ECF2;--text:#111827;--muted:#6B7280;
-  --green:#10B981;--red:#EF4444;--blue:#0066FF;--purple:#7C3AED;
-  --shadow:0 1px 4px rgba(0,0,0,0.07);--font:'Plus Jakarta Sans',sans-serif;
-}
+:root{--bg:#F5F7FA;--white:#fff;--border:#E8ECF2;--text:#111827;--muted:#6B7280;--green:#10B981;--red:#EF4444;--blue:#0066FF;--purple:#7C3AED;--shadow:0 1px 4px rgba(0,0,0,0.07);--font:'Plus Jakarta Sans',sans-serif}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
 .nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:20;box-shadow:var(--shadow)}
 .logo{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px}
@@ -54,23 +50,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .pos{background:#DCFCE7;color:#15803D}
 .neg{background:#FEE2E2;color:#B91C1C}
 .mini-spark{height:38px;margin-top:10px}
-.chart-wrap{position:relative;margin-bottom:0}
-.chart-range-btns{display:flex;gap:4px;margin-bottom:12px}
-.range-btn{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:var(--font);color:var(--muted);background:var(--bg);transition:all .15s}
-.range-btn.active{background:var(--text);color:#fff}
-.chart-hover-info{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;min-height:32px}
-.hover-price{font-size:26px;font-weight:700;letter-spacing:-1px;font-family:var(--font);transition:all .1s}
-.hover-chg{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;display:block;min-height:18px}
-.hover-chg.pos{color:#15803D}
-.hover-chg.neg{color:#B91C1C}
 .detail-panel{background:var(--white);border:1px solid var(--border);border-radius:18px;padding:24px;margin-bottom:16px;box-shadow:var(--shadow)}
-.detail-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px}
+.detail-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
 .d-symbol{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .d-name{font-size:14px;color:var(--muted);margin-bottom:8px}
 .d-price{font-size:36px;font-weight:700;letter-spacing:-1.5px;line-height:1}
 .d-chg{font-size:14px;font-weight:700;padding:5px 12px;border-radius:9px;display:inline-block;margin-top:8px}
 .d-meta{font-size:12px;color:var(--muted);text-align:right;line-height:1.8;flex-shrink:0}
-.chart-box{height:200px;margin-bottom:0}
+.chart-hover-info{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;min-height:36px}
+.hover-price{font-size:26px;font-weight:700;letter-spacing:-1px}
+.hover-chg{font-size:12px;font-weight:600;color:var(--muted);margin-top:4px;display:block;min-height:18px}
+.hover-chg.pos{color:#15803D}
+.hover-chg.neg{color:#B91C1C}
+.chart-range-btns{display:flex;gap:4px;margin-bottom:12px}
+.range-btn{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:var(--font);color:var(--muted);background:var(--bg);transition:all .15s}
+.range-btn.active{background:var(--text);color:#fff}
+.chart-box{height:190px;margin-bottom:16px}
 .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat-box{flex:1;min-width:80px;background:var(--bg);border-radius:10px;padding:10px 12px}
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
@@ -79,10 +74,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .exp-box{border-radius:12px;padding:18px 20px;margin-bottom:10px;background:var(--white);border:1px solid var(--border);box-shadow:var(--shadow)}
 .exp-box.why{border-top:3px solid #111827}
 .exp-box.out{border-top:3px solid #6B7280}
-.exp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;color:var(--muted)}
+.exp-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
 .exp-box.why .exp-label{color:#111827}
 .exp-box.out .exp-label{color:#6B7280}
-.exp-text{font-size:14px;line-height:1.75;color:#1F2937;font-weight:400}
+.exp-text{font-size:14px;line-height:1.75;color:#1F2937}
 .cache-badge{font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);color:var(--muted)}
 .news-section{margin-bottom:16px}
 .news-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -164,14 +159,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
       <div>
         <div class="d-symbol" id="d-symbol">—</div>
         <div class="d-name" id="d-name">—</div>
-        <div class="d-price" id="d-price">—</div>
-        <div class="d-chg" id="d-chg">—</div>
+        <div class="d-price" id="d-price" style="display:none">—</div>
+        <div class="d-chg" id="d-chg" style="display:none">—</div>
       </div>
       <div class="d-meta" id="d-meta"></div>
     </div>
     <div class="chart-hover-info">
-      <div class="hover-price" id="hover-price" id="d-price-display">—</div>
-      <div class="hover-chg pos" id="hover-chg">—</div>
+      <div>
+        <div class="hover-price" id="hover-price">—</div>
+        <span class="hover-chg" id="hover-chg"></span>
+      </div>
     </div>
     <div class="chart-range-btns">
       <button class="range-btn active" onclick="changeRange('1T',this)">1T</button>
@@ -181,9 +178,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
       <button class="range-btn" onclick="changeRange('1J',this)">1J</button>
       <button class="range-btn" onclick="changeRange('5J',this)">5J</button>
     </div>
-    <div class="chart-wrap">
-      <canvas id="mainChart"></canvas>
-    </div>
+    <div class="chart-box"><canvas id="mainChart"></canvas></div>
     <div class="stats-row" id="stats-row"></div>
     <div id="auto-analyse">
       <div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>
@@ -220,32 +215,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div id="gloss-list"></div>
 </div>
 
-<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten: Yahoo Finance · News: GNews · KI: Groq</div>
+<div class="disc">Finanzblick liefert Informationen und Bildung — keine Anlageberatung. Kursdaten: Yahoo Finance · News: RSS · KI: Groq</div>
 
 <script>
-const CACHE_MS = 4*60*60*1000;
-const MEM = {};
-function cGet(k){
-  // Erst localStorage prüfen
-  try {
-    const raw = localStorage.getItem('fb_'+k);
-    if(raw) {
-      const e = JSON.parse(raw);
-      if(Date.now()-e.t < CACHE_MS) return e.d;
-      localStorage.removeItem('fb_'+k);
-    }
-  } catch(err) {}
-  // Dann Memory-Cache
-  const e=MEM[k];
-  if(!e||Date.now()-e.t>CACHE_MS)return null;
-  return e.d;
-}
-function cSet(k,d){
-  MEM[k]={d,t:Date.now()};
-  try { localStorage.setItem('fb_'+k, JSON.stringify({d,t:Date.now()})); } catch(err) {}
-}
+var CACHE_MS=4*60*60*1000;
+var MEM={};
+function cGet(k){try{var r=localStorage.getItem('fb_'+k);if(r){var e=JSON.parse(r);if(Date.now()-e.t<CACHE_MS)return e.d;localStorage.removeItem('fb_'+k);}}catch(x){}var m=MEM[k];if(!m||Date.now()-m.t>CACHE_MS)return null;return m.d;}
+function cSet(k,d){MEM[k]={d:d,t:Date.now()};try{localStorage.setItem('fb_'+k,JSON.stringify({d:d,t:Date.now()}));}catch(x){}}
 
-const PINNED=[
+var PINNED=[
   {symbol:'^GDAXI',label:'DAX',icon:'🇩🇪'},
   {symbol:'BTC-USD',label:'Bitcoin',icon:'₿'},
   {symbol:'NVDA',label:'Nvidia',icon:'🟢'},
@@ -253,22 +231,22 @@ const PINNED=[
   {symbol:'^GSPC',label:'S&P 500',icon:'🇺🇸'},
   {symbol:'AAPL',label:'Apple',icon:'🍎'},
   {symbol:'ETH-USD',label:'Ethereum',icon:'⟠'},
-  {symbol:'TSLA',label:'Tesla',icon:'⚡'},
+  {symbol:'TSLA',label:'Tesla',icon:'⚡'}
 ];
 
-const EVENTS=[
+var EVENTS=[
   {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Hohe Inflation → Fed erhöht Zinsen → Aktien fallen. Niedrige Inflation → Zinssenkung möglich.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
   {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung positiv für Aktien. Zinserhöhung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
   {day:'28',mon:'Mai',title:'Nvidia Quartalszahlen',desc:'Erwartungen sehr hoch. Enttäuschung = starke Rückgänge. Überraschung = neue Hochs.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Nvidia','Nasdaq']},
-  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Zinserhöhung. Zu wenige → Konjunktursorgen. Beides bewegt Märkte.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
-  {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Kurse 3–6 Monate nach dem Halving. Keine Garantie.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
+  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Zinserhöhung. Zu wenige → Konjunktursorgen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
+  {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Kurse 3-6 Monate nach dem Halving.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
 ];
 
-const GLOSSARY=[
+var GLOSSARY=[
   {term:'ETF',def:'Ein Fonds der automatisch viele Aktien kauft. Ideal für Einsteiger: günstig und breit gestreut.'},
   {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Höhere Zinsen → Kredite teurer → Aktien fallen oft.'},
   {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet. Bärisch = fallende Kurse erwartet.'},
-  {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel. Mehr Volatilität = mehr Chance und Risiko.'},
+  {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel.'},
   {term:'Dividende',def:'Unternehmensgewinn der direkt an Aktionäre ausgezahlt wird.'},
   {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. Ziel der EZB: 2% pro Jahr.'},
   {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Breit gestreut verliert man weniger.'},
@@ -277,69 +255,75 @@ const GLOSSARY=[
   {term:'Unterstützung & Widerstand',def:'Kursniveaus wo der Kurs oft stoppt. Unterstützung = Boden. Widerstand = Decke.'}
 ];
 
-let currentSymbol=null,currentData=null,currentNews=[],mainChart=null,searchTimeout=null;
+var currentSymbol=null,currentData=null,currentNews=[],currentRange='1T',mainChart=null,searchTimeout=null;
 
 function gotoPage(id,el){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nl').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nl').forEach(function(b){b.classList.remove('active');});
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
 }
 
 function fmtPrice(p,cur){
   if(!p&&p!==0)return '—';
-  const s=cur==='EUR'?'€':cur==='GBP'?'£':'$';
-  if(p>10000)return s+p.toLocaleString('de-DE',{maximumFractionDigits:0});
-  if(p>100)return s+p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  var s=cur==='EUR'?'€':cur==='GBP'?'£':'$';
+  if(p>=10000)return s+Math.round(p).toLocaleString('de-DE');
+  if(p>=100)return s+p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
   return s+p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:4});
 }
 function fmtVol(v){
   if(!v)return '—';
-  if(v>1e9)return (v/1e9).toFixed(1)+'B';
-  if(v>1e6)return (v/1e6).toFixed(1)+'M';
+  if(v>=1e9)return (v/1e9).toFixed(1)+'B';
+  if(v>=1e6)return (v/1e6).toFixed(1)+'M';
   return v;
 }
 function timeAgo(iso){
-  const m=(Date.now()-new Date(iso))/60000;
+  var m=(Date.now()-new Date(iso))/60000;
   if(m<60)return 'vor '+Math.round(m)+' Min.';
   if(m<1440)return 'vor '+Math.round(m/60)+' Std.';
   return 'vor '+Math.round(m/1440)+' Tagen';
 }
 function sentimentBadge(s){
-  if(s==='bullish')return '<span class="news-badge badge-bullish">&#8593; Bullisch</span>';
-  if(s==='bearish')return '<span class="news-badge badge-bearish">&#8595; Bärisch</span>';
-  return '<span class="news-badge badge-neutral">&#8594; Neutral</span>';
+  if(s==='bullish')return '<span class="news-badge badge-bullish">↑ Bullisch</span>';
+  if(s==='bearish')return '<span class="news-badge badge-bearish">↓ Bärisch</span>';
+  return '<span class="news-badge badge-neutral">→ Neutral</span>';
 }
 
 // SEARCH
-const sInput=document.getElementById('search-input');
-const sResults=document.getElementById('search-results');
-const sSpinner=document.getElementById('search-spinner');
-sInput.addEventListener('input',e=>{
+var sInput=document.getElementById('search-input');
+var sResults=document.getElementById('search-results');
+var sSpinner=document.getElementById('search-spinner');
+sInput.addEventListener('input',function(e){
   clearTimeout(searchTimeout);
-  const q=e.target.value.trim();
+  var q=e.target.value.trim();
   if(!q){sResults.classList.remove('open');return;}
-  searchTimeout=setTimeout(()=>doSearch(q),350);
+  searchTimeout=setTimeout(function(){doSearch(q);},350);
 });
 async function doSearch(q){
   sSpinner.classList.add('show');
   sResults.innerHTML='<div class="sr-empty">Suche...</div>';
   sResults.classList.add('open');
   try{
-    const r=await fetch('/api/search?q='+encodeURIComponent(q));
-    const data=await r.json();
-    const res=data.results||[];
+    var r=await fetch('/api/search?q='+encodeURIComponent(q));
+    var data=await r.json();
+    var res=data.results||[];
     if(!res.length){sResults.innerHTML='<div class="sr-empty">Keine Ergebnisse</div>';return;}
-    sResults.innerHTML=res.map(r=>'<div class="sr-item" onclick="selectSymbol(\''+r.symbol+'\',\''+r.name.replace(/'/g,"\\'")+'\'  );closeSearch()"><div class="sr-icon">'+(r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'📈':'📊')+'</div><div><div class="sr-name">'+r.name+'</div><div class="sr-type">'+r.symbol+' &middot; '+r.type+'</div></div><div class="sr-right">'+(r.exchange||'')+'</div></div>').join('');
+    sResults.innerHTML=res.map(function(r){
+      var icon=r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'📈':'📊';
+      return '<div class="sr-item" onclick="selectSymbol(\''+r.symbol+'\',\''+r.name.replace(/'/g,"\\'")+'\');closeSearch()"><div class="sr-icon">'+icon+'</div><div><div class="sr-name">'+r.name+'</div><div class="sr-type">'+r.symbol+' · '+r.type+'</div></div><div class="sr-right">'+(r.exchange||'')+'</div></div>';
+    }).join('');
   }catch(e){sResults.innerHTML='<div class="sr-empty">Nicht verfügbar</div>';}
   sSpinner.classList.remove('show');
 }
 function closeSearch(){sResults.classList.remove('open');sInput.value='';}
-document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))closeSearch();});
+document.addEventListener('click',function(e){if(!document.getElementById('search-wrap').contains(e.target))closeSearch();});
 
 // SELECT
 async function selectSymbol(symbol,name){
   currentSymbol=symbol; currentNews=[];
+  currentRange='1T';
+  document.querySelectorAll('.range-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelector('.range-btn').classList.add('active');
   document.getElementById('detail-panel').style.display='block';
   document.getElementById('news-section').style.display='none';
   document.getElementById('ai-resp').classList.remove('show');
@@ -349,68 +333,54 @@ async function selectSymbol(symbol,name){
   document.getElementById('ai-btn').textContent='Fragen ✦';
   document.getElementById('d-symbol').textContent=symbol;
   document.getElementById('d-name').textContent=name||'Wird geladen...';
-  document.getElementById('d-price').textContent='—';
-  document.getElementById('d-chg').textContent='Lädt...';
-  document.getElementById('d-chg').className='d-chg';
+  document.getElementById('hover-price').textContent='Lädt...';
+  document.getElementById('hover-chg').textContent='';
   document.getElementById('auto-analyse').innerHTML='<div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
-  // Reset Zeitraum auf 1T
-  currentRange='1T';
-  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
-  const firstBtn=document.querySelector('.range-btn');
-  if(firstBtn)firstBtn.classList.add('active');
-  document.querySelectorAll('.asset-card').forEach(c=>c.classList.remove('active'));
-  const card=document.getElementById('ac-'+symbol.replace(/[^a-zA-Z0-9]/g,'_'));
+  document.querySelectorAll('.asset-card').forEach(function(c){c.classList.remove('active');});
+  var card=document.getElementById('ac-'+symbol.replace(/[^a-zA-Z0-9]/g,'_'));
   if(card)card.classList.add('active');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
-  await Promise.all([loadQuote(symbol),loadNews(name||symbol)]);
+  await Promise.all([loadQuote(symbol,'1T'),loadNews(name||symbol)]);
   await loadAutoAnalyse(name||symbol);
 }
 
 // QUOTE
-let currentRange='1T';
-
-async function loadQuote(symbol, range){
-  range = range || currentRange || '1T';
-  const cacheKey='q_'+symbol+'_'+range;
-  const cached=cGet(cacheKey);
+async function loadQuote(symbol,range){
+  var ck='q_'+symbol+'_'+(range||'1T');
+  var cached=cGet(ck);
   if(cached){currentData=cached;renderQuote(cached,symbol);return;}
   try{
-    const r=await fetch('/api/quote?symbol='+encodeURIComponent(symbol)+'&range='+range);
-    const data=await r.json();
+    var r=await fetch('/api/quote?symbol='+encodeURIComponent(symbol)+'&range='+(range||'1T'));
+    var data=await r.json();
     if(data.error)return;
-    currentData=data; cSet(cacheKey,data); renderQuote(data,symbol);
+    currentData=data; cSet(ck,data); renderQuote(data,symbol);
   }catch(e){}
 }
 
-async function changeRange(range, btn){
-  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+async function changeRange(range,btn){
+  document.querySelectorAll('.range-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  currentRange = range;
-  if(!currentSymbol) return;
+  currentRange=range;
+  if(!currentSymbol)return;
   document.getElementById('hover-price').textContent='Lädt...';
   document.getElementById('hover-chg').textContent='';
-  // Force fresh fetch — bypass cache for range changes
-  var cacheKey='q_'+currentSymbol+'_'+range;
-  delete MEM[cacheKey];
-  try { localStorage.removeItem('fb_'+cacheKey); } catch(e) {}
-  await loadQuote(currentSymbol, range);
+  var ck='q_'+currentSymbol+'_'+range;
+  delete MEM[ck];
+  try{localStorage.removeItem('fb_'+ck);}catch(e){}
+  await loadQuote(currentSymbol,range);
 }
+
 function renderQuote(data,symbol){
   document.getElementById('d-symbol').textContent=symbol;
   document.getElementById('d-name').textContent=data.name||symbol;
-  document.getElementById('d-price').textContent=fmtPrice(data.price,data.currency);
-  const c=document.getElementById('d-chg');
-  c.textContent=(data.isPos?'▲ +':'▼ ')+Math.abs(data.changePct).toFixed(2)+'% heute';
-  c.className='d-chg '+(data.isPos?'pos':'neg');
-  // Hover Info initialisieren
-  const hp=document.getElementById('hover-price');
-  const hc=document.getElementById('hover-chg');
+  var hp=document.getElementById('hover-price');
+  var hc=document.getElementById('hover-chg');
   hp.textContent=fmtPrice(data.price,data.currency);
-  const pct=(data.rangeChangePct||data.changePct||0);
-  const pos=(data.rangeChange||data.change||0)>=0;
+  var pct=data.rangeChangePct||data.changePct||0;
+  var pos=(data.rangeChange||data.change||0)>=0;
   hc.textContent=(pos?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'%';
   hc.className='hover-chg '+(pos?'pos':'neg');
-  const now=new Date();
+  var now=new Date();
   document.getElementById('d-meta').innerHTML='<span>'+now.toLocaleDateString('de-DE',{day:'numeric',month:'long'})+'</span><span>'+now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr</span>';
   document.getElementById('stats-row').innerHTML='<div class="stat-box"><div class="stat-label">Tageshoch</div><div class="stat-val">'+fmtPrice(data.high,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Tagestief</div><div class="stat-val">'+fmtPrice(data.low,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Volumen</div><div class="stat-val">'+fmtVol(data.volume)+'</div></div><div class="stat-box"><div class="stat-label">Währung</div><div class="stat-val">'+(data.currency||'USD')+'</div></div>';
   drawMainChart(data);
@@ -418,52 +388,49 @@ function renderQuote(data,symbol){
 
 // AUTO ANALYSE
 async function loadAutoAnalyse(name){
-  const ck='a_'+name;
-  const cached=cGet(ck);
+  var ck='a_'+name;
+  var cached=cGet(ck);
   if(cached){renderAnalyse(cached,true);return;}
   try{
-    const cd=currentData||{price:'—',changePct:0,isPos:true};
-    const r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,price:fmtPrice(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,3)})});
-    const data=await r.json();
+    var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,price:fmtPrice(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,3)})});
+    var data=await r.json();
     if(data.error)throw new Error(data.error);
     cSet(ck,data); renderAnalyse(data,false);
   }catch(e){
-    document.getElementById('auto-analyse').innerHTML='<div class="exp-box why"><div class="exp-label">💡 Analyse</div><div class="exp-text" style="color:var(--muted)">Analyse nicht verfügbar. Stelle eine eigene Frage unten.</div></div>';
+    document.getElementById('auto-analyse').innerHTML='<div class="exp-box why"><div class="exp-label">Analyse</div><div class="exp-text" style="color:var(--muted)">Stelle eine eigene Frage unten.</div></div>';
   }
 }
 function renderAnalyse(data,fromCache){
-  const badge=fromCache?'<span class="cache-badge">gecacht</span>':'';
-  document.getElementById('auto-analyse').innerHTML=
-    '<div class="exp-box why"><div class="exp-label"><span>Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div>'+
-    '<div class="exp-box out"><div class="exp-label"><span>Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>';
+  var badge=fromCache?'<span class="cache-badge">gecacht</span>':'';
+  document.getElementById('auto-analyse').innerHTML='<div class="exp-box why"><div class="exp-label"><span>Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div><div class="exp-box out"><div class="exp-label"><span>Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>';
 }
 
 // NEWS
 async function loadNews(assetName){
-  const ck='n_'+assetName;
-  const cached=cGet(ck);
+  var ck='n_'+assetName;
+  var cached=cGet(ck);
   if(cached){currentNews=cached.articles||[];renderNews(cached);return;}
   try{
-    const sym=currentSymbol||'';
-    const r=await fetch('/api/news?asset='+encodeURIComponent(assetName)+'&symbol='+encodeURIComponent(sym));
-    const data=await r.json();
+    var r=await fetch('/api/news?asset='+encodeURIComponent(assetName)+'&symbol='+encodeURIComponent(currentSymbol||''));
+    var data=await r.json();
     currentNews=data.articles||[];
     cSet(ck,data); renderNews(data);
   }catch(e){}
 }
 function renderNews(data){
-  const articles=data.articles||[];
-  const stand=data.cachedAt?new Date(data.cachedAt):new Date();
+  var articles=data.articles||[];
+  var stand=data.cachedAt?new Date(data.cachedAt):new Date();
   document.getElementById('news-stand').textContent='Stand: '+stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
   if(!articles.length){
-    document.getElementById('news-panel').innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">Keine spezifischen News gefunden.</div>';
+    document.getElementById('news-panel').innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">Keine News verfügbar.</div>';
     document.getElementById('news-section').style.display='block';
     return;
   }
-  let html='';
+  var html='';
   articles.forEach(function(a){
-    const badge=sentimentBadge(a.sentiment||'neutral');
-    const desc=a.description?'<div class="news-desc">'+a.description.slice(0,120)+'...</div>':'';
+    var badge=sentimentBadge(a.sentiment||'neutral');
+    var desc=a.description?'<div class="news-desc">'+a.description.slice(0,120)+'...</div>':'';
     html+='<div class="news-item">'+badge+'<a class="news-link" href="'+a.url+'" target="_blank" rel="noopener">'+a.title+'</a><div class="news-meta"><span class="news-source">'+a.source+'</span><span class="news-time">'+timeAgo(a.publishedAt)+'</span></div>'+desc+'</div>';
   });
   document.getElementById('news-panel').innerHTML=html;
@@ -473,118 +440,71 @@ function renderNews(data){
 // AI FRAGE
 async function askAI(){
   if(!currentSymbol)return;
-  const btn=document.getElementById('ai-btn');
-  const resp=document.getElementById('ai-resp');
-  const frage=document.getElementById('ai-input').value.trim();
+  var btn=document.getElementById('ai-btn');
+  var resp=document.getElementById('ai-resp');
+  var frage=document.getElementById('ai-input').value.trim();
   if(!frage)return;
   btn.disabled=true;
   btn.innerHTML='<span class="loading-dots"><span></span><span></span><span></span></span>';
   resp.classList.add('show'); resp.textContent='';
   try{
-    const cd=currentData||{price:'—',changePct:0,isPos:true};
-    const r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,price:fmtPrice(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,3)})});
-    const data=await r.json();
-    const text=data.antwort||'Keine Antwort erhalten.';
-    let i=0;
-    const iv=setInterval(function(){resp.textContent+=text[i];i++;if(i>=text.length){clearInterval(iv);btn.disabled=false;btn.textContent='Fragen ✦';}},12);
+    var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,price:fmtPrice(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,3)})});
+    var data=await r.json();
+    var text=data.antwort||'Keine Antwort erhalten.';
+    var i=0;
+    var iv=setInterval(function(){resp.textContent+=text[i];i++;if(i>=text.length){clearInterval(iv);btn.disabled=false;btn.textContent='Fragen ✦';}},12);
   }catch(e){resp.textContent='Verbindungsfehler.';btn.disabled=false;btn.textContent='Fragen ✦';}
 }
 
-// CHARTS
-function drawSpark(id,chartData,isPos){
-  var el=document.getElementById('spark-'+id);
-  if(!el)return;
-  new Chart(el.getContext('2d'),{
-    type:'line',
-    data:{
-      labels:chartData.map(function(_,i){return i;}),
-      datasets:[{
-        data:chartData,
-        borderColor:isPos?'#10B981':'#EF4444',
-        borderWidth:1.5,
-        pointRadius:0,
-        tension:0,
-        fill:false
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:{display:false},y:{display:false}},
-      animation:{duration:0}
-    }
-  });
-}
-
-// Crosshair Plugin
-var crosshairPlugin = {
+// CROSSHAIR PLUGIN
+var crosshairPlugin={
   id:'crosshair',
   afterDraw:function(chart){
-    if(chart._hoverIdx==null) return;
+    if(chart._hoverIdx==null)return;
     var meta=chart.getDatasetMeta(0);
-    if(!meta.data[chart._hoverIdx]) return;
+    if(!meta.data[chart._hoverIdx])return;
     var pt=meta.data[chart._hoverIdx];
-    var x=pt.x, y=pt.y;
     var ca=chart.chartArea;
     var ctx=chart.ctx;
     var color=chart._lineColor||'#10B981';
     ctx.save();
-    // Vertikale Linie
-    ctx.beginPath();
-    ctx.moveTo(x,ca.top);
-    ctx.lineTo(x,ca.bottom);
-    ctx.lineWidth=1;
-    ctx.strokeStyle='rgba(0,0,0,0.18)';
-    ctx.setLineDash([4,4]);
-    ctx.stroke();
-    // Horizontale Linie
-    ctx.beginPath();
-    ctx.moveTo(ca.left,y);
-    ctx.lineTo(ca.right,y);
-    ctx.lineWidth=1;
-    ctx.strokeStyle='rgba(0,0,0,0.1)';
-    ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pt.x,ca.top);ctx.lineTo(pt.x,ca.bottom);
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.setLineDash([4,4]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ca.left,pt.y);ctx.lineTo(ca.right,pt.y);
+    ctx.lineWidth=1;ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.stroke();
     ctx.setLineDash([]);
-    // Punkt
-    ctx.beginPath();
-    ctx.arc(x,y,6,0,Math.PI*2);
-    ctx.fillStyle='#fff';
-    ctx.fill();
-    ctx.lineWidth=2.5;
-    ctx.strokeStyle=color;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x,y,2.5,0,Math.PI*2);
-    ctx.fillStyle=color;
-    ctx.fill();
+    ctx.beginPath();ctx.arc(pt.x,pt.y,6,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    ctx.lineWidth=2.5;ctx.strokeStyle=color;ctx.stroke();
+    ctx.beginPath();ctx.arc(pt.x,pt.y,2.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
     ctx.restore();
   },
   afterEvent:function(chart,args){
-    var evt=args.event;
-    var ca=chart.chartArea;
-    if(!ca) return;
+    var evt=args.event;var ca=chart.chartArea;
+    if(!ca)return;
     if(evt.type==='mousemove'&&evt.x>=ca.left&&evt.x<=ca.right&&evt.y>=ca.top&&evt.y<=ca.bottom){
-      var meta=chart.getDatasetMeta(0);
-      var minD=Infinity, idx=null;
-      meta.data.forEach(function(pt,i){
-        var d=Math.abs(pt.x-evt.x);
-        if(d<minD){minD=d;idx=i;}
-      });
+      var meta=chart.getDatasetMeta(0);var minD=Infinity;var idx=null;
+      meta.data.forEach(function(pt,i){var d=Math.abs(pt.x-evt.x);if(d<minD){minD=d;idx=i;}});
       chart._hoverIdx=idx;
-    } else {
-      chart._hoverIdx=null;
-    }
+    }else{chart._hoverIdx=null;}
     chart.draw();
   }
 };
 
+// SPARK CHARTS
+function drawSpark(id,chartData,isPos){
+  var el=document.getElementById('spark-'+id);
+  if(!el)return;
+  new Chart(el.getContext('2d'),{type:'line',data:{labels:chartData.map(function(_,i){return i;}),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:0,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:0}}});
+}
+
+// MAIN CHART
 function drawMainChart(data){
   var ctx=document.getElementById('mainChart').getContext('2d');
   var color=data.isPos?'#10B981':'#EF4444';
   var currency=data.currency||'USD';
   var firstPrice=data.chartData&&data.chartData.length>0?data.chartData[0]:data.price;
-  if(mainChart) mainChart.destroy();
+  if(mainChart)mainChart.destroy();
   mainChart=new Chart(ctx,{
     type:'line',
     plugins:[crosshairPlugin],
@@ -648,7 +568,7 @@ function drawMainChart(data){
           ticks:{color:'#9CA3AF',font:{size:11},maxTicksLimit:6,maxRotation:0}
         },
         y:{
-          grid:{color:'rgba(0,0,0,0.05)',lineWidth:1},
+          grid:{color:'rgba(0,0,0,0.05)'},
           border:{display:false},
           position:'right',
           ticks:{
@@ -656,9 +576,9 @@ function drawMainChart(data){
             font:{size:11},
             maxTicksLimit:8,
             callback:function(v){
-              if(!v&&v!==0) return '';
-              if(Math.abs(v)>=1000000) return (v/1000000).toFixed(1)+' M';
-              if(Math.abs(v)>=1000) return Math.round(v).toLocaleString('de-DE');
+              if(!v&&v!==0)return '';
+              if(Math.abs(v)>=1000000)return (v/1000000).toFixed(1)+' M';
+              if(Math.abs(v)>=1000)return Math.round(v).toLocaleString('de-DE');
               return Number(v).toLocaleString('de-DE',{maximumFractionDigits:2});
             }
           }
@@ -673,19 +593,16 @@ async function buildGrid(){
   var grid=document.getElementById('asset-grid');
   grid.innerHTML=PINNED.map(function(p){
     var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
-    return '<div class="asset-card" id="ac-'+id+'" onclick="selectSymbol(''+p.symbol+'',''+p.label+'')"><div class="ac-symbol">'+p.icon+' '+p.symbol+'</div><div class="ac-name">'+p.label+'</div><div class="ac-price" id="price-'+id+'">—</div><div id="chg-'+id+'"></div><div class="mini-spark"><canvas id="spark-'+id+'"></canvas></div></div>';
+    return '<div class="asset-card" id="ac-'+id+'" onclick="selectSymbol(\''+p.symbol+'\',\''+p.label+'\')"><div class="ac-symbol">'+p.icon+' '+p.symbol+'</div><div class="ac-name">'+p.label+'</div><div class="ac-price" id="price-'+id+'">—</div><div id="chg-'+id+'"></div><div class="mini-spark"><canvas id="spark-'+id+'"></canvas></div></div>';
   }).join('');
   PINNED.forEach(async function(p){
     try{
       var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_');
-      var cached=cGet('q_'+p.symbol+'_1T');
+      var ck='q_'+p.symbol+'_1T';
+      var cached=cGet(ck);
       var data=cached;
-      if(!data){
-        var r=await fetch('/api/quote?symbol='+encodeURIComponent(p.symbol)+'&range=1T');
-        data=await r.json();
-        if(!data.error) cSet('q_'+p.symbol+'_1T',data);
-      }
-      if(!data||data.error) return;
+      if(!data){var r=await fetch('/api/quote?symbol='+encodeURIComponent(p.symbol)+'&range=1T');data=await r.json();if(!data.error)cSet(ck,data);}
+      if(!data||data.error)return;
       document.getElementById('price-'+id).textContent=fmtPrice(data.price,data.currency);
       document.getElementById('chg-'+id).innerHTML='<span class="ac-chg '+(data.isPos?'pos':'neg')+'">'+(data.isPos?'▲':'▼')+' '+Math.abs(data.changePct).toFixed(2)+'%</span>';
       drawSpark(id,data.chartData||[],data.isPos);
