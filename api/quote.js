@@ -9,12 +9,12 @@ if (!symbol) return res.status(400).json({ error: ‘Kein Symbol’ });
 
 // Zeitraum-Konfiguration
 const configs = {
-‘1T’: { range: ‘1d’,  interval: ‘5m’  },  // ~78 Punkte
-‘1W’: { range: ‘5d’,  interval: ‘30m’ },  // ~80 Punkte
-‘1M’: { range: ‘1mo’, interval: ‘1d’  },  // ~22 Punkte
-‘6M’: { range: ‘6mo’, interval: ‘1d’  },  // ~126 Punkte
-‘1J’: { range: ‘1y’,  interval: ‘1d’  },  // ~252 Punkte
-‘5J’: { range: ‘5y’,  interval: ‘1wk’ },  // ~260 Punkte
+‘1T’: { range: ‘1d’,  interval: ‘5m’  },
+‘1W’: { range: ‘5d’,  interval: ‘30m’ },
+‘1M’: { range: ‘1mo’, interval: ‘1d’  },
+‘6M’: { range: ‘6mo’, interval: ‘1d’  },
+‘1J’: { range: ‘1y’,  interval: ‘1d’  },
+‘5J’: { range: ‘5y’,  interval: ‘1wk’ },
 };
 
 const cfg = configs[range] || configs[‘1T’];
