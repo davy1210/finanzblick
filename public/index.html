@@ -71,7 +71,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .d-price{font-size:36px;font-weight:700;letter-spacing:-1.5px;line-height:1}
 .d-chg{font-size:14px;font-weight:700;padding:5px 12px;border-radius:9px;display:inline-block;margin-top:8px}
 .d-meta{font-size:12px;color:var(--muted);text-align:right;line-height:1.8;flex-shrink:0}
-.chart-box{height:190px;margin-bottom:0}
+.chart-box{height:200px;margin-bottom:0}
 .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 .stat-box{flex:1;min-width:80px;background:var(--bg);border-radius:10px;padding:10px 12px}
 .stat-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
@@ -491,7 +491,7 @@ async function askAI(){
 function drawSpark(id,chartData,isPos){
   const el=document.getElementById('spark-'+id);
   if(!el)return;
-  new Chart(el.getContext('2d'),{type:'line',data:{labels:chartData.map(function(_,i){return i;}),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:0,fill:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:300}}});
+  new Chart(el.getContext('2d'),{type:'line',data:{labels:chartData.map(function(_,i){return i;}),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:0,fill:false,stepped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:300}}});
 }
 // Crosshair Plugin — Google/Trade Republic Style
 const crosshairPlugin = {
@@ -590,6 +590,7 @@ function drawMainChart(data) {
         pointRadius: 0,
         pointHoverRadius: 0,
         tension: 0,
+        stepped: false,
         fill: true,
         backgroundColor: function(ctx) {
           var g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
@@ -652,9 +653,15 @@ function drawMainChart(data) {
           ticks: {
             color: '#9CA3AF',
             font: { size: 11 },
+            maxTicksLimit: 5,
             callback: function(v) { return v ? v.toLocaleString('de-DE') : ''; }
           },
-          position: 'right'
+          position: 'right',
+          afterDataLimits: function(axis) {
+            const range = axis.max - axis.min;
+            axis.min = axis.min - range * 0.05;
+            axis.max = axis.max + range * 0.05;
+          }
         }
       }
     }
