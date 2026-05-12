@@ -658,16 +658,16 @@ function drawMainChart(data){
             callback:function(v){return v?v.toLocaleString('de-DE'):'';}
           },
           position:'right',
-          afterDataLimits:function(axis){
+         afterDataLimits:function(axis){
             var r=axis.max-axis.min;
-            axis.min=axis.min-r*0.05;
-            axis.max=axis.max+r*0.05;
+            axis.min=axis.min-r*0.03;
+            axis.max=axis.max+r*0.03;
+            var step=r/7;
+            axis.ticks=[];
+            for(var i=0;i<=7;i++){
+              axis.ticks.push({value:Math.round((axis.min+step*i)/1000)*1000});
+            }
           }
-        }
-      }
-    }
-  });
-}
 
 async function buildGrid(){
   const grid=document.getElementById('asset-grid');
