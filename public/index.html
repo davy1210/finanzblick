@@ -388,8 +388,12 @@ async function changeRange(range, btn){
   btn.classList.add('active');
   currentRange = range;
   if(!currentSymbol) return;
-  // Reset chart
   document.getElementById('hover-price').textContent='Lädt...';
+  document.getElementById('hover-chg').textContent='';
+  // Force fresh fetch — bypass cache for range changes
+  var cacheKey='q_'+currentSymbol+'_'+range;
+  delete MEM[cacheKey];
+  try { localStorage.removeItem('fb_'+cacheKey); } catch(e) {}
   await loadQuote(currentSymbol, range);
 }
 function renderQuote(data,symbol){
@@ -489,178 +493,175 @@ async function askAI(){
 
 // CHARTS
 function drawSpark(id,chartData,isPos){
-  const el=document.getElementById('spark-'+id);
+  var el=document.getElementById('spark-'+id);
   if(!el)return;
-  new Chart(el.getContext('2d'),{type:'line',data:{labels:chartData.map(function(_,i){return i;}),datasets:[{data:chartData,borderColor:isPos?'#10B981':'#EF4444',borderWidth:1.5,pointRadius:0,tension:0,fill:false,stepped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:300}}});
+  new Chart(el.getContext('2d'),{
+    type:'line',
+    data:{
+      labels:chartData.map(function(_,i){return i;}),
+      datasets:[{
+        data:chartData,
+        borderColor:isPos?'#10B981':'#EF4444',
+        borderWidth:1.5,
+        pointRadius:0,
+        tension:0,
+        fill:false
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false}},
+      animation:{duration:0}
+    }
+  });
 }
-// Crosshair Plugin — Google/Trade Republic Style
-const crosshairPlugin = {
-  id: 'crosshair',
-  afterDraw: function(chart) {
-    if (chart._hoverIdx === undefined || chart._hoverIdx === null) return;
-    const ctx = chart.ctx;
-    const meta = chart.getDatasetMeta(0);
-    if (!meta.data[chart._hoverIdx]) return;
-    const point = meta.data[chart._hoverIdx];
-    const x = point.x;
-    const y = point.y;
-    const top = chart.chartArea.top;
-    const bottom = chart.chartArea.bottom;
-    const left = chart.chartArea.left;
-    const right = chart.chartArea.right;
 
+// Crosshair Plugin
+var crosshairPlugin = {
+  id:'crosshair',
+  afterDraw:function(chart){
+    if(chart._hoverIdx==null) return;
+    var meta=chart.getDatasetMeta(0);
+    if(!meta.data[chart._hoverIdx]) return;
+    var pt=meta.data[chart._hoverIdx];
+    var x=pt.x, y=pt.y;
+    var ca=chart.chartArea;
+    var ctx=chart.ctx;
+    var color=chart._lineColor||'#10B981';
     ctx.save();
-
-    // Vertikale gestrichelte Linie
+    // Vertikale Linie
     ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x, bottom);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-    ctx.setLineDash([5, 4]);
+    ctx.moveTo(x,ca.top);
+    ctx.lineTo(x,ca.bottom);
+    ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(0,0,0,0.18)';
+    ctx.setLineDash([4,4]);
     ctx.stroke();
-
-    // Horizontale gestrichelte Linie
+    // Horizontale Linie
     ctx.beginPath();
-    ctx.moveTo(left, y);
-    ctx.lineTo(right, y);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.setLineDash([5, 4]);
+    ctx.moveTo(ca.left,y);
+    ctx.lineTo(ca.right,y);
+    ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(0,0,0,0.1)';
     ctx.stroke();
-
     ctx.setLineDash([]);
-
-    // Punkt auf der Linie — großer ausgefüllter Kreis
-    const color = chart._chartColor || '#10B981';
+    // Punkt
     ctx.beginPath();
-    ctx.arc(x, y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
+    ctx.arc(x,y,6,0,Math.PI*2);
+    ctx.fillStyle='#fff';
     ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = color;
+    ctx.lineWidth=2.5;
+    ctx.strokeStyle=color;
     ctx.stroke();
-
-    // Kleiner innerer Punkt
     ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.arc(x,y,2.5,0,Math.PI*2);
+    ctx.fillStyle=color;
     ctx.fill();
-
     ctx.restore();
   },
-  afterEvent: function(chart, args) {
-    const evt = args.event;
-    const ca = chart.chartArea;
-    if (!ca) return;
-    if ((evt.type === 'mousemove' || evt.type === 'mouseleave') &&
-        evt.x >= ca.left && evt.x <= ca.right &&
-        evt.y >= ca.top && evt.y <= ca.bottom) {
-      // Nächsten Datenpunkt finden
-      const meta = chart.getDatasetMeta(0);
-      let minDist = Infinity, idx = null;
-      meta.data.forEach(function(pt, i) {
-        const dist = Math.abs(pt.x - evt.x);
-        if (dist < minDist) { minDist = dist; idx = i; }
+  afterEvent:function(chart,args){
+    var evt=args.event;
+    var ca=chart.chartArea;
+    if(!ca) return;
+    if(evt.type==='mousemove'&&evt.x>=ca.left&&evt.x<=ca.right&&evt.y>=ca.top&&evt.y<=ca.bottom){
+      var meta=chart.getDatasetMeta(0);
+      var minD=Infinity, idx=null;
+      meta.data.forEach(function(pt,i){
+        var d=Math.abs(pt.x-evt.x);
+        if(d<minD){minD=d;idx=i;}
       });
-      chart._hoverIdx = idx;
+      chart._hoverIdx=idx;
     } else {
-      chart._hoverIdx = null;
+      chart._hoverIdx=null;
     }
     chart.draw();
   }
 };
 
-function drawMainChart(data) {
-  const ctx = document.getElementById('mainChart').getContext('2d');
-  const color = data.isPos ? '#10B981' : '#EF4444';
-  const currency = data.currency || 'USD';
-  const firstPrice = data.chartData && data.chartData[0] ? data.chartData[0] : data.price;
-  if (mainChart) mainChart.destroy();
-
-  mainChart = new Chart(ctx, {
-    type: 'line',
-    plugins: [crosshairPlugin],
-    data: {
-      labels: data.chartTimes || [],
-      datasets: [{
-        data: data.chartData || [],
-        borderColor: color,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        pointHoverRadius: 0,
-        tension: 0,
-        stepped: false,
-        fill: true,
-        backgroundColor: function(ctx) {
-          var g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
-          g.addColorStop(0, data.isPos ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)');
-          g.addColorStop(1, 'rgba(255,255,255,0)');
+function drawMainChart(data){
+  var ctx=document.getElementById('mainChart').getContext('2d');
+  var color=data.isPos?'#10B981':'#EF4444';
+  var currency=data.currency||'USD';
+  var firstPrice=data.chartData&&data.chartData.length>0?data.chartData[0]:data.price;
+  if(mainChart) mainChart.destroy();
+  mainChart=new Chart(ctx,{
+    type:'line',
+    plugins:[crosshairPlugin],
+    data:{
+      labels:data.chartTimes||[],
+      datasets:[{
+        data:data.chartData||[],
+        borderColor:color,
+        borderWidth:1.5,
+        pointRadius:0,
+        pointHoverRadius:0,
+        tension:0,
+        fill:true,
+        backgroundColor:function(c){
+          var g=c.chart.ctx.createLinearGradient(0,0,0,200);
+          g.addColorStop(0,data.isPos?'rgba(16,185,129,0.08)':'rgba(239,68,68,0.08)');
+          g.addColorStop(1,'rgba(255,255,255,0)');
           return g;
         }
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      animation: { duration: 250 },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: false,
-          external: function(context) {
-            const tooltip = context.tooltip;
-            const hp = document.getElementById('hover-price');
-            const hc = document.getElementById('hover-chg');
-            // Farbe für Crosshair merken
-            context.chart._chartColor = color;
-            if (!tooltip || tooltip.opacity === 0) {
-              hp.textContent = fmtPrice(data.price, currency);
-              const pct = data.rangeChangePct || data.changePct || 0;
-              const pos = (data.rangeChange || data.change || 0) >= 0;
-              hc.textContent = (pos ? '▲ +' : '▼ ') + Math.abs(pct).toFixed(2) + '%';
-              hc.className = 'hover-chg ' + (pos ? 'pos' : 'neg');
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      animation:{duration:200},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          enabled:false,
+          external:function(context){
+            var tooltip=context.tooltip;
+            var hp=document.getElementById('hover-price');
+            var hc=document.getElementById('hover-chg');
+            context.chart._lineColor=color;
+            if(!tooltip||tooltip.opacity===0){
+              hp.textContent=fmtPrice(data.price,currency);
+              var pct=data.rangeChangePct||data.changePct||0;
+              var pos=(data.rangeChange||data.change||0)>=0;
+              hc.textContent=(pos?'▲ +':'▼ ')+Math.abs(pct).toFixed(2)+'%';
+              hc.className='hover-chg '+(pos?'pos':'neg');
               return;
             }
-            if (tooltip.dataPoints && tooltip.dataPoints[0]) {
-              const hoverPrice = tooltip.dataPoints[0].parsed.y;
-              const label = tooltip.dataPoints[0].label || '';
-              const hoverChange = hoverPrice - firstPrice;
-              const hoverPct = (hoverChange / firstPrice) * 100;
-              const hpos = hoverChange >= 0;
-              hp.textContent = fmtPrice(hoverPrice, currency);
-              hc.textContent = (hpos ? '▲ +' : '▼ ') + Math.abs(hoverPct).toFixed(2) + '% · ' + label;
-              hc.className = 'hover-chg ' + (hpos ? 'pos' : 'neg');
+            if(tooltip.dataPoints&&tooltip.dataPoints[0]){
+              var hp2=tooltip.dataPoints[0].parsed.y;
+              var label=tooltip.dataPoints[0].label||'';
+              var hch=hp2-firstPrice;
+              var hpct=firstPrice?(hch/firstPrice)*100:0;
+              var hpos=hch>=0;
+              hp.textContent=fmtPrice(hp2,currency);
+              hc.textContent=(hpos?'▲ +':'▼ ')+Math.abs(hpct).toFixed(2)+'% · '+label;
+              hc.className='hover-chg '+(hpos?'pos':'neg');
             }
           }
         }
       },
-      scales: {
-        x: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: {
-            color: '#9CA3AF',
-            font: { size: 11 },
-            maxTicksLimit: 6,
-            maxRotation: 0
-          }
+      scales:{
+        x:{
+          grid:{display:false},
+          border:{display:false},
+          ticks:{color:'#9CA3AF',font:{size:11},maxTicksLimit:6,maxRotation:0}
         },
-        y: {
-          grid: { color: 'rgba(0,0,0,0.04)' },
-          border: { display: false },
-          ticks: {
-            color: '#9CA3AF',
-            font: { size: 11 },
-            maxTicksLimit: 5,
-            callback: function(v) { return v ? v.toLocaleString('de-DE') : ''; }
+        y:{
+          grid:{color:'rgba(0,0,0,0.04)'},
+          border:{display:false},
+          ticks:{
+            color:'#9CA3AF',
+            font:{size:11},
+            maxTicksLimit:5,
+            callback:function(v){return v?v.toLocaleString('de-DE'):'';}
           },
-          position: 'right',
-          afterDataLimits: function(axis) {
-            const range = axis.max - axis.min;
-            axis.min = axis.min - range * 0.05;
-            axis.max = axis.max + range * 0.05;
+          position:'right',
+          afterDataLimits:function(axis){
+            var r=axis.max-axis.min;
+            axis.min=axis.min-r*0.05;
+            axis.max=axis.max+r*0.05;
           }
         }
       }
@@ -668,7 +669,6 @@ function drawMainChart(data) {
   });
 }
 
-// GRID
 async function buildGrid(){
   const grid=document.getElementById('asset-grid');
   grid.innerHTML=PINNED.map(function(p){
