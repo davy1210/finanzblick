@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .logo{font-size:19px;font-weight:800;display:flex;align-items:center;gap:10px;letter-spacing:-.3px}
 .logo-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#059669,#2563EB);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800}
 .nav-center{display:flex;gap:2px;background:var(–bg);padding:4px;border-radius:12px}
-.nl{padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;color:var(–muted);cursor:pointer;border:none;background:none;font-family:var(–font);transition:all .15s}
+.nl{padding:7px 18px;border-radius:8px;font-size:13px;font-weight:600;color:var(–muted);cursor:pointer;border:none;background:none;font-family:var(–font);transition:all .15s;letter-spacing:.1px}
 .nl.active{background:var(–white);color:var(–text);box-shadow:var(–shadow-sm)}
 .nav-right{display:flex;align-items:center;gap:8px}
 .nav-icon-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid var(–border);background:var(–white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;color:var(–text)}
@@ -46,7 +46,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .page-sub{font-size:13px;color:var(–muted)}
 
 /* MODAL BASE */
-.modal-overlay{position:fixed;inset:0;background:var(–overlay);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal-overlay.hidden{display:none}
 .modal{background:var(–white);border-radius:24px;padding:40px;max-width:520px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,0.2);position:relative}
 .modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:8px;border:none;background:var(–bg);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(–muted)}
@@ -59,21 +59,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .ob-sub{font-size:14px;color:var(–muted);margin-bottom:32px;line-height:1.6;font-weight:400}
 .ob-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(–muted);margin-bottom:12px}
 .ob-options{display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
-.ob-option{padding:16px 20px;border-radius:14px;border:2px solid var(–border);cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;gap:14px;background:var(–bg)}
+.ob-option{padding:18px 20px;border-radius:13px;border:2px solid var(–border);cursor:pointer;transition:all .15s;display:flex;align-items:flex-start;justify-content:space-between;background:var(–bg)}
 .ob-option:hover{border-color:var(–blue);background:var(–blue-bg)}
 .ob-option.selected{border-color:var(–blue);background:var(–blue-bg)}
-.ob-option-icon{font-size:24px;flex-shrink:0;margin-top:2px}
-.ob-option-title{font-size:14px;font-weight:700;margin-bottom:3px}
-.ob-option-desc{font-size:12px;color:var(–muted);font-weight:400;line-height:1.5}
+.ob-option.selected::after{content:‘✓’;font-size:16px;font-weight:800;color:var(–blue);flex-shrink:0;margin-left:12px;margin-top:2px}
+.ob-option-icon{display:none}
+.ob-option-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.ob-option-desc{font-size:12px;color:var(–muted);font-weight:400;line-height:1.6}
 .ob-btn{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(–blue),var(–purple));color:#fff;font-family:var(–font);font-size:15px;font-weight:700;border:none;cursor:pointer;transition:opacity .15s;letter-spacing:.2px}
 .ob-btn:hover{opacity:.9}
 .ob-btn:disabled{opacity:.5;cursor:not-allowed}
 .ob-disclaimer{font-size:11px;color:var(–muted);text-align:center;margin-top:14px;line-height:1.5}
 
 /* USER PANEL */
-.panel-overlay{position:fixed;inset:0;background:var(–overlay);z-index:90;display:none;backdrop-filter:blur(2px)}
+.panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;display:none}
 .panel-overlay.open{display:block}
-.user-panel{position:fixed;top:0;right:0;bottom:0;width:320px;background:var(–white);z-index:95;box-shadow:-8px 0 32px rgba(0,0,0,0.15);transform:translateX(100%);transition:transform .25s ease;overflow-y:auto}
+.user-panel{position:fixed;top:0;right:0;bottom:0;width:320px;background:var(–white);z-index:95;box-shadow:-4px 0 40px rgba(0,0,0,0.25);transform:translateX(100%);transition:transform .25s ease;overflow-y:auto;border-left:1px solid var(–border)}
 .user-panel.open{transform:translateX(0)}
 .panel-header{padding:24px 20px 16px;border-bottom:1px solid var(–border);display:flex;align-items:center;justify-content:space-between}
 .panel-title{font-size:17px;font-weight:800;letter-spacing:-.3px}
@@ -96,10 +97,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 
 /* LEVEL SELECTOR IN PANEL */
 .level-options{display:flex;flex-direction:column;gap:8px}
-.level-opt{padding:12px 14px;border-radius:11px;border:1.5px solid var(–border);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px;background:var(–bg)}
-.level-opt:hover{border-color:var(–blue)}
+.level-opt{padding:12px 16px;border-radius:10px;border:1.5px solid var(–border);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;background:var(–bg)}
+.level-opt:hover{border-color:var(–blue);background:var(–blue-bg)}
 .level-opt.active{border-color:var(–blue);background:var(–blue-bg)}
-.level-opt-icon{font-size:18px}
+.level-opt.active::after{content:‘✓’;font-size:14px;font-weight:800;color:var(–blue)}
+.level-opt-icon{font-size:18px;display:none}
 .level-opt-text{font-size:13px;font-weight:600}
 
 /* LEGAL SECTION */
@@ -143,6 +145,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .asset-card{background:var(–white);border:1.5px solid var(–border);border-radius:var(–radius);padding:16px;cursor:pointer;transition:all .2s;box-shadow:var(–shadow-sm)}
 .asset-card:hover{border-color:var(–blue);transform:translateY(-2px);box-shadow:var(–shadow)}
 .asset-card.active{border-color:var(–blue);box-shadow:0 0 0 4px rgba(37,99,235,0.1),var(–shadow)}
+.ac-icon-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(–blue-bg);color:var(–blue);font-size:10px;font-weight:800;letter-spacing:-.2px;margin-bottom:8px}
 .ac-symbol{font-size:10px;font-weight:700;color:var(–muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
 .ac-name{font-size:12px;color:var(–muted);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
 .ac-price{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
@@ -218,7 +221,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 /* ASK AI */
 .ask-ai-section{background:linear-gradient(135deg,var(–purple-bg),var(–blue-bg));border:1.5px solid rgba(124,58,237,0.2);border-radius:16px;padding:22px}
 .ask-ai-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.ask-ai-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(–purple),var(–blue));display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
+.ask-ai-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(–purple),var(–blue));display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;flex-shrink:0;letter-spacing:-.3px}
 .ask-ai-title{font-size:15px;font-weight:800}
 .ask-ai-sub{font-size:12px;color:var(–muted);margin-bottom:14px;margin-left:46px;font-weight:500}
 .ask-ai-row{display:flex;gap:10px}
@@ -280,29 +283,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="ob-label">Ihr Erfahrungsniveau</div>
     <div class="ob-options">
       <div class="ob-option" data-level="beginner" onclick="selectLevel(this)">
-        <div class="ob-option-icon">🌱</div>
-        <div>
-          <div class="ob-option-title">Einsteiger</div>
-          <div class="ob-option-desc">Ich beginne gerade mit dem Investieren und möchte Finanzthemen verständlich erklärt bekommen.</div>
-        </div>
-      </div>
-      <div class="ob-option" data-level="intermediate" onclick="selectLevel(this)">
-        <div class="ob-option-icon">📈</div>
-        <div>
-          <div class="ob-option-title">Fortgeschritten</div>
-          <div class="ob-option-desc">Ich habe Erfahrung mit Aktien und ETFs und möchte tiefergehende Analysen und Zusammenhänge verstehen.</div>
-        </div>
-      </div>
-      <div class="ob-option" data-level="expert" onclick="selectLevel(this)">
-        <div class="ob-option-icon">🏦</div>
-        <div>
-          <div class="ob-option-title">Erfahrener Investor</div>
-          <div class="ob-option-desc">Ich bin mit Finanzmärkten vertraut und möchte professionelle, detaillierte Marktanalysen.</div>
-        </div>
-      </div>
+
+```
+    <div>
+      <div class="ob-option-title">Einsteiger</div>
+      <div class="ob-option-desc">Ich beginne gerade mit dem Investieren und möchte Finanzthemen verständlich erklärt bekommen.</div>
     </div>
-    <button class="ob-btn" id="ob-btn" onclick="finishOnboarding()" disabled>Finanzblick starten →</button>
-    <div class="ob-disclaimer">Finanzblick ist ein Informationsangebot und keine Anlageberatung. Alle Inhalte dienen ausschließlich der Bildung und Information.</div>
+  </div>
+  <div class="ob-option" data-level="intermediate" onclick="selectLevel(this)">
+    
+    <div>
+      <div class="ob-option-title">Fortgeschritten</div>
+      <div class="ob-option-desc">Ich habe Erfahrung mit Aktien und ETFs und möchte tiefergehende Analysen und Zusammenhänge verstehen.</div>
+    </div>
+  </div>
+  <div class="ob-option" data-level="expert" onclick="selectLevel(this)">
+    
+    <div>
+      <div class="ob-option-title">Erfahrener Investor</div>
+      <div class="ob-option-desc">Ich bin mit Finanzmärkten vertraut und möchte professionelle, detaillierte Marktanalysen.</div>
+    </div>
+  </div>
+</div>
+<button class="ob-btn" id="ob-btn" onclick="finishOnboarding()" disabled>Finanzblick starten →</button>
+<div class="ob-disclaimer">Finanzblick ist ein Informationsangebot und keine Anlageberatung. Alle Inhalte dienen ausschließlich der Bildung und Information.</div>
+```
+
   </div>
 </div>
 
@@ -333,18 +339,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="panel-section-title">Ihr Erfahrungsniveau</div>
     <div class="level-options">
       <div class="level-opt" data-level="beginner" onclick="changeLevelPanel(this)">
-        <span class="level-opt-icon">🌱</span>
-        <span class="level-opt-text">Einsteiger</span>
-      </div>
-      <div class="level-opt" data-level="intermediate" onclick="changeLevelPanel(this)">
-        <span class="level-opt-icon">📈</span>
-        <span class="level-opt-text">Fortgeschritten</span>
-      </div>
-      <div class="level-opt" data-level="expert" onclick="changeLevelPanel(this)">
-        <span class="level-opt-icon">🏦</span>
-        <span class="level-opt-text">Erfahrener Investor</span>
-      </div>
-    </div>
+
+```
+    <span class="level-opt-text">Einsteiger</span>
+  </div>
+  <div class="level-opt" data-level="intermediate" onclick="changeLevelPanel(this)">
+    
+    <span class="level-opt-text">Fortgeschritten</span>
+  </div>
+  <div class="level-opt" data-level="expert" onclick="changeLevelPanel(this)">
+    
+    <span class="level-opt-text">Erfahrener Investor</span>
+  </div>
+</div>
+```
+
   </div>
 
   <!-- DARSTELLUNG -->
@@ -352,7 +361,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div class="panel-section">
     <div class="panel-section-title">Darstellung</div>
     <div class="panel-row">
-      <div><span class="panel-row-icon">🌙</span><span class="panel-row-label">Dark Mode</span></div>
+      <div><span class="panel-row-label">Dark Mode</span></div>
       <label class="toggle">
         <input type="checkbox" id="dark-toggle" onchange="toggleDark(this)">
         <span class="toggle-slider"></span>
@@ -365,19 +374,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
   <div class="panel-section">
     <div class="panel-section-title">Rechtliches</div>
     <div class="legal-item" onclick="showLegal('impressum')">
-      <span class="legal-item-title">📋 Impressum</span>
+      <span class="legal-item-title">Impressum</span>
       <span class="legal-item-arrow">›</span>
     </div>
     <div class="legal-item" onclick="showLegal('datenschutz')">
-      <span class="legal-item-title">🔒 Datenschutzerklärung</span>
+      <span class="legal-item-title">Datenschutzerklärung</span>
       <span class="legal-item-arrow">›</span>
     </div>
     <div class="legal-item" onclick="showLegal('disclaimer')">
-      <span class="legal-item-title">⚖️ Haftungsausschluss</span>
+      <span class="legal-item-title">Haftungsausschluss</span>
       <span class="legal-item-arrow">›</span>
     </div>
     <div class="legal-item" onclick="showLegal('nutzung')">
-      <span class="legal-item-title">📄 Nutzungsbedingungen</span>
+      <span class="legal-item-title">Nutzungsbedingungen</span>
       <span class="legal-item-arrow">›</span>
     </div>
   </div>
@@ -394,13 +403,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 <nav class="nav">
   <div class="logo"><div class="logo-icon">FB</div>Finanzblick</div>
   <div class="nav-center">
-    <button class="nl active" onclick="gotoPage('dash',this)">📊 Märkte</button>
-    <button class="nl" onclick="gotoPage('events',this)">📅 Ereignisse</button>
-    <button class="nl" onclick="gotoPage('wissen',this)">📖 Wissen</button>
+    <button class="nl active" onclick="gotoPage('dash',this)">Märkte</button>
+    <button class="nl" onclick="gotoPage('events',this)">Ereignisse</button>
+    <button class="nl" onclick="gotoPage('wissen',this)">Wissen</button>
   </div>
   <div class="nav-right">
     <span class="level-badge" id="level-badge">Einsteiger</span>
-    <button class="nav-icon-btn" onclick="openPanel()" title="Einstellungen">⚙️</button>
+    <button class="nav-icon-btn" onclick="openPanel()" title="Einstellungen" style="font-size:13px;font-weight:700;letter-spacing:-.3px">≡</button>
   </div>
 </nav>
 
@@ -412,7 +421,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="page-sub">Suche nach jeder Aktie, ETF, Krypto oder Rohstoff weltweit</div>
   </div>
   <div class="search-wrap" id="search-wrap">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon" style="font-size:14px;color:var(--muted);font-weight:600">⌕</span>
     <input class="search-input" id="search-input" placeholder="z.B. Apple, Bitcoin, DAX, Volkswagen..." autocomplete="off">
     <div class="search-spinner" id="search-spinner"><div class="spinner"></div></div>
     <div class="search-results" id="search-results"></div>
@@ -452,21 +461,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
     <div class="stats-row" id="stats-row"></div>
     <div class="analyse-section">
       <div class="range-indicator ri-1T" id="range-indicator">
-        <span id="ri-icon">📅</span><span id="ri-label">Analyse für: Heute</span>
+        <span id="ri-icon"></span><span id="ri-label">Analyse für: Heute</span>
       </div>
       <div id="auto-analyse">
         <div class="analyse-loading"><span class="loading-dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>
       </div>
       <div class="news-section" id="news-section" style="display:none">
         <div class="news-header">
-          <div class="news-title-txt">📰 Relevante News</div>
+          <div class="news-title-txt">Relevante News</div>
           <div class="news-stand" id="news-stand"></div>
         </div>
         <div class="news-list" id="news-panel"></div>
       </div>
       <div class="ask-ai-section">
         <div class="ask-ai-header">
-          <div class="ask-ai-icon">✦</div>
+          <div class="ask-ai-icon">KI</div>
           <div class="ask-ai-title">Stell deine Frage</div>
         </div>
         <div class="ask-ai-sub">Unsere KI beantwortet deine Fragen verständlich — abgestimmt auf dein Erfahrungsniveau</div>
@@ -514,7 +523,7 @@ var userLevel='beginner';
 var isDark=false;
 
 var LEVEL_LABELS={beginner:'Einsteiger',intermediate:'Fortgeschritten',expert:'Erfahrener Investor'};
-var LEVEL_ICONS={beginner:'🌱',intermediate:'📈',expert:'🏦'};
+var LEVEL_ICONS={beginner:'',intermediate:'',expert:''};
 
 function loadSettings(){
   var level=localStorage.getItem('fb_level');
@@ -586,6 +595,10 @@ function toggleDark(input){
   isDark=input.checked;
   document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
   localStorage.setItem('fb_dark',isDark?'1':'0');
+  // Force repaint
+  document.body.style.display='none';
+  document.body.offsetHeight;
+  document.body.style.display='';
 }
 
 // ── LEGAL ─────────────────────────────────────────────────────────────────
@@ -647,19 +660,19 @@ function closeLegal(){
 
 // ── DATA ──────────────────────────────────────────────────────────────────
 var RANGE_META={
-  '1T':{label:'Heute',icon:'📅',cls:'ri-1T'},
-  '1W':{label:'Diese Woche',icon:'📅',cls:'ri-1W'},
-  '1M':{label:'Letzter Monat',icon:'📆',cls:'ri-1M'},
-  '6M':{label:'Letzte 6 Monate',icon:'📆',cls:'ri-6M'},
-  '1J':{label:'Letztes Jahr',icon:'🗓️',cls:'ri-1J'},
-  '5J':{label:'Letzte 5 Jahre',icon:'🗓️',cls:'ri-5J'},
+  '1T':{label:'Heute',cls:'ri-1T'},
+  '1W':{label:'Diese Woche',cls:'ri-1W'},
+  '1M':{label:'Letzter Monat',cls:'ri-1M'},
+  '6M':{label:'Letzte 6 Monate',cls:'ri-6M'},
+  '1J':{label:'Letztes Jahr',cls:'ri-1J'},
+  '5J':{label:'Letzte 5 Jahre',cls:'ri-5J'},
 };
 
 var PINNED=[
-  {symbol:'^GDAXI',label:'DAX',icon:'🇩🇪'},{symbol:'BTC-USD',label:'Bitcoin',icon:'₿'},
-  {symbol:'NVDA',label:'Nvidia',icon:'🟢'},{symbol:'GC=F',label:'Gold',icon:'🥇'},
-  {symbol:'^GSPC',label:'S&P 500',icon:'🇺🇸'},{symbol:'AAPL',label:'Apple',icon:'🍎'},
-  {symbol:'ETH-USD',label:'Ethereum',icon:'⟠'},{symbol:'TSLA',label:'Tesla',icon:'⚡'}
+  {symbol:'^GDAXI',label:'DAX',icon:'DE'},{symbol:'BTC-USD',label:'Bitcoin',icon:'BTC'},
+  {symbol:'NVDA',label:'Nvidia',icon:'NV'},{symbol:'GC=F',label:'Gold',icon:'AU'},
+  {symbol:'^GSPC',label:'S&P 500',icon:'US'},{symbol:'AAPL',label:'Apple',icon:'AP'},
+  {symbol:'ETH-USD',label:'Ethereum',icon:'ETH'},{symbol:'TSLA',label:'Tesla',icon:'TS'}
 ];
 
 var EVENTS=[
@@ -727,7 +740,6 @@ function updateRangeIndicator(range){
   var meta=RANGE_META[range]||RANGE_META['1T'];
   var el=document.getElementById('range-indicator');
   el.className='range-indicator '+meta.cls;
-  document.getElementById('ri-icon').textContent=meta.icon;
   document.getElementById('ri-label').textContent='Analyse für: '+meta.label;
   document.getElementById('hover-period').textContent=meta.label;
 }
@@ -752,7 +764,7 @@ async function doSearch(q){
     var res=data.results||[];
     if(!res.length){sResults.innerHTML='<div class="sr-empty">Keine Ergebnisse gefunden</div>';return;}
     sResults.innerHTML=res.map(function(r){
-      var icon=r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'📈':'📊';
+      var icon=r.symbol.includes('-USD')?'🪙':r.symbol.startsWith('^')?'':'';
       return '<div class="sr-item" onclick="selectSymbol(\''+r.symbol+'\',\''+r.name.replace(/'/g,"\\'")+'\');closeSearch()"><div class="sr-icon">'+icon+'</div><div><div class="sr-name">'+r.name+'</div><div class="sr-type">'+r.symbol+' · '+r.type+'</div></div><div class="sr-right">'+(r.exchange||'')+'</div></div>';
     }).join('');
   }catch(e){sResults.innerHTML='<div class="sr-empty">Suche nicht verfügbar</div>';}
@@ -873,8 +885,8 @@ function renderAnalyse(data,fromCache){
   var badge=fromCache?'<span class="cache-badge">gecacht</span>':'';
   document.getElementById('auto-analyse').innerHTML=
     '<div class="analyse-grid">'+
-    '<div class="exp-box why"><div class="exp-label"><span>📊 Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div>'+
-    '<div class="exp-box out"><div class="exp-label"><span>🔭 Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>'+
+    '<div class="exp-box why"><div class="exp-label"><span>Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'Keine Analyse.')+'</div></div>'+
+    '<div class="exp-box out"><div class="exp-label"><span>Ausblick</span></div><div class="exp-text">'+(data.ausblick||'Keine Analyse.')+'</div></div>'+
     '</div>';
 }
 
