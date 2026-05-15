@@ -1,138 +1,146 @@
-import https from 'https';
+import https from ‘https’;
 
-// Zeitraum-spezifische Analyse-Kontexte
 const RANGE_CONTEXT = {
-  '1T': {
-    label: 'Heute',
-    focus: 'Erkläre was HEUTE passiert: aktuelle Kursbewegung, heutige News und kurzfristige Marktreaktionen. Fokus auf intraday-Bewegungen und tagesaktuelle Ereignisse.',
-    newsCount: 3,
-  },
-  '1W': {
-    label: 'Diese Woche',
-    focus: 'Erkläre die Entwicklung der letzten 7 Tage: wöchentliche Trends, wichtige Ereignisse diese Woche, kurzfristige Marktbewegungen.',
-    newsCount: 3,
-  },
-  '1M': {
-    label: 'Letzter Monat',
-    focus: 'Erkläre die Entwicklung des letzten Monats: monatliche Trends, Quartalszahlen, wichtige Ereignisse der letzten 4 Wochen, mittelfristige Faktoren.',
-    newsCount: 4,
-  },
-  '6M': {
-    label: 'Letzte 6 Monate',
-    focus: 'Erkläre die Entwicklung der letzten 6 Monate: mittelfristige Trends, Zinsentscheidungen, wirtschaftliche Entwicklungen, Sektortrends.',
-    newsCount: 4,
-  },
-  '1J': {
-    label: 'Letztes Jahr',
-    focus: 'Erkläre die Jahresentwicklung: wichtige Meilensteine des letzten Jahres, makroökonomische Faktoren, regulatorische Änderungen, langfristige Trends.',
-    newsCount: 5,
-  },
-  '5J': {
-    label: 'Letzte 5 Jahre',
-    focus: 'Erkläre die langfristige Entwicklung über 5 Jahre: strukturelle Veränderungen, technologische Disruption, makroökonomische Zyklen, langfristige Wachstumstreiber.',
-    newsCount: 5,
-  },
+‘1T’: { label: ‘Heute’, focus: ‘Analysiere die heutige Kursbewegung und tagesaktuelle Ereignisse. Fokus auf intraday-Bewegungen.’ },
+‘1W’: { label: ‘Diese Woche’, focus: ‘Analysiere die Entwicklung der letzten 7 Tage und wöchentliche Trends.’ },
+‘1M’: { label: ‘Letzter Monat’, focus: ‘Analysiere die monatliche Entwicklung, Quartalszahlen und mittelfristige Faktoren.’ },
+‘6M’: { label: ‘Letzte 6 Monate’, focus: ‘Analysiere mittelfristige Trends, Zinsentscheidungen und wirtschaftliche Entwicklungen.’ },
+‘1J’: { label: ‘Letztes Jahr’, focus: ‘Analysiere die Jahresentwicklung, makroökonomische Faktoren und regulatorische Änderungen.’ },
+‘5J’: { label: ‘Letzte 5 Jahre’, focus: ‘Analysiere langfristige strukturelle Veränderungen, Marktzyklen und Wachstumstreiber.’ },
 };
 
+const LEVEL_CONTEXT = {
+‘beginner’: {
+label: ‘Einsteiger’,
+instruction: ‘Erkläre alles in sehr einfacher Sprache ohne Fachjargon. Erkläre jeden Fachbegriff sofort wenn du ihn verwendest. Kurze, klare Sätze. Vermeide komplexe Zusammenhänge.’,
+},
+‘intermediate’: {
+label: ‘Fortgeschritten’,
+instruction: ‘Verwende Finanzfachbegriffe aber erkläre komplexere Konzepte kurz. Gehe auf technische und fundamentale Faktoren ein.’,
+},
+‘expert’: {
+label: ‘Erfahrener Investor’,
+instruction: ‘Verwende professionelle Finanzsprache. Gehe auf technische Analyse, Makroökonomie und Marktstruktur ein. Keine vereinfachenden Erklärungen nötig.’,
+},
+};
+
+// Strikte Finanz-Fakten Regeln
+const FACT_RULES = `
+WICHTIGE REGELN — halte dich strikt daran:
+
+- Kryptowährungen (Bitcoin, Ethereum etc.) sind KEINE sicheren Häfen — sie sind hochspekulative, volatile Assets
+- Sichere Häfen sind: Gold, Schweizer Franken (CHF), US-Staatsanleihen, japanischer Yen
+- Mache KEINE konkreten Kursprognosen oder Preisziele
+- Sage NICHT “kaufen” oder “verkaufen” — das ist Anlageberatung
+- Beschreibe nur was passiert ist und mögliche Faktoren — keine Garantien
+- Wenn du dir bei einem Fakt nicht sicher bist, lass ihn weg
+- Keine Aussagen wie “sicherer Hafen” für Aktien oder Krypto
+  `;
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if(req.method !== 'POST') return res.status(405).end();
+res.setHeader(‘Access-Control-Allow-Origin’, ‘*’);
+if(req.method !== ‘POST’) return res.status(405).end();
 
-  const { asset, price, changePct, isPos, frage, news, range } = req.body;
-  const apiKey = process.env.GROQ_API_KEY;
+const { asset, price, changePct, isPos, frage, news, range, level } = req.body;
+const apiKey = process.env.GROQ_API_KEY;
 
-  const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
-  const richtung = isPos
-    ? `gestiegen (+${Math.abs(changePct || 0).toFixed(2)}%)`
-    : `gefallen (-${Math.abs(changePct || 0).toFixed(2)}%)`;
+const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT[‘1T’];
+const lvl = LEVEL_CONTEXT[level] || LEVEL_CONTEXT[‘beginner’];
 
-  const newsKontext = news && news.length > 0
-    ? '\n\nAktuelle relevante News:\n' + news.slice(0, ctx.newsCount).map(n =>
-        `- [${n.sentiment === 'bullish' ? '↑' : n.sentiment === 'bearish' ? '↓' : '→'}] ${n.title}`
-      ).join('\n')
-    : '';
+const richtung = isPos
+? `gestiegen (+${Math.abs(changePct || 0).toFixed(2)}%)`
+: `gefallen (-${Math.abs(changePct || 0).toFixed(2)}%)`;
 
-  let systemPrompt, userPrompt;
+const newsKontext = news && news.length > 0
+? ‘\n\nAktuelle relevante News:\n’ + news.slice(0, 4).map(n =>
+`- [${n.sentiment === 'bullish' ? '↑ Bullisch' : '↓ Bärisch'}] ${n.title}`
+).join(’\n’)
+: ‘’;
 
-  if(frage) {
-    systemPrompt = `Du bist Finanzblick, ein freundlicher Finanzerklärer für Privatanleger in Österreich und Deutschland. 
-Antworte immer auf Deutsch, einfach und klar verständlich für Einsteiger. 
-Beziehe den Zeitraum "${ctx.label}" in deine Antwort ein.
-Keine Anlageberatung — nur Information und Bildung.`;
+let systemPrompt, userPrompt;
 
-    userPrompt = `${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.${newsKontext}
+if(frage) {
+systemPrompt = `Du bist Finanzblick, ein seriöser und präziser Finanzerklärer für Privatanleger in Österreich und Deutschland. Nutzerlevel: ${lvl.label}. ${lvl.instruction} Antworte immer auf Deutsch. ${FACT_RULES} Keine Anlageberatung — nur faktenbasierte Information und Bildung.`;
 
-Nutzerfrage: "${frage}"
+```
+userPrompt = `${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.${newsKontext}
+```
 
-Beantworte die Frage im Kontext des Zeitraums "${ctx.label}" auf Deutsch für Einsteiger. Max. 3 Absätze.`;
+Nutzerfrage: “${frage}”
 
-  } else {
-    systemPrompt = `Du bist Finanzblick, ein professioneller aber verständlicher Finanzerklärer für Privatanleger. 
-Antworte immer auf Deutsch, klar und strukturiert.
-Strukturiere deine Antwort EXAKT mit diesen zwei Überschriften: MARKTLAGE und AUSBLICK
-Keine Anlageberatung — nur Information und Bildung.`;
+Beantworte die Frage sachlich und faktenbasiert im Kontext des Zeitraums “${ctx.label}”. Max. 3 Absätze.`;
 
-    userPrompt = `${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.
+} else {
+systemPrompt = `Du bist Finanzblick, ein seriöser und präziser Finanzerklärer für Privatanleger in Österreich und Deutschland. Nutzerlevel: ${lvl.label}. ${lvl.instruction} Antworte immer auf Deutsch. Strukturiere deine Antwort EXAKT mit: MARKTLAGE und AUSBLICK ${FACT_RULES} Keine Anlageberatung — nur faktenbasierte Information und Bildung.`;
+
+```
+userPrompt = `${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.
+```
+
 ${ctx.focus}${newsKontext}
 
-MARKTLAGE: Erkläre in 2-3 Sätzen warum sich ${asset} im Zeitraum "${ctx.label}" so entwickelt hat. Beziehe die News ein falls vorhanden.
+MARKTLAGE: Erkläre sachlich und faktenbasiert in 2-3 Sätzen warum sich ${asset} im Zeitraum “${ctx.label}” so entwickelt hat.
 
-AUSBLICK: Erkläre in 2-3 Sätzen was als nächstes passieren könnte — passend zum Zeitraum "${ctx.label}".
+AUSBLICK: Erkläre in 2-3 Sätzen welche Faktoren die weitere Entwicklung beeinflussen könnten — ohne konkrete Kursprognosen.`;
+}
 
-Keine Anlageberatung.`;
-  }
+const body = JSON.stringify({
+model: ‘llama-3.1-8b-instant’,
+max_tokens: 700,
+temperature: 0.3,
+messages: [
+{ role: ‘system’, content: systemPrompt },
+{ role: ‘user’, content: userPrompt }
+]
+});
 
-  const body = JSON.stringify({
-    model: 'llama-3.1-8b-instant',
-    max_tokens: 700,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ]
+try {
+const text = await new Promise((resolve, reject) => {
+const r = https.request({
+hostname: ‘api.groq.com’,
+path: ‘/openai/v1/chat/completions’,
+method: ‘POST’,
+headers: {
+‘Content-Type’: ‘application/json’,
+‘Authorization’: `Bearer ${apiKey}`,
+‘Content-Length’: Buffer.byteLength(body)
+}
+}, resp => {
+let d = ‘’;
+resp.on(‘data’, c => d += c);
+resp.on(‘end’, () => {
+try {
+const p = JSON.parse(d);
+if(p.error) return reject(new Error(p.error.message));
+resolve(p.choices?.[0]?.message?.content || ‘Keine Antwort.’);
+} catch(e) { reject(e); }
+});
+});
+r.on(‘error’, reject);
+r.write(body);
+r.end();
+});
+
+```
+// ** Sterne entfernen die Groq manchmal hinzufügt
+const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+
+if(!frage) {
+  const marktMatch = clean.match(/MARKTLAGE[:\s]*([\s\S]*?)(?=AUSBLICK|$)/i);
+  const ausblickMatch = clean.match(/AUSBLICK[:\s]*([\s\S]*?)$/i);
+  return res.status(200).json({
+    warum: marktMatch ? marktMatch[1].trim() : clean,
+    ausblick: ausblickMatch ? ausblickMatch[1].trim() : '',
+    range: range || '1T',
+    rangeLabel: ctx.label,
+    typ: 'auto'
   });
+}
 
-  try {
-    const text = await new Promise((resolve, reject) => {
-      const r = https.request({
-        hostname: 'api.groq.com',
-        path: '/openai/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Length': Buffer.byteLength(body)
-        }
-      }, resp => {
-        let d = '';
-        resp.on('data', c => d += c);
-        resp.on('end', () => {
-          try {
-            const p = JSON.parse(d);
-            if(p.error) return reject(new Error(p.error.message));
-            resolve(p.choices?.[0]?.message?.content || 'Keine Antwort.');
-          } catch(e) { reject(e); }
-        });
-      });
-      r.on('error', reject);
-      r.write(body);
-      r.end();
-    });
+return res.status(200).json({ antwort: clean, typ: 'frage' });
+```
 
-    if(!frage) {
-      const marktMatch = text.match(/MARKTLAGE[:\s]*([\s\S]*?)(?=AUSBLICK|$)/i);
-      const ausblickMatch = text.match(/AUSBLICK[:\s]*([\s\S]*?)$/i);
-      return res.status(200).json({
-        warum: marktMatch ? marktMatch[1].trim() : text,
-        ausblick: ausblickMatch ? ausblickMatch[1].trim() : '',
-        range: range || '1T',
-        rangeLabel: ctx.label,
-        typ: 'auto'
-      });
-    }
-
-    return res.status(200).json({ antwort: text, typ: 'frage' });
-
-  } catch(e) {
-    return res.status(500).json({ error: e.message });
-  }
+} catch(e) {
+return res.status(500).json({ error: e.message });
+}
 }
