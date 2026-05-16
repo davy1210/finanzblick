@@ -40,9 +40,10 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .page-sub{font-size:13px;color:var(–muted);margin-bottom:24px}
 
 /* SETTINGS PANEL */
-.settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200}
+.settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200}
 .settings-overlay.open{display:block}
-.settings-panel{position:absolute;top:0;right:0;bottom:0;width:280px;background:var(–card);border-left:1px solid var(–border);overflow-y:auto;box-shadow:-8px 0 32px rgba(0,0,0,0.12)}
+.settings-panel{position:fixed;top:0;right:0;bottom:0;width:280px;background:var(–card);border-left:1px solid var(–border);overflow-y:auto;box-shadow:-8px 0 32px rgba(0,0,0,0.15);z-index:201;transform:translateX(100%);transition:transform .25s ease}
+.settings-panel.open{transform:translateX(0)}
 .sp-header{padding:20px;border-bottom:1px solid var(–border);display:flex;align-items:center;justify-content:space-between}
 .sp-title{font-size:16px;font-weight:800}
 .sp-close{width:30px;height:30px;border-radius:7px;border:1px solid var(–border);background:var(–bg);cursor:pointer;font-size:16px;color:var(–muted);display:flex;align-items:center;justify-content:center}
@@ -269,40 +270,42 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
   </div>
 </div>
 
-<!-- SETTINGS OVERLAY -->
+<!-- SETTINGS OVERLAY (separate from panel) -->
 
-<div class="settings-overlay" id="settings-overlay" onclick="closeSettings(event)">
-  <div class="settings-panel" onclick="event.stopPropagation()">
-    <div class="sp-header">
-      <div class="sp-title">Einstellungen</div>
-      <button class="sp-close" onclick="closeSettings()">✕</button>
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
+
+<!-- SETTINGS PANEL (sibling, not child) -->
+
+<div class="settings-panel" id="settings-panel">
+  <div class="sp-header">
+    <div class="sp-title">Einstellungen</div>
+    <button class="sp-close" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="sp-section">
+    <div class="sp-section-title">Erfahrungsniveau</div>
+    <button class="level-btn" data-level="beginner" onclick="setLevel('beginner')">Einsteiger</button>
+    <button class="level-btn" data-level="intermediate" onclick="setLevel('intermediate')">Fortgeschritten</button>
+    <button class="level-btn" data-level="expert" onclick="setLevel('expert')">Erfahrener Investor</button>
+  </div>
+  <div class="sp-section">
+    <div class="sp-section-title">Darstellung</div>
+    <div class="sp-row">
+      <span class="sp-row-label">Dark Mode</span>
+      <label class="toggle">
+        <input type="checkbox" id="dark-toggle" onchange="setDark(this.checked)">
+        <div class="toggle-track"></div>
+      </label>
     </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Erfahrungsniveau</div>
-      <button class="level-btn" data-level="beginner" onclick="setLevel('beginner')">Einsteiger</button>
-      <button class="level-btn" data-level="intermediate" onclick="setLevel('intermediate')">Fortgeschritten</button>
-      <button class="level-btn" data-level="expert" onclick="setLevel('expert')">Erfahrener Investor</button>
-    </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Darstellung</div>
-      <div class="sp-row">
-        <span class="sp-row-label">Dark Mode</span>
-        <label class="toggle">
-          <input type="checkbox" id="dark-toggle" onchange="setDark(this.checked)">
-          <div class="toggle-track"></div>
-        </label>
-      </div>
-    </div>
-    <div class="sp-section">
-      <div class="sp-section-title">Rechtliches</div>
-      <button class="legal-btn" onclick="showLegal('impressum')"><span>Impressum</span><span class="legal-arrow">›</span></button>
-      <button class="legal-btn" onclick="showLegal('datenschutz')"><span>Datenschutzerklärung</span><span class="legal-arrow">›</span></button>
-      <button class="legal-btn" onclick="showLegal('haftung')"><span>Haftungsausschluss</span><span class="legal-arrow">›</span></button>
-      <button class="legal-btn" onclick="showLegal('nutzung')"><span>Nutzungsbedingungen</span><span class="legal-arrow">›</span></button>
-    </div>
-    <div class="sp-section">
-      <div style="font-size:12px;color:var(--muted);text-align:center">Finanzblick v1.0 Beta<br>Kein Anlageberatungsangebot</div>
-    </div>
+  </div>
+  <div class="sp-section">
+    <div class="sp-section-title">Rechtliches</div>
+    <button class="legal-btn" onclick="showLegal('impressum')"><span>Impressum</span><span class="legal-arrow">›</span></button>
+    <button class="legal-btn" onclick="showLegal('datenschutz')"><span>Datenschutzerklärung</span><span class="legal-arrow">›</span></button>
+    <button class="legal-btn" onclick="showLegal('haftung')"><span>Haftungsausschluss</span><span class="legal-arrow">›</span></button>
+    <button class="legal-btn" onclick="showLegal('nutzung')"><span>Nutzungsbedingungen</span><span class="legal-arrow">›</span></button>
+  </div>
+  <div class="sp-section">
+    <div style="font-size:12px;color:var(--muted);text-align:center">Finanzblick v1.0 Beta<br>Kein Anlageberatungsangebot</div>
   </div>
 </div>
 
@@ -449,11 +452,11 @@ function setDark(on){
 }
 function openSettings(){
   document.getElementById('settings-overlay').classList.add('open');
+  document.getElementById('settings-panel').classList.add('open');
 }
-function closeSettings(e){
-  if(!e || e.target === document.getElementById('settings-overlay')){
-    document.getElementById('settings-overlay').classList.remove('open');
-  }
+function closeSettings(){
+  document.getElementById('settings-overlay').classList.remove('open');
+  document.getElementById('settings-panel').classList.remove('open');
 }
 
 // ── ONBOARDING ────────────────────────────────────────────────────────────
