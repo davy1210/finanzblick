@@ -72,13 +72,16 @@ module.exports = async function handler(req, res) {
       .map(e => {
         const dt = fmtDate(new Date(e.date).getTime() / 1000);
         const impact = getImpact(e.symbol);
+        const eps = e.epsEstimate ? '$' + e.epsEstimate + ' pro Aktie' : 'noch nicht bekannt';
         return {
           type: 'earnings',
           day: dt.day,
           mon: dt.mon,
           date: e.date,
           title: `${e.symbol} Quartalszahlen`,
-          desc: `${e.symbol} veröffentlicht Quartalsergebnisse. EPS-Schätzung: ${e.epsEstimate ? '$' + e.epsEstimate : 'ausstehend'}. Überraschungen bewegen oft den gesamten Sektor.`,
+          what: `${e.symbol} veröffentlicht seinen Quartalsbericht — Einblick in Umsatz, Gewinn und Ausblick des Unternehmens.`,
+          why: `Quartalszahlen zeigen ob ein Unternehmen wächst oder stagniert. Analysten-Erwartung für Gewinn pro Aktie: ${eps}.`,
+          effect: `Besser als erwartet → Aktie steigt oft stark. Schlechter als erwartet → Aktie kann stark fallen. Überraschungen beim Ausblick wirken oft stärker als der aktuelle Gewinn.`,
           impact: impact.label,
           impCls: impact.cls,
           assets: [e.symbol]
@@ -104,12 +107,34 @@ module.exports = async function handler(req, res) {
         const isNFP = e.event.includes('Non Farm') || e.event.includes('Payroll');
         const isECB = e.event.includes('ECB');
 
-        let desc = 'Wichtiger Wirtschaftstermin der die Märkte bewegen kann.';
-        let assets = ['S&P 500','DAX'];
-        if (isFed) { desc = 'Die US-Notenbank entscheidet über Zinsen. Jede Formulierung von Fed-Chef Powell wird von den Märkten genau analysiert.'; assets = ['S&P 500','Gold','Bitcoin','USD']; }
-        if (isCPI) { desc = 'US-Inflationsdaten. Fällt Inflation schneller als erwartet, steigen Zinssenkungshoffnungen. Zu hohe Inflation = Zinserhöhungsrisiko.'; assets = ['S&P 500','Gold','Bitcoin','Anleihen']; }
-        if (isNFP) { desc = 'US-Arbeitsmarktdaten. Zu viele Jobs = Inflation = Zinserhöhung. Zu wenige = Konjunkturschwäche. Beide Extreme bewegen Märkte stark.'; assets = ['S&P 500','DAX','Gold','USD']; }
-        if (isECB) { desc = 'EZB-Zinsentscheidung für Europa. Zinssenkung stützt Aktien. Zinserhöhung belastet Kredite und Märkte.'; assets = ['DAX','Euro','Europäische Aktien']; }
+        let what, why, effect, assets;
+
+        if (isFed) {
+          what = 'Die US-Notenbank (Fed) entscheidet ob Geldleihen teurer oder günstiger wird.';
+          why = 'Zinsen sind der wichtigste Hebel der Weltwirtschaft. Höhere Zinsen bremsen Wachstum und Inflation — niedrigere Zinsen kurbeln sie an.';
+          effect = 'Zinssenkung → Aktien steigen oft, Gold steigt, Dollar fällt. Zinserhöhung → Aktien fallen oft, Anleihen unter Druck.';
+          assets = ['S&P 500','Gold','Bitcoin','USD'];
+        } else if (isCPI) {
+          what = 'Der Verbraucherpreisindex misst wie stark die Preise gestiegen sind — also wie hoch die Inflation ist.';
+          why = 'Inflation bestimmt was die Notenbank als nächstes tut. Zu viel Inflation → Zinserhöhung. Zu wenig → Zinssenkung möglich.';
+          effect = 'Inflation fällt → Hoffnung auf Zinssenkung → Aktien und Bitcoin steigen oft. Inflation steigt → Märkte fallen.';
+          assets = ['S&P 500','Gold','Bitcoin','Anleihen'];
+        } else if (isNFP) {
+          what = 'Non-Farm Payrolls: wie viele neue Stellen außerhalb der Landwirtschaft in den USA geschaffen wurden.';
+          why = 'Viele neue Jobs = Wirtschaft läuft gut, aber auch mehr Lohninflation → Fed erhöht Zinsen. Wenige Jobs = Konjunkturschwäche.';
+          effect = 'Zu viele Jobs → Zinserhöhungsangst → Aktien fallen. Zu wenige → Rezessionsangst → Aktien fallen. Nur ein "goldener Mittelweg" ist gut.';
+          assets = ['S&P 500','DAX','Gold','USD'];
+        } else if (isECB) {
+          what = 'Die Europäische Zentralbank entscheidet über Zinsen in der Eurozone — betrifft direkt Europa und den DAX.';
+          why = 'EZB-Zinsen bestimmen wie teuer Kredite für europäische Unternehmen und Haushalte sind.';
+          effect = 'Zinssenkung → gut für DAX und europäische Aktien. Zinserhöhung → Druck auf Aktien und Immobilien.';
+          assets = ['DAX','Euro','Europäische Aktien'];
+        } else {
+          what = 'Wichtiger Wirtschaftstermin der Hinweise auf den Zustand der Wirtschaft gibt.';
+          why = 'Wirtschaftsdaten beeinflussen die Erwartungen der Investoren und damit die Kurse.';
+          effect = 'Besser als erwartet → Märkte steigen. Schlechter als erwartet → Märkte fallen.';
+          assets = ['S&P 500','DAX'];
+        }
 
         return {
           type: 'economic',
@@ -117,7 +142,7 @@ module.exports = async function handler(req, res) {
           mon: dt.mon,
           date: e.time,
           title: e.event,
-          desc,
+          what, why, effect,
           impact: 'Hoher Einfluss',
           impCls: 'imp-high',
           assets
