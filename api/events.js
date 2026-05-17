@@ -171,39 +171,50 @@ module.exports = async function handler(req, res) {
       }))
     ].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 8);
 
-    // 4. KI-Erklärungen parallel generieren (nur wenn apiKey vorhanden)
-    let events;
-    if (apiKey) {
-      const explained = await Promise.all(allRaw.map(async e => {
-        const explanation = await generateExplanation(e.title, e.type, e.extra, apiKey);
-        const dt = fmtDate(e.date);
-        return {
-          type: e.type,
-          day: dt.day,
-          mon: dt.mon,
-          date: e.date,
-          title: e.title,
-          what: explanation.what,
-          why: explanation.why,
-          effect: explanation.effect,
-          extra: e.extra,
-          impact: e.impact,
-          impCls: e.impCls,
-          assets: e.assets
-        };
-      }));
-      events = explained;
-    } else {
-      events = allRaw.map(e => {
-        const dt = fmtDate(e.date);
-        return { ...e, day: dt.day, mon: dt.mon };
+    // 4. KI-Erklärungen sequenziell generieren (vermeidet Rate Limits)
+    const events = [];
+    for (const e of allRaw) {
+      const dt = fmtDate(e.date);
+      let what = '', why = '', effect = '';
+      if (apiKey) {
+        // 3 Versuche pro Ereignis
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const explanation = await generateExplanation(e.title, e.type, e.extra, apiKey);
+          if (explanation.what && explanation.what.length > 10) {
+            what = explanation.what;
+            why = explanation.why;
+            effect = explanation.effect;
+            break;
+          }
+          // Kurze Pause zwischen Versuchen
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+      events.push({
+        type: e.type,
+        day: dt.day,
+        mon: dt.mon,
+        date: e.date,
+        title: e.title,
+        what,
+        why,
+        effect,
+        extra: e.extra,
+        impact: e.impact,
+        impCls: e.impCls,
+        assets: e.assets
       });
     }
 
-    eventsCache = events;
-    cacheTime = now;
+    // Nur cachen wenn alle Erklärungen geladen wurden
+    const allExplained = events.every(e => e.what && e.what.length > 10);
 
-    return res.status(200).json({ events, cachedAt: new Date(now).toISOString(), fromCache: false });
+    if (allExplained) {
+      eventsCache = events;
+      cacheTime = now;
+    }
+
+    return res.status(200).json({ events, cachedAt: new Date(now).toISOString(), fromCache: false, allExplained });
 
   } catch(e) {
     if (eventsCache) {
