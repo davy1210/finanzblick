@@ -817,7 +817,8 @@ async function buildGrid(){
   });
 }
 
-function toggleEvent(id){
+var evCache={};
+async function toggleEvent(id){
   var ex=document.getElementById('ex-'+id);
   var card=document.getElementById('ev-'+id);
   var tog=document.getElementById('tog-'+id);
@@ -826,10 +827,29 @@ function toggleEvent(id){
     ex.classList.remove('open');
     card.classList.remove('expanded');
     tog.textContent='Details +';
-  } else {
-    ex.classList.add('open');
-    card.classList.add('expanded');
-    tog.textContent='Schließen −';
+    return;
+  }
+  ex.classList.add('open');
+  card.classList.add('expanded');
+  tog.textContent='Schließen −';
+  // Erklärung laden falls noch nicht da
+  var body=document.getElementById('ex-body-'+id);
+  if(!body||evCache[id]) return;
+  var title=ex.dataset.title;
+  var type=ex.dataset.type;
+  if(!title) return;
+  body.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:4px 0"><span class="dots"><span></span><span></span><span></span></span> Erklärung wird geladen...</div>';
+  try{
+    var r=await fetch('/api/explain?title='+encodeURIComponent(title)+'&type='+(type||'economic'));
+    var d=await r.json();
+    evCache[id]=true;
+    var html='';
+    if(d.what) html+='<div class="ev-explain-row"><div class="ev-explain-label">Was passiert hier?</div><div class="ev-explain-text">'+d.what+'</div></div>';
+    if(d.why) html+='<div class="ev-explain-row"><div class="ev-explain-label">Warum ist das wichtig?</div><div class="ev-explain-text">'+d.why+'</div></div>';
+    if(d.effect) html+='<div class="ev-explain-row"><div class="ev-explain-label">Mögliche Marktreaktion</div><div class="ev-explain-effect">'+d.effect+'</div></div>';
+    body.innerHTML=html||'<div style="font-size:13px;color:var(--muted)">Keine Erklärung verfügbar.</div>';
+  }catch(e){
+    body.innerHTML='<div style="font-size:13px;color:var(--muted)">Erklärung nicht verfügbar.</div>';
   }
 }
 function renderEvents(events){
@@ -841,15 +861,9 @@ function renderEvents(events){
     var typeTag=e.type==='earnings'
       ?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--blue-bg);color:var(--blue);margin-right:6px">Quartalszahlen</span>'
       :'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--amber-bg);color:var(--amber);margin-right:6px">Wirtschaft</span>';
-    var what=e.what||'Erklärung wird geladen...';
-    var why=e.why||'';
-    var effect=e.effect||'';
-    var explain='<div class="ev-explain" id="ex-'+i+'">'+
-      '<div class="ev-explain-row"><div class="ev-explain-label">Was passiert hier?</div><div class="ev-explain-text">'+what+'</div></div>'+
-      (why?'<div class="ev-explain-row"><div class="ev-explain-label">Warum ist das wichtig?</div><div class="ev-explain-text">'+why+'</div></div>':'')+
-      (effect?'<div class="ev-explain-row"><div class="ev-explain-label">Mögliche Marktreaktion</div><div class="ev-explain-effect">'+effect+'</div></div>':'')+
-      '</div>';
-    return '<div class="ev-card" id="ev-'+i+'" onclick="toggleEvent('+i+')">'+
+    var safeTitle=e.title.replace(/"/g,'&quot;');
+    var explain='<div class="ev-explain" id="ex-'+i+'" data-title="'+safeTitle+'" data-type="'+e.type+'"><div id="ex-body-'+i+'"></div></div>';
+    return '<div class="ev-card" id="ev-'+i+'" onclick="toggleEvent('+i+')">' +
       '<div class="ev-date"><div class="ev-day">'+e.day+'</div><div class="ev-mon">'+e.mon+'</div></div>'+
       '<div class="ev-body">'+
         '<div class="ev-title-row"><div class="ev-title">'+typeTag+e.title+'</div><span class="ev-toggle" id="tog-'+i+'">Details +</span></div>'+
