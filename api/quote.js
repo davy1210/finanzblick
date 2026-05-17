@@ -1,4 +1,4 @@
-import https from 'https';
+const https = require('https');
 
 const CONFIGS = {
   '1T': { range: '1d',  interval: '5m'  },
@@ -17,7 +17,7 @@ function formatTime(ts, range) {
   return d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
 
@@ -26,25 +26,31 @@ export default async function handler(req, res) {
   if (!symbol) return res.status(400).json({ error: 'Kein Symbol' });
 
   const cfg = CONFIGS[range] || CONFIGS['1T'];
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${cfg.interval}&range=${cfg.range}&includePrePost=false&lang=de`;
+  const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
+    encodeURIComponent(symbol) +
+    '?interval=' + cfg.interval + '&range=' + cfg.range +
+    '&includePrePost=false&lang=de';
 
   try {
-    const body = await new Promise((resolve, reject) => {
-      const r = https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (resp) => {
+    const body = await new Promise(function(resolve, reject) {
+      const r = https.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
+        timeout: 8000
+      }, function(resp) {
         let d = '';
-        resp.on('data', c => d += c);
-        resp.on('end', () => resolve(d));
+        resp.on('data', function(c) { d += c; });
+        resp.on('end', function() { resolve(d); });
       });
       r.on('error', reject);
-      r.setTimeout(8000, () => { r.destroy(); reject(new Error('timeout')); });
+      r.on('timeout', function() { r.destroy(); reject(new Error('timeout')); });
     });
 
     const json = JSON.parse(body);
-    const result = json?.chart?.result?.[0];
+    const result = json && json.chart && json.chart.result && json.chart.result[0];
     if (!result) return res.status(404).json({ error: 'Keine Daten' });
 
     const meta = result.meta || {};
-    const closes = result.indicators?.quote?.[0]?.close || [];
+    const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close) || [];
     const timestamps = result.timestamp || [];
 
     const chartData = [], chartTimes = [];
@@ -79,4 +85,4 @@ export default async function handler(req, res) {
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
-}
+};
