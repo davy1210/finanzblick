@@ -414,9 +414,12 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
 <script>
 // ── CACHE ─────────────────────────────────────────────────────────────────
+// Cache-Zeiten nach Zeitraum (wie server-side)
+var CACHE_BY_RANGE = {'1T':30*60*1000,'1W':2*60*60*1000,'1M':4*60*60*1000,'6M':8*60*60*1000,'1J':12*60*60*1000,'5J':24*60*60*1000};
 var CACHE_MS = 4*60*60*1000, MEM = {};
-function cGet(k){try{var r=localStorage.getItem('fb_'+k);if(r){var e=JSON.parse(r);if(Date.now()-e.t<CACHE_MS)return e.d;}}catch(x){}return MEM[k]&&Date.now()-MEM[k].t<CACHE_MS?MEM[k].d:null;}
-function cSet(k,d){MEM[k]={d:d,t:Date.now()};try{localStorage.setItem('fb_'+k,JSON.stringify({d:d,t:Date.now()}));}catch(x){}}
+function cacheMs(range){ return CACHE_BY_RANGE[range]||CACHE_MS; }
+function cGet(k,ms){var ttl=ms||CACHE_MS;try{var r=localStorage.getItem('fb_'+k);if(r){var e=JSON.parse(r);if(Date.now()-e.t<ttl)return e.d;localStorage.removeItem('fb_'+k);}}catch(x){}return MEM[k]&&Date.now()-MEM[k].t<ttl?MEM[k].d:null;}
+function cSet(k,d,ms){var ttl=ms||CACHE_MS;MEM[k]={d:d,t:Date.now()};try{localStorage.setItem('fb_'+k,JSON.stringify({d:d,t:Date.now()}));}catch(x){}}
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 var userLevel='beginner', isDark=false;
@@ -508,7 +511,11 @@ function fmtP(p,cur){
 }
 function fmtV(v){ if(!v) return '—'; if(v>=1e9) return (v/1e9).toFixed(1)+'B'; if(v>=1e6) return (v/1e6).toFixed(1)+'M'; if(v>=1e3) return (v/1e3).toFixed(1)+'K'; return v; }
 function timeAgo(iso){ var m=(Date.now()-new Date(iso))/60000; if(m<60) return 'vor '+Math.round(m)+' Min.'; if(m<1440) return 'vor '+Math.round(m/60)+' Std.'; return 'vor '+Math.round(m/1440)+' Tagen'; }
-function nbadge(s){ if(s==='bullish') return '<span class="nbadge nb-bull">↑ Bullisch</span>'; if(s==='bearish') return '<span class="nbadge nb-bear">↓ Bärisch</span>'; return '<span class="nbadge nb-neu">→ Neutral</span>'; }
+function nbadge(s,impact){
+  var badge = s==='bullish'?'<span class="nbadge nb-bull">↑ Bullisch</span>':s==='bearish'?'<span class="nbadge nb-bear">↓ Bärisch</span>':'<span class="nbadge nb-neu">→ Neutral</span>';
+  if(impact==='high') badge+='<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--amber-bg);color:var(--amber);margin-left:5px">Wichtig</span>';
+  return badge;
+}
 
 // ── SEARCH ────────────────────────────────────────────────────────────────
 var sInp=document.getElementById('search-input'), sRes=document.getElementById('search-results');
@@ -629,13 +636,13 @@ function renderAnalyse(data,cached){
 // ── NEWS ──────────────────────────────────────────────────────────────────
 async function loadNews(name,range){
   var ck='n_'+name+'_'+range;
-  var cached=cGet(ck);
+  var cached=cGet(ck, cacheMs(range));
   if(cached){ currentNews=cached.articles||[]; renderNews(cached); return; }
   try{
     var bust='&t='+Math.floor(Date.now()/3600000); // Cache buster per Stunde
     var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range+bust);
     var data=await r.json();
-    currentNews=data.articles||[]; cSet(ck,data); renderNews(data);
+    currentNews=data.articles||[]; cSet(ck,data,cacheMs(range)); renderNews(data);
   }catch(e){}
 }
 function renderNews(data){
