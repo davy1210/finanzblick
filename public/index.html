@@ -716,25 +716,46 @@ var PINNED=[
   {symbol:'ETH-USD',label:'Ethereum',badge:'ETH'},{symbol:'TSLA',label:'Tesla',badge:'TS'}
 ];
 var EVENTS=[
-  {day:'14',mon:'Mai',title:'US Inflationsdaten (CPI)',desc:'Hohe Inflation → Fed erhöht Zinsen → Aktien fallen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','S&P 500','Bitcoin']},
-  {day:'21',mon:'Mai',title:'EZB Leitzinsentscheidung',desc:'Zinssenkung positiv für Aktien. Zinserhöhung könnte Märkte enttäuschen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro']},
-  {day:'28',mon:'Mai',title:'Nvidia Quartalszahlen',desc:'Erwartungen sehr hoch. Enttäuschung = Rückgänge. Überraschung = neue Hochs.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Nvidia','Nasdaq']},
-  {day:'05',mon:'Jun',title:'US Arbeitsmarktdaten',desc:'Zu viele Jobs → Zinserhöhung. Zu wenige → Konjunktursorgen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold']},
-  {day:'12',mon:'Jun',title:'Bitcoin Halving-Nachwirkung',desc:'Historisch steigen Kurse 3-6 Monate nach dem Halving.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']}
+  {day:'20',mon:'Mai',title:'Fed Protokoll (FOMC Minutes)',desc:'Die Veröffentlichung der Fed-Sitzungsprotokolle gibt Einblick in die Zinspolitik der US-Notenbank. Märkte reagieren oft stark auf überraschende Formulierungen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','Gold','Bitcoin']},
+  {day:'22',mon:'Mai',title:'Nvidia Quartalszahlen (Q1 2025)',desc:'Der wichtigste Earnings-Termin für den KI-Sektor. Nvidia liefert die Chips für ChatGPT, Gemini und Co. Verfehlt Nvidia die Erwartungen, fällt oft der gesamte Tech-Sektor.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['Nvidia','Nasdaq','S&P 500']},
+  {day:'29',mon:'Mai',title:'EZB Zinsentscheidung',desc:'Die Europäische Zentralbank entscheidet über den Leitzins. Eine Zinssenkung stützt Aktien und Immobilien. Zinserhöhung belastet Kredite und Märkte.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['DAX','Euro','Anleihen']},
+  {day:'06',mon:'Jun',title:'US Arbeitsmarktdaten (NFP)',desc:'Non-Farm Payrolls — die wichtigste US-Wirtschaftszahl. Zu viele neue Jobs = Inflation = Zinserhöhung. Zu wenige = Konjunkturschwäche. Beide Extreme bewegen die Märkte.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','DAX','Gold','USD']},
+  {day:'11',mon:'Jun',title:'US Inflationsdaten (CPI Mai)',desc:'Der Verbraucherpreisindex zeigt ob Inflation steigt oder fällt. Fällt die Inflation schneller als erwartet, steigen die Hoffnungen auf Zinssenkungen.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','Gold','Bitcoin','Anleihen']},
+  {day:'18',mon:'Jun',title:'Fed Zinsentscheidung + Pressekonferenz',desc:'Die US-Notenbank entscheidet über Zinsen. Besonders wichtig ist die Pressekonferenz von Fed-Chef Powell — jedes Wort wird von Märkten analysiert.',impact:'Hoher Einfluss',impCls:'imp-high',assets:['S&P 500','Gold','Bitcoin','USD']},
+  {day:'25',mon:'Jun',title:'Bitcoin: Institutionelle ETF-Zuflüsse Q2',desc:'Quartalsbilanz der Bitcoin-ETF-Zuflüsse. BlackRock, Fidelity und Co. kaufen regelmäßig nach. Hohe Zuflüsse = bullisch für Bitcoin.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['Bitcoin','Ethereum']},
+  {day:'01',mon:'Jul',title:'DAX Quartalsüberprüfung',desc:'Deutsche Börse überprüft quartalsweise die DAX-Zusammensetzung. Aufnahmen in den Index bedeuten Pflichtankäufe von ETFs.',impact:'Mittlerer Einfluss',impCls:'imp-med',assets:['DAX','Deutsche Aktien']}
 ];
 var GLOSSARY=[
-  {term:'ETF (Exchange Traded Fund)',def:'Ein Fonds der automatisch viele Aktien kauft. Günstig, breit gestreut, ideal für Einsteiger.'},
-  {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Höhere Zinsen → Kredite teurer → Aktien fallen oft.'},
-  {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet. Bärisch = fallende Kurse erwartet.'},
-  {term:'Volatilität',def:'Wie stark ein Kurs schwankt. Bitcoin: sehr hoch. Gold: mittel.'},
-  {term:'Dividende',def:'Unternehmensgewinn der direkt an Aktionäre ausgezahlt wird.'},
-  {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. Ziel der EZB: 2% pro Jahr.'},
-  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Breit gestreut verliert man weniger.'},
-  {term:'Marktkapitalisierung',def:'Kurs × alle Aktien = Gesamtwert des Unternehmens.'},
-  {term:'Halving (Bitcoin)',def:'Alle 4 Jahre wird die Menge neuer Bitcoins halbiert.'},
-  {term:'Sicherer Hafen',def:'Assets die in Krisenzeiten als stabil gelten: Gold, Schweizer Franken, US-Staatsanleihen. Krypto gehört NICHT dazu.'},
-  {term:'KGV',def:'Kurs-Gewinn-Verhältnis. KGV 20 = du zahlst 20€ für 1€ Jahresgewinn.'},
-  {term:'Rendite',def:'Ertrag einer Anlage in Prozent. MSCI World: historisch ca. 7-8% pro Jahr.'}
+  // Grundlagen
+  {term:'ETF (Exchange Traded Fund)',def:'Ein Fonds der automatisch viele Aktien kauft — z.B. alle DAX-Firmen oder den weltweiten MSCI World. Günstig, breit gestreut, kein aktives Management nötig. Ideal für Einsteiger als langfristiger Vermögensaufbau.',level:'beginner'},
+  {term:'Aktie',def:'Ein Anteil an einem Unternehmen. Wer eine Apple-Aktie besitzt, gehört Apple zu einem winzigen Teil. Steigt das Unternehmen im Wert, steigt auch die Aktie. Fällt es, fällt auch der Kurs.',level:'beginner'},
+  {term:'Anleihe (Bond)',def:'Ein Kredit den du einem Staat oder Unternehmen gibst. Du bekommst regelmäßige Zinszahlungen und am Ende dein Geld zurück. Sicherer als Aktien, aber weniger Rendite.',level:'beginner'},
+  {term:'Dividende',def:'Ein Teil des Unternehmensgewinns der direkt an Aktionäre ausgezahlt wird — wie Miete auf dein Kapital. Stabile Großunternehmen wie Nestlé oder Coca-Cola zahlen oft verlässliche Dividenden.',level:'beginner'},
+  {term:'Inflation',def:'Preise steigen, Geld wird weniger wert. 100€ heute kaufen in 10 Jahren (bei 3% Inflation) nur noch Waren im Wert von ca. 74€. Ziel der EZB: 2% pro Jahr. Deshalb ist Sparbuch langfristig Geldverlust.',level:'beginner'},
+  {term:'Diversifikation',def:'Nicht alle Eier in einen Korb. Wer in viele verschiedene Assets, Länder und Branchen investiert, verliert weniger wenn ein Bereich einbricht. ETFs auf den MSCI World sind die einfachste Form.',level:'beginner'},
+  {term:'Zinsen / Leitzins',def:'Der Preis fürs Geldleihen. Wenn die EZB (Europa) oder Fed (USA) die Zinsen erhöht, werden Kredite teurer, Unternehmen investieren weniger und Aktien fallen oft. Zinssenkungen wirken umgekehrt.',level:'beginner'},
+  {term:'Bullisch & Bärisch',def:'Bullisch = steigende Kurse erwartet (der Bulle stößt nach oben). Bärisch = fallende Kurse erwartet (der Bär schlägt nach unten). Diese Begriffe beschreiben die Markterwartung von Investoren.',level:'beginner'},
+  {term:'Sicherer Hafen',def:'Assets die in Krisenzeiten als stabil oder wertsteigernd gelten: Gold, Schweizer Franken (CHF), US-Staatsanleihen, japanischer Yen. Kryptowährungen sind KEIN sicherer Hafen — sie sind hochvolatil.',level:'beginner'},
+  {term:'Rendite',def:'Der Gesamtertrag einer Anlage in Prozent. Der MSCI World lieferte historisch ca. 7-8% pro Jahr. Eine Rendite von 7% verdoppelt dein Kapital in ca. 10 Jahren (Zinseszinseffekt).',level:'beginner'},
+  // Fortgeschritten
+  {term:'KGV (Kurs-Gewinn-Verhältnis)',def:'Wie teuer ist eine Aktie im Verhältnis zum Gewinn? KGV 20 bedeutet: du zahlst 20€ für 1€ Jahresgewinn. Niedriges KGV = möglicherweise günstig. Hohes KGV = teuer oder hohes Wachstum erwartet. S&P 500 historisch: KGV ~16.',level:'intermediate'},
+  {term:'Marktkapitalisierung',def:'Aktienkurs × Gesamtanzahl aller Aktien = Gesamtwert des Unternehmens. Apple: über 3 Billionen Dollar. Das ist der theoretische Kaufpreis des gesamten Unternehmens.',level:'intermediate'},
+  {term:'Volatilität',def:'Statistisches Maß wie stark ein Kurs schwankt. Gemessen als Standardabweichung der Renditen. Bitcoin: sehr hoch (>50% p.a.). Gold: mittel (~15%). Anleihen: niedrig. Mehr Volatilität = mehr Chance und mehr Risiko.',level:'intermediate'},
+  {term:'Halving (Bitcoin)',def:'Alle ~4 Jahre wird die Menge neuer Bitcoins pro Block halbiert. Das reduziert das Angebot. Historisch stiegen die Kurse 12-18 Monate nach jedem Halving stark an — aber keine Garantie für die Zukunft.',level:'intermediate'},
+  {term:'Marktkorrektur',def:'Ein Kursrückgang von 10-20% vom letzten Hoch. Korrekturen sind normal und passieren durchschnittlich einmal pro Jahr. Ein Crash (>20%) ist seltener aber heftiger. Langfristige Investoren ignorieren Korrekturen.',level:'intermediate'},
+  {term:'Liquidität',def:'Wie schnell und günstig ein Asset verkauft werden kann. Aktien großer Unternehmen: sehr liquide. Immobilien: wenig liquide. Bitcoin: liquide aber mit hoher Slippage bei großen Mengen.',level:'intermediate'},
+  {term:'Portfolio-Rebalancing',def:'Das regelmäßige Wiederherstellen der ursprünglichen Asset-Aufteilung. Wenn Aktien stark gestiegen sind, verkauft man etwas und kauft das Underperformer nach. Typisch: jährlich oder bei >5% Abweichung.',level:'intermediate'},
+  {term:'Zinseszins',def:'Der "achte Weltwunder" (Einstein). Zinsen werden auf Zinsen gezahlt. 10.000€ bei 7% p.a.: nach 10 Jahren 19.672€, nach 20 Jahren 38.697€, nach 30 Jahren 76.123€. Zeit ist der wichtigste Faktor.',level:'intermediate'},
+  {term:'Short-Selling (Leerverkauf)',def:'Eine Aktie leihen, verkaufen und später günstiger zurückkaufen — man wettet auf fallende Kurse. Riskant: Verluste sind theoretisch unbegrenzt. Wird von Hedgefonds und professionellen Händlern genutzt.',level:'intermediate'},
+  {term:'P/B-Verhältnis (Kurs-Buchwert)',def:'Vergleicht Aktienkurs mit dem Buchwert (Vermögen minus Schulden). P/B unter 1 = Aktie ist günstiger als das bilanzierte Vermögen. Nützlich bei Banken und Industrieunternehmen.',level:'intermediate'},
+  // Experten
+  {term:'Duration (Anleihen)',def:'Maß für die Zinssensitivität von Anleihen. Duration 8 Jahre bedeutet: steigen die Zinsen um 1%, fällt der Anleihenkurs um ~8%. Langläufer haben höhere Duration und reagieren stärker auf Zinsänderungen.',level:'expert'},
+  {term:'Quantitative Easing (QE)',def:'Zentralbank kauft massiv Staatsanleihen und andere Wertpapiere um Geld in die Wirtschaft zu pumpen. Senkt Zinsen, stützt Märkte, kann aber Inflation auslösen. Fed und EZB nutzten QE massiv nach 2008 und 2020.',level:'expert'},
+  {term:'Carry Trade',def:'Kredit in Niedrigzinswährung (z.B. JPY) aufnehmen, in Hochzinswährung anlegen. Profitabel bei stabilen Wechselkursen — aber schlagartig verlustreich wenn Wechselkurse sich bewegen. Auflösung des JPY-Carry-Trades August 2024 = globaler Crash.',level:'expert'},
+  {term:'Sharpe Ratio',def:'Rendite einer Anlage im Verhältnis zum eingegangenen Risiko (Volatilität). Sharpe > 1 = gutes Risiko-Rendite-Verhältnis. Sharpe > 2 = sehr gut. Buffett: ~0.8. Renaissance Medallion Fund: >2.',level:'expert'},
+  {term:'Yield Curve (Zinskurve)',def:'Zeigt Zinsen für verschiedene Laufzeiten. Normal: langfristig höher als kurzfristig. Invertierte Zinskurve (kurz > lang) galt historisch als zuverlässiger Rezessionsindikator — mit 12-18 Monaten Vorlauf.',level:'expert'},
+  {term:'Beta (Marktsensitivität)',def:'Misst wie stark eine Aktie auf Marktbewegungen reagiert. Beta 1.5 = Aktie steigt/fällt 1.5x so stark wie der Markt. Beta < 1 = defensiv. Beta > 1 = aggressiv/zyklisch. Tesla: Beta ~2.',level:'expert'},
+  {term:'EBITDA',def:'Earnings Before Interest, Taxes, Depreciation and Amortization. Gewinn vor Zinsen, Steuern, Abschreibungen. Zeigt operative Ertragskraft unabhängig von Kapitalstruktur und Steuern. Basis für EV/EBITDA-Bewertung.',level:'expert'}
 ];
 
 async function buildGrid(){
@@ -762,13 +783,19 @@ function buildEvents(){
   }).join('');
 }
 
+function getLevelBadge(level){
+  if(level==='expert') return '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--amber-bg);color:var(--amber);margin-left:8px">Experten</span>';
+  if(level==='intermediate') return '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--purple-bg);color:var(--purple);margin-left:8px">Fortgeschritten</span>';
+  return '';
+}
 function renderGloss(items){
   document.getElementById('gloss-list').innerHTML=items.map(function(g){
-    return '<div class="gloss-card"><div class="gloss-term">'+g.term+'</div><div class="gloss-def">'+g.def+'</div></div>';
+    return '<div class="gloss-card"><div class="gloss-term">'+g.term+getLevelBadge(g.level)+'</div><div class="gloss-def">'+g.def+'</div></div>';
   }).join('');
 }
 function filterGloss(q){
-  renderGloss(q?GLOSSARY.filter(function(g){return g.term.toLowerCase().includes(q.toLowerCase())||g.def.toLowerCase().includes(q.toLowerCase());}):GLOSSARY);
+  var filtered=q?GLOSSARY.filter(function(g){return g.term.toLowerCase().includes(q.toLowerCase())||g.def.toLowerCase().includes(q.toLowerCase());}):GLOSSARY;
+  renderGloss(filtered);
 }
 
 // INIT
