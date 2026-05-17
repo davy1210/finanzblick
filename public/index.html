@@ -632,7 +632,8 @@ async function loadNews(name,range){
   var cached=cGet(ck);
   if(cached){ currentNews=cached.articles||[]; renderNews(cached); return; }
   try{
-    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range);
+    var bust='&t='+Math.floor(Date.now()/3600000); // Cache buster per Stunde
+    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range+bust);
     var data=await r.json();
     currentNews=data.articles||[]; cSet(ck,data); renderNews(data);
   }catch(e){}
@@ -644,9 +645,18 @@ function renderNews(data){
   document.getElementById('news-time').textContent='Stand: '+stand.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
   document.getElementById('news-list').innerHTML=arts.map(function(a){
     var desc=a.description&&a.description.length>10?'<div class="ndesc">'+a.description.slice(0,130)+'...</div>':'';
-    return '<div class="news-item"><div class="news-top">'+nbadge(a.sentiment)+'<span class="nsource">'+a.source+'</span><span class="ntime">'+timeAgo(a.publishedAt)+'</span></div><a class="nlink" href="'+a.url+'" target="_blank" rel="noopener">'+a.title+'</a>'+desc+'</div>';
+    var safeUrl=a.url&&a.url!=='#'?a.url:'';
+    var clickFn=safeUrl?'onclick="window.open(''+safeUrl.replace(/\/g,'\\').replace(/'/g,'\'')+'')"':'';
+    return '<div class="news-item" '+clickFn+' style="cursor:'+( safeUrl?'pointer':'default')+'"><div class="news-top">'+nbadge(a.sentiment)+'<span class="nsource">'+a.source+'</span><span class="ntime">'+timeAgo(a.publishedAt)+'</span></div><div class="nlink">'+a.title+'</div>'+desc+'</div>';
   }).join('');
   document.getElementById('news-wrap').style.display='block';
+}
+
+// ── NEWS LINK HANDLER ────────────────────────────────────────────────────
+function openNews(e, url){
+  if(!url) return;
+  e.preventDefault();
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // ── ASK AI ────────────────────────────────────────────────────────────────
@@ -791,6 +801,7 @@ function toggleEvent(id){
   var ex=document.getElementById('ex-'+id);
   var card=document.getElementById('ev-'+id);
   var tog=document.getElementById('tog-'+id);
+  if(!ex||!card||!tog) return;
   if(ex.classList.contains('open')){
     ex.classList.remove('open');
     card.classList.remove('expanded');
@@ -831,16 +842,15 @@ function renderEvents(events){
 
 async function buildEvents(){
   document.getElementById('ev-list').innerHTML='<div style="padding:20px;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:10px"><span class="dots"><span></span><span></span><span></span></span> Ereignisse werden geladen...</div>';
+  // Cache löschen damit neue Felder (what/why/effect) geladen werden
+  delete MEM['events_all'];
+  try{ localStorage.removeItem('fb_events_all'); }catch(x){}
   try{
-    var cached=cGet('events_all');
-    if(cached){ renderEvents(cached); return; }
-    var r=await fetch('/api/events');
+    var r=await fetch('/api/events?v=2');
     var data=await r.json();
     if(data.events&&data.events.length>0){
-      cSet('events_all',data.events);
       renderEvents(data.events);
     } else {
-      // Fallback auf hardcodierte Events
       renderEvents(EVENTS);
     }
   }catch(e){
