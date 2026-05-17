@@ -245,7 +245,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 <body>
 
 <!-- ONBOARDING -->
-<div class="ob-overlay" id="ob-overlay">
+<div class="ob-overlay" id="ob-overlay" style="display:none">
   <div class="ob-modal">
     <div class="ob-logo">
       <div class="ob-logo-icon">FB</div>
@@ -263,7 +263,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
     <div class="ob-option" data-level="expert" onclick="obSelect(this)">
       <div><div class="ob-option-title">Erfahrener Investor</div><div class="ob-option-desc">Ich bin mit Finanzmärkten vertraut und möchte professionelle Marktanalysen.</div></div>
     </div>
-    <button class="ob-btn" id="ob-btn" onclick="obFinish()" disabled>Finanzblick starten</button>
+    <button class="ob-btn" id="ob-btn" onclick="obFinish()" disabled>Finanzblick starten →</button>
     <div class="ob-note">Finanzblick ist ein Informationsangebot — keine Anlageberatung.</div>
   </div>
 </div>
@@ -337,7 +337,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
     <div class="search-results" id="search-results"></div>
   </div>
   <div class="section-label">Beliebte Assets</div>
-  <div class="asset-grid" id="asset-grid"></div>
+  <div class="asset-grid" id="asset-grid"><div style="grid-column:1/-1;padding:20px;color:var(--muted);font-size:13px">Kursdaten werden geladen...</div></div>
   <div class="detail-panel" id="detail-panel" style="display:none">
     <div class="detail-header">
       <div class="detail-top">
