@@ -841,14 +841,14 @@ function renderEvents(events){
     var typeTag=e.type==='earnings'
       ?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--blue-bg);color:var(--blue);margin-right:6px">Quartalszahlen</span>'
       :'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--amber-bg);color:var(--amber);margin-right:6px">Wirtschaft</span>';
-    var explain='';
-    if(e.what){
-      explain='<div class="ev-explain" id="ex-'+i+'">'+
-        '<div class="ev-explain-row"><div class="ev-explain-label">Was passiert hier?</div><div class="ev-explain-text">'+e.what+'</div></div>'+
-        '<div class="ev-explain-row"><div class="ev-explain-label">Warum ist das wichtig?</div><div class="ev-explain-text">'+e.why+'</div></div>'+
-        '<div class="ev-explain-row"><div class="ev-explain-label">Mögliche Marktreaktion</div><div class="ev-explain-effect">'+e.effect+'</div></div>'+
-        '</div>';
-    }
+    var what=e.what||'Erklärung wird geladen...';
+    var why=e.why||'';
+    var effect=e.effect||'';
+    var explain='<div class="ev-explain" id="ex-'+i+'">'+
+      '<div class="ev-explain-row"><div class="ev-explain-label">Was passiert hier?</div><div class="ev-explain-text">'+what+'</div></div>'+
+      (why?'<div class="ev-explain-row"><div class="ev-explain-label">Warum ist das wichtig?</div><div class="ev-explain-text">'+why+'</div></div>':'')+
+      (effect?'<div class="ev-explain-row"><div class="ev-explain-label">Mögliche Marktreaktion</div><div class="ev-explain-effect">'+effect+'</div></div>':'')+
+      '</div>';
     return '<div class="ev-card" id="ev-'+i+'" onclick="toggleEvent('+i+')">'+
       '<div class="ev-date"><div class="ev-day">'+e.day+'</div><div class="ev-mon">'+e.mon+'</div></div>'+
       '<div class="ev-body">'+
