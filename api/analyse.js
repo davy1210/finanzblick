@@ -1,58 +1,126 @@
 const https = require('https');
 
+const RANGE_CONTEXT = {
+  '1T': { label: 'Heute', focus: 'Fokussiere auf die heutige Kursbewegung, tagesaktuelle Nachrichten und kurzfristige Markttreiber.' },
+  '1W': { label: 'Diese Woche', focus: 'Analysiere die Wochenentwicklung, wichtige Ereignisse der letzten 7 Tage und kurzfristige Trends.' },
+  '1M': { label: 'Letzter Monat', focus: 'Betrachte die monatliche Entwicklung, Quartalszahlen, Zinsentscheidungen und mittelfristige Faktoren.' },
+  '6M': { label: 'Letzte 6 Monate', focus: 'Analysiere das Halbjahr: Zinsentwicklung, makroökonomische Trends, Sektorrotation und wichtige Ereignisse.' },
+  '1J': { label: 'Letztes Jahr', focus: 'Betrachte die Jahresentwicklung: Makroökonomie, Regulierung, strukturelle Veränderungen und Jahres-Highlights.' },
+  '5J': { label: 'Letzte 5 Jahre', focus: 'Langfristperspektive: Strukturwandel, Technologiezyklen, Marktzyklen, COVID-Erholung, KI-Revolution und langfristige Treiber.' },
+};
+
+const LEVEL_PROMPTS = {
+  beginner: 'Schreibe für absolute Einsteiger ohne Finanzwissen. Vermeide Fachbegriffe komplett oder erkläre sie sofort in Klammern. Kurze, einfache Sätze. Beispiele aus dem Alltag wenn möglich.',
+  intermediate: 'Schreibe für Investoren mit Grundwissen. Verwende Fachbegriffe wie KGV, Volatilität, Zinsen — aber erkläre komplexere Zusammenhänge kurz. Technische und fundamentale Perspektive.',
+  expert: 'Schreibe für erfahrene Investoren und Trader. Professionelle Finanzsprache, makroökonomische Analyse, technische Faktoren, institutionelle Perspektive. Keine vereinfachenden Erklärungen nötig.',
+};
+
+const RULES = `
+STRIKTE INHALTLICHE REGELN — niemals verletzen:
+1. Kryptowährungen (BTC, ETH etc.) sind HOCHSPEKULATIVE, VOLATILE ASSETS — NIEMALS als sicherer Hafen bezeichnen
+2. Sichere Häfen sind NUR: Gold, Schweizer Franken (CHF), US-Staatsanleihen, japanischer Yen
+3. KEINE konkreten Kursziele oder Preisprognosen nennen
+4. NICHT sagen: kaufen, verkaufen, investieren, einsteigen — das ist Anlageberatung
+5. KEINE Sterne (**), Rauten (#) oder Markdown-Formatierung — nur reiner Text
+6. Keine übertriebenen Aussagen wie "sicher steigen", "garantiert" oder "wird definitiv"
+7. Immer sachlich und faktenbasiert bleiben
+`;
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { asset, price, changePct, isPos, frage, news, range, level } = req.body;
+  const { asset, price, changePct, isPos, frage, news, range, level } = req.body || {};
   const apiKey = process.env.GROQ_API_KEY;
 
-  const rangeLabels = { '1T':'Heute','1W':'Diese Woche','1M':'Letzter Monat','6M':'Letzte 6 Monate','1J':'Letztes Jahr','5J':'Letzte 5 Jahre' };
-  const rangeLabel = rangeLabels[range] || 'Heute';
+  if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
-  const levelText = level === 'expert' ? 'Professionelle Sprache, keine Vereinfachungen.' : level === 'intermediate' ? 'Fachbegriffe verwenden, kurz erklären.' : 'Sehr einfache Sprache, keine Fachbegriffe.';
+  const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
+  const levelPrompt = LEVEL_PROMPTS[level] || LEVEL_PROMPTS['beginner'];
+  const richtung = isPos
+    ? `um +${Math.abs(changePct || 0).toFixed(2)}% gestiegen`
+    : `um -${Math.abs(changePct || 0).toFixed(2)}% gefallen`;
 
-  const richtung = isPos ? 'gestiegen (+' + Math.abs(changePct||0).toFixed(2) + '%)' : 'gefallen (-' + Math.abs(changePct||0).toFixed(2) + '%)';
+  const newsBlock = news && news.length > 0
+    ? '\n\nAktuelle relevante Nachrichten:\n' + news.slice(0, 4).map(n =>
+        `- [${n.sentiment === 'bullish' ? 'Positiv' : n.sentiment === 'bearish' ? 'Negativ' : 'Neutral'}] ${n.title} (${n.source})`
+      ).join('\n')
+    : '';
 
-  const newsText = news && news.length > 0 ? '\n\nNews:\n' + news.slice(0,3).map(n => '- ' + n.title).join('\n') : '';
+  let system, user;
 
-  const system = 'Du bist Finanzblick, ein sachlicher Finanzerklärer fuer Privatanleger. ' + levelText + ' Antworte auf Deutsch. WICHTIG: Krypto ist KEIN sicherer Hafen. Keine Sterne oder ** im Text. Keine Anlageberatung.';
+  if (frage) {
+    system = `Du bist Finanzblick — ein sachlicher, präziser Finanzerklärer für Privatanleger in Deutschland und Österreich.
+${levelPrompt}
+${RULES}
+Beantworte Fragen ausschließlich informativ und bildend. Keine Anlageberatung.`;
 
-  const user = frage
-    ? asset + ' bei ' + price + ', Zeitraum ' + rangeLabel + ', ' + richtung + '.' + newsText + '\n\nFrage: ' + frage + '\n\nMax. 3 kurze Absaetze.'
-    : asset + ' bei ' + price + ', Zeitraum ' + rangeLabel + ', ' + richtung + '.' + newsText + '\n\nMARKTLAGE: Warum diese Entwicklung? (2-3 Saetze)\n\nAUSBLICK: Was koennte als naechstes passieren? (2-3 Saetze)';
+    user = `Kontext: ${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.${newsBlock}
+
+Nutzerfrage: "${frage}"
+
+Beantworte sachlich und faktenbasiert im Kontext des Zeitraums "${ctx.label}". Maximal 3 Absätze.`;
+
+  } else {
+    system = `Du bist Finanzblick — ein sachlicher, präziser Finanzerklärer für Privatanleger in Deutschland und Österreich.
+${levelPrompt}
+${RULES}
+Strukturiere deine Antwort EXAKT mit den zwei Überschriften: MARKTLAGE und AUSBLICK
+Keine Anlageberatung — nur faktenbasierte Analyse und Bildung.`;
+
+    user = `${asset} steht bei ${price} und ist im Zeitraum "${ctx.label}" ${richtung}.
+${ctx.focus}${newsBlock}
+
+MARKTLAGE: Erkläre sachlich in 2-3 Sätzen warum sich ${asset} im Zeitraum "${ctx.label}" so entwickelt hat. Beziehe verfügbare Nachrichten ein.
+
+AUSBLICK: Nenne in 2-3 Sätzen die wichtigsten Faktoren die die weitere Entwicklung beeinflussen könnten — ohne Kursprognosen oder Empfehlungen.`;
+  }
 
   const body = JSON.stringify({
     model: 'llama-3.1-8b-instant',
-    max_tokens: 500,
-    temperature: 0.3,
-    messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
+    max_tokens: 600,
+    temperature: 0.25,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user }
+    ]
   });
 
   try {
-    const text = await new Promise(function(resolve, reject) {
+    const raw = await new Promise(function(resolve, reject) {
       const r = https.request({
         hostname: 'api.groq.com',
         path: '/openai/v1/chat/completions',
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey, 'Content-Length': Buffer.byteLength(body) }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Length': Buffer.byteLength(body)
+        }
       }, function(resp) {
         let d = '';
         resp.on('data', function(c) { d += c; });
         resp.on('end', function() {
           try {
             const p = JSON.parse(d);
-            if (p.error) return reject(new Error(p.error.message));
+            if (p.error) return reject(new Error(p.error.message || JSON.stringify(p.error)));
             resolve((p.choices && p.choices[0] && p.choices[0].message && p.choices[0].message.content) || '');
-          } catch(e) { reject(e); }
+          } catch(e) { reject(new Error('Parse error: ' + d.slice(0, 100))); }
         });
       });
       r.on('error', reject);
+      r.setTimeout(15000, function() { r.destroy(); reject(new Error('Timeout')); });
       r.write(body);
       r.end();
     });
 
-    const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+    // Markdown und Sterne bereinigen
+    const clean = raw
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
 
     if (frage) {
       return res.status(200).json({ antwort: clean, typ: 'frage' });
@@ -60,11 +128,14 @@ module.exports = async function handler(req, res) {
 
     const mMatch = clean.match(/MARKTLAGE[:\s]*([\s\S]*?)(?=AUSBLICK|$)/i);
     const aMatch = clean.match(/AUSBLICK[:\s]*([\s\S]*?)$/i);
+
     return res.status(200).json({
       warum: mMatch ? mMatch[1].trim() : clean,
       ausblick: aMatch ? aMatch[1].trim() : '',
+      range: range || '1T',
       typ: 'auto'
     });
+
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
