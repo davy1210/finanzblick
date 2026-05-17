@@ -41,9 +41,21 @@ module.exports = async function handler(req, res) {
     ? `um +${Math.abs(changePct || 0).toFixed(2)}% gestiegen`
     : `um -${Math.abs(changePct || 0).toFixed(2)}% gefallen`;
 
-  const newsBlock = news && news.length > 0
-    ? '\n\nAktuelle relevante Nachrichten:\n' + news.slice(0, 4).map(n =>
-        `- [${n.sentiment === 'bullish' ? 'Positiv' : n.sentiment === 'bearish' ? 'Negativ' : 'Neutral'}] ${n.title} (${n.source})`
+  // News nach Impact filtern — wichtige News immer erklären
+  const rangeNewsCount = {'1T':4,'1W':3,'1M':3,'6M':2,'1J':2,'5J':1}[range] || 3;
+  const filteredNews = news ? news
+    .filter(n => {
+      if(['1J','5J'].includes(range)) return n.impactLevel === 'high';
+      if(['1M','6M'].includes(range)) return n.impactLevel === 'high' || n.impactLevel === 'medium';
+      return true;
+    })
+    .slice(0, rangeNewsCount) : [];
+
+  const newsBlock = filteredNews.length > 0
+    ? '\n\nAktuelle Nachrichten (relevant für Zeitraum "' + ctx.label + '"):\n' + filteredNews.map(n =>
+        '- [' + (n.sentiment === 'bullish' ? 'Positiv' : n.sentiment === 'bearish' ? 'Negativ' : 'Neutral') +
+        (n.impactLevel === 'high' ? ' — WICHTIG' : '') +
+        '] ' + n.title + ' (' + (n.source || '') + ')'
       ).join('\n')
     : '';
 
