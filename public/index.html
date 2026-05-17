@@ -862,11 +862,11 @@ function renderEvents(events){
 
 async function buildEvents(){
   document.getElementById('ev-list').innerHTML='<div style="padding:20px;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:10px"><span class="dots"><span></span><span></span><span></span></span> Ereignisse werden geladen...</div>';
-  // Cache löschen damit neue Felder (what/why/effect) geladen werden
+  // Cache immer leeren — KI-Erklärungen müssen frisch sein
   delete MEM['events_all'];
   try{ localStorage.removeItem('fb_events_all'); }catch(x){}
   try{
-    var r=await fetch('/api/events?v=2');
+    var r=await fetch('/api/events?v=3&t='+Date.now());
     var data=await r.json();
     if(data.events&&data.events.length>0){
       renderEvents(data.events);
