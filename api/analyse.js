@@ -89,7 +89,7 @@ AUSBLICK: Nenne in 2-3 Sätzen die wichtigsten Faktoren die die weitere Entwickl
   }
 
   const body = JSON.stringify({
-    model: 'llama-3.1-8b-instant',
+    model: 'llama-3.3-70b-versatile',
     max_tokens: 600,
     temperature: 0.25,
     messages: [
@@ -98,8 +98,17 @@ AUSBLICK: Nenne in 2-3 Sätzen die wichtigsten Faktoren die die weitere Entwickl
     ]
   });
 
-  try {
-    const raw = await new Promise(function(resolve, reject) {
+  async function callGroq(model, systemPrompt, userPrompt) {
+    const b = JSON.stringify({
+      model: model,
+      max_tokens: 600,
+      temperature: 0.25,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]
+    });
+    return new Promise(function(resolve, reject) {
       const r = https.request({
         hostname: 'api.groq.com',
         path: '/openai/v1/chat/completions',
@@ -107,7 +116,7 @@ AUSBLICK: Nenne in 2-3 Sätzen die wichtigsten Faktoren die die weitere Entwickl
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + apiKey,
-          'Content-Length': Buffer.byteLength(body)
+          'Content-Length': Buffer.byteLength(b)
         }
       }, function(resp) {
         let d = '';
@@ -115,16 +124,39 @@ AUSBLICK: Nenne in 2-3 Sätzen die wichtigsten Faktoren die die weitere Entwickl
         resp.on('end', function() {
           try {
             const p = JSON.parse(d);
-            if (p.error) return reject(new Error(p.error.message || JSON.stringify(p.error)));
+            // Rate limit oder Kapazitätsgrenze erreicht
+            if (p.error) {
+              const errMsg = p.error.message || JSON.stringify(p.error);
+              if (errMsg.includes('rate_limit') || errMsg.includes('capacity') || errMsg.includes('quota') || resp.statusCode === 429) {
+                return reject(new Error('rate_limit'));
+              }
+              return reject(new Error(errMsg));
+            }
             resolve((p.choices && p.choices[0] && p.choices[0].message && p.choices[0].message.content) || '');
           } catch(e) { reject(new Error('Parse error: ' + d.slice(0, 100))); }
         });
       });
       r.on('error', reject);
       r.setTimeout(15000, function() { r.destroy(); reject(new Error('Timeout')); });
-      r.write(body);
+      r.write(b);
       r.end();
     });
+  }
+
+  try {
+    // Primär: llama-3.3-70b (beste Qualität)
+    // Fallback: llama-3.1-8b (bei Rate Limit)
+    let raw;
+    try {
+      raw = await callGroq('llama-3.3-70b-versatile', system, user);
+    } catch(e) {
+      if (e.message === 'rate_limit') {
+        // Automatisch auf kleineres Modell wechseln
+        raw = await callGroq('llama-3.1-8b-instant', system, user);
+      } else {
+        throw e;
+      }
+    }
 
     // Markdown und Sterne bereinigen
     const clean = raw
