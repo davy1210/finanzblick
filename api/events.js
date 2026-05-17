@@ -92,12 +92,29 @@ module.exports = async function handler(req, res) {
     const econUrl = `https://finnhub.io/api/v1/calendar/economic?token=${apiKey}`;
     const econData = await fetchJSON(econUrl);
 
-    // Wichtige Wirtschaftstermine filtern
-    const importantEvents = ['Federal Funds Rate','CPI','Non Farm Payroll','GDP','ECB Rate','Unemployment'];
+    // Nur die wirklich wichtigen Wirtschaftstermine — keine Duplikate
+    const PRIORITY_EVENTS = [
+      { key: 'Federal Funds Rate', title: 'Fed Zinsentscheidung' },
+      { key: 'CPI', title: 'US Inflationsdaten (CPI)' },
+      { key: 'Non Farm Payroll', title: 'US Arbeitsmarktdaten' },
+      { key: 'ECB Rate', title: 'EZB Zinsentscheidung' },
+      { key: 'GDP Growth', title: 'US Wirtschaftswachstum (BIP)' },
+      { key: 'Unemployment Rate', title: 'US Arbeitslosenquote' },
+      { key: 'Producer Price', title: 'US Erzeugerpreise (PPI)' },
+      { key: 'Retail Sales', title: 'US Einzelhandelsumsätze' },
+    ];
+
+    // Jeden Typ nur EINMAL zeigen — kein Duplikat
+    const seenTypes = new Set();
     const econ = (econData.economicCalendar || [])
       .filter(e => {
         const name = e.event || '';
-        return importantEvents.some(k => name.includes(k)) && e.time >= from && e.time <= to;
+        if (e.time < from || e.time > to) return false;
+        const match = PRIORITY_EVENTS.find(p => name.includes(p.key));
+        if (!match) return false;
+        if (seenTypes.has(match.key)) return false;
+        seenTypes.add(match.key);
+        return true;
       })
       .slice(0, 5)
       .map(e => {
@@ -141,7 +158,7 @@ module.exports = async function handler(req, res) {
           day: dt.day,
           mon: dt.mon,
           date: e.time,
-          title: e.event,
+          title: (PRIORITY_EVENTS.find(p => (e.event||'').includes(p.key)) || {title: e.event}).title,
           what, why, effect,
           impact: 'Hoher Einfluss',
           impCls: 'imp-high',
