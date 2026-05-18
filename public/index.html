@@ -657,11 +657,14 @@ function renderFundamentals(data){
   var items=[
     {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'},
     {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
+    {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
     {label:'EPS',value:f.eps?'$'+f.eps.toFixed(2):'—',sub:'Gewinn pro Aktie'},
     {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
     {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
-    {label:'Marktkapital.',value:f.marketCap?fmtBig(f.marketCap):'—',sub:'Gesamtwert',glossKey:'Marktkapitalisierung'},
-    {label:'Ø Volumen',value:f.avgVolume?fmtV(f.avgVolume):'—',sub:'3-Monats-Durchschnitt'},
+    {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
+    {label:'Nettomarge',value:f.netMargin?f.netMargin+'%':'—',sub:'Reingewinn/Umsatz'},
+    {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'YoY Wachstum'},
+    {label:'ROE',value:f.roe?f.roe+'%':'—',sub:'Eigenkapitalrendite'},
   ].filter(function(it){return it.value!=='—';});
 
   document.getElementById('fund-grid').innerHTML=items.map(function(it){
