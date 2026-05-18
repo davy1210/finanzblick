@@ -639,8 +639,18 @@ function fmtBig(n){
 }
 function renderFundamentals(data){
   var f=data.fundamentals;
-  if(!f||Object.keys(f).length===0){document.getElementById('fund-wrap').style.display='none';return;}
+  // Prüfen ob wirklich Fundamentaldaten vorhanden (nicht nur 52W)
+  var hasFunds=f&&(f.pe||f.beta||f.eps||f.grossMargin||f.revenueGrowth);
+  var has52W=f&&f.weekHigh52&&f.weekLow52;
+
+  if(!has52W&&!hasFunds){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';
+
+  // Für Krypto/Indizes ohne Fundamentaldaten: nur 52W Band zeigen
+  if(!hasFunds&&has52W){
+    document.getElementById('rec-gauge').style.display='none';
+    document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Für dieses Asset sind keine Fundamentaldaten verfügbar.</div>';
+  }
 
   // 52W Bar
   if(f.weekHigh52&&f.weekLow52&&data.price){
