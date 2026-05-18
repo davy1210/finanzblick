@@ -68,33 +68,39 @@ module.exports = async function handler(req, res) {
     const rangeChange = price - first;
     const rangeChangePct = first ? (rangeChange / first) * 100 : 0;
 
-    // Fundamentaldaten aus v7 quote API
+    // Fundamentaldaten aus Finnhub
     let fundamentals = {
       weekHigh52: meta.fiftyTwoWeekHigh || null,
       weekLow52: meta.fiftyTwoWeekLow || null,
       exchange: meta.exchangeName || null,
     };
-    try {
-      const v7Url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(symbol) + '&fields=trailingPE,forwardPE,epsTrailingTwelveMonths,beta,dividendYield,marketCap,averageDailyVolume3Month,fiftyTwoWeekHigh,fiftyTwoWeekLow,bookValue,priceToBook';
-      const v7Body = await fetchUrl(v7Url);
-      const v7Json = JSON.parse(v7Body);
-      const q = v7Json?.quoteResponse?.result?.[0] || {};
-      fundamentals = {
-        weekHigh52: q.fiftyTwoWeekHigh || meta.fiftyTwoWeekHigh || null,
-        weekLow52: q.fiftyTwoWeekLow || meta.fiftyTwoWeekLow || null,
-        marketCap: q.marketCap || null,
-        pe: q.trailingPE || null,
-        forwardPE: q.forwardPE || null,
-        eps: q.epsTrailingTwelveMonths || null,
-        beta: q.beta || null,
-        dividendYield: q.dividendYield ? Math.round(q.dividendYield * 100 * 100) / 100 : null,
-        avgVolume: q.averageDailyVolume3Month || null,
-        pb: q.priceToBook || null,
-        bookValue: q.bookValue || null,
-        exchange: meta.exchangeName || null,
-      };
-    } catch(e) {
-      // v7 nicht verfügbar — bleibe bei v8 meta Daten
+    const finnhubKey = process.env.FINNHUB_API_KEY;
+    if (finnhubKey) {
+      try {
+        // Finnhub basic financials
+        const fhUrl = 'https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(symbol) + '&metric=all&token=' + finnhubKey;
+        const fhBody = await fetchUrl(fhUrl);
+        const fhJson = JSON.parse(fhBody);
+        const m = fhJson?.metric || {};
+        fundamentals = {
+          weekHigh52: m['52WeekHigh'] || meta.fiftyTwoWeekHigh || null,
+          weekLow52: m['52WeekLow'] || meta.fiftyTwoWeekLow || null,
+          pe: m.peExclExtraTTM || m.peTTM || null,
+          forwardPE: m.peNormalizedAnnual || null,
+          pb: m.pbAnnual || null,
+          ps: m.psAnnual || null,
+          beta: m.beta || null,
+          dividendYield: m.dividendYieldIndicatedAnnual ? Math.round(m.dividendYieldIndicatedAnnual * 100) / 100 : null,
+          eps: m.epsBasicExclExtraItemsTTM || null,
+          revenueGrowth: m.revenueGrowthTTMYoy ? Math.round(m.revenueGrowthTTMYoy * 100) / 100 : null,
+          grossMargin: m.grossMarginTTM ? Math.round(m.grossMarginTTM) : null,
+          netMargin: m.netProfitMarginTTM ? Math.round(m.netProfitMarginTTM) : null,
+          roe: m.roeTTM ? Math.round(m.roeTTM) : null,
+          exchange: meta.exchangeName || null,
+        };
+      } catch(e) {
+        // Finnhub nicht verfügbar
+      }
     }
 
     return res.status(200).json({
