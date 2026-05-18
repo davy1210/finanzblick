@@ -458,33 +458,6 @@ function cSet(k,d,ms){var ttl=ms||CACHE_MS;MEM[k]={d:d,t:Date.now()};try{localSt
 var userLevel='beginner', isDark=false;
 var currentSymbol=null, currentData=null, currentNews=[], currentRange='1T', mainChart=null, searchTimer=null;
 
-// Fundamentaldaten direkt im Browser laden (nicht vom Server)
-async function fetchFundamentals(symbol){
-  try{
-    var url='https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules=summaryDetail,financialData,defaultKeyStatistics,assetProfile&corsDomain=finance.yahoo.com';
-    var r=await fetch(url,{headers:{'Accept':'application/json'}});
-    var json=await r.json();
-    var s=json&&json.quoteSummary&&json.quoteSummary.result&&json.quoteSummary.result[0]||{};
-    var sd=s.summaryDetail||{}, fd=s.financialData||{}, ks=s.defaultKeyStatistics||{}, ap=s.assetProfile||{};
-    return {
-      pe: (sd.trailingPE&&sd.trailingPE.raw)||null,
-      forwardPE: (sd.forwardPE&&sd.forwardPE.raw)||null,
-      pb: (ks.priceToBook&&ks.priceToBook.raw)||null,
-      ebitda: (fd.ebitda&&fd.ebitda.raw)||null,
-      grossMargin: (fd.grossMargins&&fd.grossMargins.raw)?Math.round(fd.grossMargins.raw*100):null,
-      profitMargin: (fd.profitMargins&&fd.profitMargins.raw)?Math.round(fd.profitMargins.raw*100):null,
-      revenueGrowth: (fd.revenueGrowth&&fd.revenueGrowth.raw)?Math.round(fd.revenueGrowth.raw*100):null,
-      beta: (ks.beta&&ks.beta.raw)||null,
-      weekHigh52: (sd.fiftyTwoWeekHigh&&sd.fiftyTwoWeekHigh.raw)||null,
-      weekLow52: (sd.fiftyTwoWeekLow&&sd.fiftyTwoWeekLow.raw)||null,
-      marketCap: (sd.marketCap&&sd.marketCap.raw)||null,
-      dividendYield: (sd.dividendYield&&sd.dividendYield.raw)?Math.round(sd.dividendYield.raw*10000)/100:null,
-      recommendation: (fd.recommendationKey)||null,
-      targetPrice: (fd.targetMeanPrice&&fd.targetMeanPrice.raw)||null,
-      sector: ap.sector||null,
-    };
-  }catch(e){ return {}; }
-}
 
 var LEVEL_LABELS = {beginner:'Einsteiger',intermediate:'Fortgeschritten',expert:'Erfahrener Investor'};
 var RANGE_LABELS = {'1T':'Heute','1W':'Diese Woche','1M':'Letzter Monat','6M':'Letzte 6 Monate','1J':'Letztes Jahr','5J':'Letzte 5 Jahre'};
@@ -622,10 +595,7 @@ async function selectAsset(sym,name){
   if(card) card.classList.add('active');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
   await Promise.all([loadQuote(sym,'1T'), loadNews(name||sym,'1T')]);
-  // Fundamentaldaten im Browser laden und Anzeige aktualisieren
-  fetchFundamentals(sym).then(function(f){
-    if(currentData){ currentData.fundamentals=f; renderFundamentals(currentData); }
-  });
+
   await loadAutoAnalyse(name||sym,'1T');
 }
 
@@ -674,46 +644,24 @@ function renderFundamentals(data){
 
   // 52W Bar
   if(f.weekHigh52&&f.weekLow52&&data.price){
-    var range=f.weekHigh52-f.weekLow52;
-    var pos=range>0?Math.round(((data.price-f.weekLow52)/range)*100):50;
-    pos=Math.max(0,Math.min(100,pos));
+    var range52=f.weekHigh52-f.weekLow52;
+    var pos52=range52>0?Math.round(((data.price-f.weekLow52)/range52)*100):50;
+    pos52=Math.max(0,Math.min(100,pos52));
     document.getElementById('w52-wrap').innerHTML=
       '<div class="w52-title">Position im 52-Wochen-Band</div>'+
-      '<div class="w52-bar"><div class="w52-fill" style="width:100%"></div><div class="w52-dot" style="left:'+pos+'%"></div></div>'+
-      '<div class="w52-labels"><span>Tief: '+fmtP(f.weekLow52,data.currency)+'</span><span style="color:var(--blue);font-size:12px">'+pos+'% vom Tief</span><span>Hoch: '+fmtP(f.weekHigh52,data.currency)+'</span></div>';
-  }
-
-  // Empfehlung
-  if(f.recommendation){
-    var recMap={
-      'strong_buy':{cls:'rec-strong-buy',txt:'Starker Kauf'},
-      'buy':{cls:'rec-buy',txt:'Kauf'},
-      'hold':{cls:'rec-hold',txt:'Halten'},
-      'sell':{cls:'rec-sell',txt:'Verkauf'},
-      'strong_sell':{cls:'rec-strong-sell',txt:'Starker Verkauf'}
-    };
-    var rec=recMap[f.recommendation];
-    if(rec){
-      var tp=f.targetPrice?' — Kursziel: '+fmtP(f.targetPrice,data.currency):'';
-      document.getElementById('rec-gauge').style.display='block';
-      document.getElementById('rec-gauge').innerHTML=
-        '<div class="gauge-title">Analysten-Konsens</div>'+
-        '<span class="rec-wrap '+rec.cls+'">'+rec.txt+tp+'</span>';
-    }
+      '<div class="w52-bar"><div class="w52-fill" style="width:100%"></div><div class="w52-dot" style="left:'+pos52+'%"></div></div>'+
+      '<div class="w52-labels"><span>Tief: '+fmtP(f.weekLow52,data.currency)+'</span><span style="color:var(--blue);font-size:12px">'+pos52+'% vom Tief</span><span>Hoch: '+fmtP(f.weekHigh52,data.currency)+'</span></div>';
   }
 
   // Fundamentaldaten Grid
   var items=[
-    {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn',glossKey:'KGV'},
+    {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'},
     {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
-    {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
-    {label:'EBITDA',value:f.ebitda?fmtBig(f.ebitda):'—',sub:'Betriebsgewinn',glossKey:'EBITDA'},
-    {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
-    {label:'Nettomarge',value:f.profitMargin?f.profitMargin+'%':'—',sub:'Reingewinn/Umsatz'},
-    {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'Ggü. Vorjahr'},
+    {label:'EPS',value:f.eps?'$'+f.eps.toFixed(2):'—',sub:'Gewinn pro Aktie'},
     {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
     {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
     {label:'Marktkapital.',value:f.marketCap?fmtBig(f.marketCap):'—',sub:'Gesamtwert',glossKey:'Marktkapitalisierung'},
+    {label:'Ø Volumen',value:f.avgVolume?fmtV(f.avgVolume):'—',sub:'3-Monats-Durchschnitt'},
   ].filter(function(it){return it.value!=='—';});
 
   document.getElementById('fund-grid').innerHTML=items.map(function(it){
