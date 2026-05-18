@@ -458,6 +458,34 @@ function cSet(k,d,ms){var ttl=ms||CACHE_MS;MEM[k]={d:d,t:Date.now()};try{localSt
 var userLevel='beginner', isDark=false;
 var currentSymbol=null, currentData=null, currentNews=[], currentRange='1T', mainChart=null, searchTimer=null;
 
+// Fundamentaldaten direkt im Browser laden (nicht vom Server)
+async function fetchFundamentals(symbol){
+  try{
+    var url='https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(symbol)+'?modules=summaryDetail,financialData,defaultKeyStatistics,assetProfile&corsDomain=finance.yahoo.com';
+    var r=await fetch(url,{headers:{'Accept':'application/json'}});
+    var json=await r.json();
+    var s=json&&json.quoteSummary&&json.quoteSummary.result&&json.quoteSummary.result[0]||{};
+    var sd=s.summaryDetail||{}, fd=s.financialData||{}, ks=s.defaultKeyStatistics||{}, ap=s.assetProfile||{};
+    return {
+      pe: (sd.trailingPE&&sd.trailingPE.raw)||null,
+      forwardPE: (sd.forwardPE&&sd.forwardPE.raw)||null,
+      pb: (ks.priceToBook&&ks.priceToBook.raw)||null,
+      ebitda: (fd.ebitda&&fd.ebitda.raw)||null,
+      grossMargin: (fd.grossMargins&&fd.grossMargins.raw)?Math.round(fd.grossMargins.raw*100):null,
+      profitMargin: (fd.profitMargins&&fd.profitMargins.raw)?Math.round(fd.profitMargins.raw*100):null,
+      revenueGrowth: (fd.revenueGrowth&&fd.revenueGrowth.raw)?Math.round(fd.revenueGrowth.raw*100):null,
+      beta: (ks.beta&&ks.beta.raw)||null,
+      weekHigh52: (sd.fiftyTwoWeekHigh&&sd.fiftyTwoWeekHigh.raw)||null,
+      weekLow52: (sd.fiftyTwoWeekLow&&sd.fiftyTwoWeekLow.raw)||null,
+      marketCap: (sd.marketCap&&sd.marketCap.raw)||null,
+      dividendYield: (sd.dividendYield&&sd.dividendYield.raw)?Math.round(sd.dividendYield.raw*10000)/100:null,
+      recommendation: (fd.recommendationKey)||null,
+      targetPrice: (fd.targetMeanPrice&&fd.targetMeanPrice.raw)||null,
+      sector: ap.sector||null,
+    };
+  }catch(e){ return {}; }
+}
+
 var LEVEL_LABELS = {beginner:'Einsteiger',intermediate:'Fortgeschritten',expert:'Erfahrener Investor'};
 var RANGE_LABELS = {'1T':'Heute','1W':'Diese Woche','1M':'Letzter Monat','6M':'Letzte 6 Monate','1J':'Letztes Jahr','5J':'Letzte 5 Jahre'};
 var RANGE_CLS = {'1T':'rt-short','1W':'rt-short','1M':'rt-mid','6M':'rt-mid','1J':'rt-long','5J':'rt-long'};
@@ -594,6 +622,10 @@ async function selectAsset(sym,name){
   if(card) card.classList.add('active');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
   await Promise.all([loadQuote(sym,'1T'), loadNews(name||sym,'1T')]);
+  // Fundamentaldaten im Browser laden und Anzeige aktualisieren
+  fetchFundamentals(sym).then(function(f){
+    if(currentData){ currentData.fundamentals=f; renderFundamentals(currentData); }
+  });
   await loadAutoAnalyse(name||sym,'1T');
 }
 
@@ -637,7 +669,6 @@ function fmtBig(n){
 }
 function renderFundamentals(data){
   var f=data.fundamentals;
-  console.log('Fundamentals received:', JSON.stringify(f));
   if(!f||Object.keys(f).length===0){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';
 
