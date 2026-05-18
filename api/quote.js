@@ -68,19 +68,34 @@ module.exports = async function handler(req, res) {
     const rangeChange = price - first;
     const rangeChangePct = first ? (rangeChange / first) * 100 : 0;
 
-    // Fundamentaldaten aus dem v8 meta-Objekt (bereits verfügbar, kein extra Call)
-    const fundamentals = {
+    // Fundamentaldaten aus v7 quote API
+    let fundamentals = {
       weekHigh52: meta.fiftyTwoWeekHigh || null,
       weekLow52: meta.fiftyTwoWeekLow || null,
-      marketCap: meta.marketCap || null,
-      pe: meta.trailingPE || null,
-      forwardPE: meta.forwardPE || null,
-      eps: meta.epsTrailingTwelveMonths || null,
-      beta: meta.beta || null,
-      dividendYield: meta.dividendYield ? Math.round(meta.dividendYield * 100 * 100) / 100 : null,
-      avgVolume: meta.averageDailyVolume3Month || null,
       exchange: meta.exchangeName || null,
     };
+    try {
+      const v7Url = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + encodeURIComponent(symbol) + '&fields=trailingPE,forwardPE,epsTrailingTwelveMonths,beta,dividendYield,marketCap,averageDailyVolume3Month,fiftyTwoWeekHigh,fiftyTwoWeekLow,bookValue,priceToBook';
+      const v7Body = await fetchUrl(v7Url);
+      const v7Json = JSON.parse(v7Body);
+      const q = v7Json?.quoteResponse?.result?.[0] || {};
+      fundamentals = {
+        weekHigh52: q.fiftyTwoWeekHigh || meta.fiftyTwoWeekHigh || null,
+        weekLow52: q.fiftyTwoWeekLow || meta.fiftyTwoWeekLow || null,
+        marketCap: q.marketCap || null,
+        pe: q.trailingPE || null,
+        forwardPE: q.forwardPE || null,
+        eps: q.epsTrailingTwelveMonths || null,
+        beta: q.beta || null,
+        dividendYield: q.dividendYield ? Math.round(q.dividendYield * 100 * 100) / 100 : null,
+        avgVolume: q.averageDailyVolume3Month || null,
+        pb: q.priceToBook || null,
+        bookValue: q.bookValue || null,
+        exchange: meta.exchangeName || null,
+      };
+    } catch(e) {
+      // v7 nicht verfügbar — bleibe bei v8 meta Daten
+    }
 
     return res.status(200).json({
       symbol: meta.symbol || symbol,
