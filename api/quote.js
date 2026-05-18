@@ -17,6 +17,19 @@ function formatTime(ts, range) {
   return d.toLocaleDateString('de-DE', { month: 'short', year: '2-digit' });
 }
 
+function fetchUrl(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
+      timeout: 8000
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(d));
+    }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('timeout')); });
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
@@ -26,31 +39,17 @@ module.exports = async function handler(req, res) {
   if (!symbol) return res.status(400).json({ error: 'Kein Symbol' });
 
   const cfg = CONFIGS[range] || CONFIGS['1T'];
-  const url = 'https://query1.finance.yahoo.com/v8/finance/chart/' +
-    encodeURIComponent(symbol) +
-    '?interval=' + cfg.interval + '&range=' + cfg.range +
-    '&includePrePost=false&lang=de';
 
   try {
-    const body = await new Promise(function(resolve, reject) {
-      const r = https.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': '*/*' },
-        timeout: 8000
-      }, function(resp) {
-        let d = '';
-        resp.on('data', function(c) { d += c; });
-        resp.on('end', function() { resolve(d); });
-      });
-      r.on('error', reject);
-      r.on('timeout', function() { r.destroy(); reject(new Error('timeout')); });
-    });
-
-    const json = JSON.parse(body);
-    const result = json && json.chart && json.chart.result && json.chart.result[0];
+    // Chart + Kursdaten
+    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${cfg.interval}&range=${cfg.range}&includePrePost=false&lang=de`;
+    const chartBody = await fetchUrl(chartUrl);
+    const chartJson = JSON.parse(chartBody);
+    const result = chartJson?.chart?.result?.[0];
     if (!result) return res.status(404).json({ error: 'Keine Daten' });
 
     const meta = result.meta || {};
-    const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0] && result.indicators.quote[0].close) || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
     const timestamps = result.timestamp || [];
 
     const chartData = [], chartTimes = [];
@@ -69,6 +68,50 @@ module.exports = async function handler(req, res) {
     const rangeChange = price - first;
     const rangeChangePct = first ? (rangeChange / first) * 100 : 0;
 
+    // Fundamentaldaten via v10 API
+    let fundamentals = {};
+    try {
+      const fundUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryDetail,financialData,defaultKeyStatistics,assetProfile`;
+      const fundBody = await fetchUrl(fundUrl);
+      const fundJson = JSON.parse(fundBody);
+      const s = fundJson?.quoteSummary?.result?.[0] || {};
+      const sd = s.summaryDetail || {};
+      const fd = s.financialData || {};
+      const ks = s.defaultKeyStatistics || {};
+      const ap = s.assetProfile || {};
+
+      fundamentals = {
+        // Bewertung
+        pe: sd.trailingPE?.raw || ks.trailingPE?.raw || null,
+        forwardPE: sd.forwardPE?.raw || null,
+        pb: ks.priceToBook?.raw || null,
+        ps: ks.priceToSalesTrailing12Months?.raw || null,
+        // Profitabilität
+        ebitda: fd.ebitda?.raw || null,
+        grossMargin: fd.grossMargins?.raw ? Math.round(fd.grossMargins.raw * 100) : null,
+        operatingMargin: fd.operatingMargins?.raw ? Math.round(fd.operatingMargins.raw * 100) : null,
+        profitMargin: fd.profitMargins?.raw ? Math.round(fd.profitMargins.raw * 100) : null,
+        // Wachstum
+        revenueGrowth: fd.revenueGrowth?.raw ? Math.round(fd.revenueGrowth.raw * 100) : null,
+        earningsGrowth: fd.earningsGrowth?.raw ? Math.round(fd.earningsGrowth.raw * 100) : null,
+        // Dividende
+        dividendYield: sd.dividendYield?.raw ? Math.round(sd.dividendYield.raw * 100 * 100) / 100 : null,
+        // Markt
+        beta: ks.beta?.raw || null,
+        weekHigh52: sd.fiftyTwoWeekHigh?.raw || null,
+        weekLow52: sd.fiftyTwoWeekLow?.raw || null,
+        marketCap: sd.marketCap?.raw || null,
+        // Empfehlung
+        recommendation: fd.recommendationKey || null,
+        targetPrice: fd.targetMeanPrice?.raw || null,
+        // Sektor
+        sector: ap.sector || null,
+        industry: ap.industry || null,
+      };
+    } catch(e) {
+      // Fundamentals optional — kein Fehler
+    }
+
     return res.status(200).json({
       symbol: meta.symbol || symbol,
       name: meta.shortName || symbol,
@@ -81,6 +124,7 @@ module.exports = async function handler(req, res) {
       chartData, chartTimes,
       exchange: meta.exchangeName || '',
       range,
+      fundamentals,
     });
   } catch(e) {
     return res.status(500).json({ error: e.message });
