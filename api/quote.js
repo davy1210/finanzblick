@@ -68,49 +68,19 @@ module.exports = async function handler(req, res) {
     const rangeChange = price - first;
     const rangeChangePct = first ? (rangeChange / first) * 100 : 0;
 
-    // Fundamentaldaten via v10 API
-    let fundamentals = {};
-    try {
-      const fundUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryDetail,financialData,defaultKeyStatistics,assetProfile`;
-      const fundBody = await fetchUrl(fundUrl);
-      const fundJson = JSON.parse(fundBody);
-      const s = fundJson?.quoteSummary?.result?.[0] || {};
-      const sd = s.summaryDetail || {};
-      const fd = s.financialData || {};
-      const ks = s.defaultKeyStatistics || {};
-      const ap = s.assetProfile || {};
-
-      fundamentals = {
-        // Bewertung
-        pe: sd.trailingPE?.raw || ks.trailingPE?.raw || null,
-        forwardPE: sd.forwardPE?.raw || null,
-        pb: ks.priceToBook?.raw || null,
-        ps: ks.priceToSalesTrailing12Months?.raw || null,
-        // Profitabilität
-        ebitda: fd.ebitda?.raw || null,
-        grossMargin: fd.grossMargins?.raw ? Math.round(fd.grossMargins.raw * 100) : null,
-        operatingMargin: fd.operatingMargins?.raw ? Math.round(fd.operatingMargins.raw * 100) : null,
-        profitMargin: fd.profitMargins?.raw ? Math.round(fd.profitMargins.raw * 100) : null,
-        // Wachstum
-        revenueGrowth: fd.revenueGrowth?.raw ? Math.round(fd.revenueGrowth.raw * 100) : null,
-        earningsGrowth: fd.earningsGrowth?.raw ? Math.round(fd.earningsGrowth.raw * 100) : null,
-        // Dividende
-        dividendYield: sd.dividendYield?.raw ? Math.round(sd.dividendYield.raw * 100 * 100) / 100 : null,
-        // Markt
-        beta: ks.beta?.raw || null,
-        weekHigh52: sd.fiftyTwoWeekHigh?.raw || null,
-        weekLow52: sd.fiftyTwoWeekLow?.raw || null,
-        marketCap: sd.marketCap?.raw || null,
-        // Empfehlung
-        recommendation: fd.recommendationKey || null,
-        targetPrice: fd.targetMeanPrice?.raw || null,
-        // Sektor
-        sector: ap.sector || null,
-        industry: ap.industry || null,
-      };
-    } catch(e) {
-      // Fundamentals optional — kein Fehler
-    }
+    // Fundamentaldaten aus dem v8 meta-Objekt (bereits verfügbar, kein extra Call)
+    const fundamentals = {
+      weekHigh52: meta.fiftyTwoWeekHigh || null,
+      weekLow52: meta.fiftyTwoWeekLow || null,
+      marketCap: meta.marketCap || null,
+      pe: meta.trailingPE || null,
+      forwardPE: meta.forwardPE || null,
+      eps: meta.epsTrailingTwelveMonths || null,
+      beta: meta.beta || null,
+      dividendYield: meta.dividendYield ? Math.round(meta.dividendYield * 100 * 100) / 100 : null,
+      avgVolume: meta.averageDailyVolume3Month || null,
+      exchange: meta.exchangeName || null,
+    };
 
     return res.status(200).json({
       symbol: meta.symbol || symbol,
