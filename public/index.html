@@ -239,6 +239,31 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .gloss-term{font-size:14px;font-weight:800;color:var(--blue);margin-bottom:5px}
 .gloss-def{font-size:13px;color:var(--muted);line-height:1.65}
 
+.fund-section{padding:0 20px 20px}
+.fund-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:12px}
+.fund-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.fund-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.fund-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.fund-value{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.fund-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.gauge-wrap{margin:0 20px 20px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px}
+.gauge-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px}
+.gauge-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#DC2626,#F59E0B,#059669);position:relative;margin-bottom:6px}
+.gauge-needle{position:absolute;top:-3px;width:14px;height:14px;background:var(--card);border:2px solid var(--text);border-radius:50%;transform:translateX(-50%)}
+.gauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600}
+.w52-wrap{margin:0 20px 20px}
+.w52-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px}
+.w52-bar{height:6px;background:var(--border);border-radius:3px;position:relative;margin-bottom:6px}
+.w52-fill{height:6px;background:linear-gradient(to right,var(--red),var(--green));border-radius:3px}
+.w52-dot{position:absolute;top:-4px;width:14px;height:14px;background:var(--blue);border:2px solid var(--card);border-radius:50%;transform:translateX(-50%)}
+.w52-labels{display:flex;justify-content:space-between;font-size:11px;font-weight:600}
+.rec-wrap{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;margin:0 20px 20px}
+.rec-strong-buy{background:#DCFCE7;color:#15803D}
+.rec-buy{background:#D1FAE5;color:#059669}
+.rec-hold{background:#FEF3C7;color:#92400E}
+.rec-sell{background:#FEE2E2;color:#DC2626}
+.rec-strong-sell{background:#FEE2E2;color:#991B1B}
+.glossary-link{color:var(--blue);text-decoration:underline;text-decoration-style:dotted;cursor:pointer;font-weight:600}
 .disc{font-size:11px;color:var(--muted);text-align:center;padding:16px;border-top:1px solid var(--border);background:var(--card)}
 </style>
 </head>
@@ -369,6 +394,14 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
       <div class="chart-box"><canvas id="mainChart"></canvas></div>
     </div>
     <div class="stats-row" id="stats-row"></div>
+    <div id="fund-wrap" style="display:none">
+      <div class="w52-wrap" id="w52-wrap"></div>
+      <div class="gauge-wrap" id="rec-gauge" style="display:none"></div>
+      <div class="fund-section">
+        <div class="fund-title">Fundamentaldaten</div>
+        <div class="fund-grid" id="fund-grid"></div>
+      </div>
+    </div>
     <div class="analyse-section">
       <div class="range-tag rt-short" id="range-tag">Analyse: Heute</div>
       <div id="auto-analyse"><div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div></div>
@@ -595,6 +628,76 @@ async function changeRange(range,btn){
   await Promise.all([loadQuote(currentSymbol,range), loadNews(name,range)]);
   await loadAutoAnalyse(name,range);
 }
+function fmtBig(n){
+  if(!n) return '—';
+  if(n>=1e12) return '$'+(n/1e12).toFixed(2)+'B';
+  if(n>=1e9) return '$'+(n/1e9).toFixed(1)+'Mrd';
+  if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+  return '$'+n.toLocaleString('de-DE');
+}
+function renderFundamentals(data){
+  var f=data.fundamentals;
+  if(!f||Object.keys(f).length===0){document.getElementById('fund-wrap').style.display='none';return;}
+  document.getElementById('fund-wrap').style.display='block';
+
+  // 52W Bar
+  if(f.weekHigh52&&f.weekLow52&&data.price){
+    var range=f.weekHigh52-f.weekLow52;
+    var pos=range>0?Math.round(((data.price-f.weekLow52)/range)*100):50;
+    pos=Math.max(0,Math.min(100,pos));
+    document.getElementById('w52-wrap').innerHTML=
+      '<div class="w52-title">Position im 52-Wochen-Band</div>'+
+      '<div class="w52-bar"><div class="w52-fill" style="width:100%"></div><div class="w52-dot" style="left:'+pos+'%"></div></div>'+
+      '<div class="w52-labels"><span>Tief: '+fmtP(f.weekLow52,data.currency)+'</span><span style="color:var(--blue);font-size:12px">'+pos+'% vom Tief</span><span>Hoch: '+fmtP(f.weekHigh52,data.currency)+'</span></div>';
+  }
+
+  // Empfehlung
+  if(f.recommendation){
+    var recMap={
+      'strong_buy':{cls:'rec-strong-buy',txt:'Starker Kauf'},
+      'buy':{cls:'rec-buy',txt:'Kauf'},
+      'hold':{cls:'rec-hold',txt:'Halten'},
+      'sell':{cls:'rec-sell',txt:'Verkauf'},
+      'strong_sell':{cls:'rec-strong-sell',txt:'Starker Verkauf'}
+    };
+    var rec=recMap[f.recommendation];
+    if(rec){
+      var tp=f.targetPrice?' — Kursziel: '+fmtP(f.targetPrice,data.currency):'';
+      document.getElementById('rec-gauge').style.display='block';
+      document.getElementById('rec-gauge').innerHTML=
+        '<div class="gauge-title">Analysten-Konsens</div>'+
+        '<span class="rec-wrap '+rec.cls+'">'+rec.txt+tp+'</span>';
+    }
+  }
+
+  // Fundamentaldaten Grid
+  var items=[
+    {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn',glossKey:'KGV'},
+    {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
+    {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
+    {label:'EBITDA',value:f.ebitda?fmtBig(f.ebitda):'—',sub:'Betriebsgewinn',glossKey:'EBITDA'},
+    {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
+    {label:'Nettomarge',value:f.profitMargin?f.profitMargin+'%':'—',sub:'Reingewinn/Umsatz'},
+    {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'Ggü. Vorjahr'},
+    {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
+    {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
+    {label:'Marktkapital.',value:f.marketCap?fmtBig(f.marketCap):'—',sub:'Gesamtwert',glossKey:'Marktkapitalisierung'},
+  ].filter(function(it){return it.value!=='—';});
+
+  document.getElementById('fund-grid').innerHTML=items.map(function(it){
+    var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\'' + it.glossKey + '\')">' + it.label + '</span>':it.label;
+    return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
+  }).join('');
+}
+
+function scrollToGloss(term){
+  gotoPage('wissen',document.querySelectorAll('.nl')[2]);
+  setTimeout(function(){
+    document.getElementById('wiss-search').value=term;
+    filterGloss(term);
+  },100);
+}
+
 function renderQuote(data,sym){
   document.getElementById('d-symbol').textContent=sym;
   document.getElementById('d-name').textContent=data.name||sym;
@@ -606,6 +709,7 @@ function renderQuote(data,sym){
   var now=new Date();
   document.getElementById('d-meta').innerHTML='<div>'+now.toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})+'</div><div>'+now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr</div>';
   document.getElementById('stats-row').innerHTML='<div class="stat-box"><div class="stat-label">Tageshoch</div><div class="stat-val">'+fmtP(data.high,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Tagestief</div><div class="stat-val">'+fmtP(data.low,data.currency)+'</div></div><div class="stat-box"><div class="stat-label">Volumen</div><div class="stat-val">'+fmtV(data.volume)+'</div></div><div class="stat-box"><div class="stat-label">Währung</div><div class="stat-val">'+(data.currency||'USD')+'</div></div>';
+  renderFundamentals(data);
   drawChart(data);
 }
 
