@@ -637,6 +637,7 @@ function fmtBig(n){
 }
 function renderFundamentals(data){
   var f=data.fundamentals;
+  console.log('Fundamentals received:', JSON.stringify(f));
   if(!f||Object.keys(f).length===0){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';
 
