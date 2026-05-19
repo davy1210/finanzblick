@@ -15,15 +15,62 @@ const LEVEL_PROMPTS = {
   expert: 'Professionelle Finanzsprache. Makroökonomische Analyse, technische Faktoren, institutionelle Perspektive.',
 };
 
-const MACRO_CONTEXT = `
+// Makro-Kontext wird dynamisch aus Request-Body oder Fallback gebaut
+function buildMacroContext(macro) {
+  if (!macro || Object.keys(macro).length === 0) {
+    return `Aktueller Makro-Kontext:
+- Fed Leitzins: ~4.25-4.50% (restriktive Geldpolitik)
+- EZB Leitzins: ~2.65% (Zinssenkungszyklus läuft)
+- US Inflation: ~2.4% (nahe Fed-Ziel von 2%)
+- Globale Themen: KI-Revolution, Handelsspannungen USA-China, Energiewende`;
+  }
+  const parts = ['Aktueller Makro-Kontext (Live-Daten):'];
+  if (macro.fedRate !== null && macro.fedRate !== undefined) parts.push(`- Fed Leitzins: ${macro.fedRate}% (${macro.fedRate > 4 ? 'restriktiv' : macro.fedRate > 2 ? 'neutral' : 'expansiv'})`);
+  if (macro.ecbRate !== null && macro.ecbRate !== undefined) parts.push(`- EZB Leitzins: ${macro.ecbRate}%`);
+  if (macro.cpiYoy !== null && macro.cpiYoy !== undefined) parts.push(`- US Inflation (CPI): ${macro.cpiYoy}% YoY (${macro.cpiYoy > 3 ? 'zu hoch' : macro.cpiYoy > 2 ? 'leicht erhöht' : 'nahe Fed-Ziel'})`);
+  if (macro.unemployment !== null && macro.unemployment !== undefined) parts.push(`- US Arbeitslosigkeit: ${macro.unemployment}% (${macro.unemployment < 4 ? 'Vollbeschäftigung' : 'moderat'})`);
+  if (macro.gdpGrowth !== null && macro.gdpGrowth !== undefined) parts.push(`- US BIP-Wachstum: ${macro.gdpGrowth}% (annualisiert)`);
+  parts.push('- Globale Themen: KI-Revolution (Nvidia/Tech), Handelsspannungen USA-China, Energiewende');
+  return parts.join('\n');
+}
+
+// Makro-Kontext wird live von FRED geladen
+const MACRO_FALLBACK = `
 Aktueller Makro-Kontext (Mai 2026):
-- Fed Leitzins: ~4.25-4.50% (restriktive Geldpolitik, Zinssenkungen erwartet H2 2026)
+- Fed Leitzins: ~4.25-4.50% (restriktiv — dämpft Wirtschaft und Inflation)
 - EZB Leitzins: ~2.65% (Zinssenkungszyklus läuft seit 2024)
 - US Inflation (CPI): ~2.4% (nahe Fed-Ziel von 2%)
-- US Wirtschaft: Moderates Wachstum, Arbeitsmarkt stabil
-- Globale Themen: KI-Revolution (Nvidia, Tech-Sektor), Handelsspannungen USA-China, Energiewende
-- Marktstimmung: Vorsichtiger Optimismus, S&P 500 nahe Allzeithoch
+- US Wirtschaft: Moderates Wachstum, Arbeitsmarkt stabil (~4% Arbeitslosigkeit)
+- Globale Themen: KI-Revolution, Handelsspannungen USA-China, Energiewende
 `;
+
+async function getLiveMacro() {
+  try {
+    const raw = await new Promise((resolve, reject) => {
+      https.get('https://finanzblick.vercel.app/api/macro', {
+        headers: { 'User-Agent': 'Finanzblick-Internal/1.0' },
+        timeout: 3000
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      }).on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('t')); });
+    });
+    const m = JSON.parse(raw);
+    if (!m || !m.fedRate) return MACRO_FALLBACK;
+    return `
+Aktueller Makro-Kontext (Live FRED-Daten):
+- Fed Leitzins: ${m.fedRate}% ${m.fedRate > 4 ? '(restriktiv)' : m.fedRate > 2 ? '(neutral)' : '(expansiv)'}
+- EZB Leitzins: ${m.ecbRate !== null ? m.ecbRate + '%' : 'k.A.'}
+- US Inflation (CPI): ${m.cpiYoy !== null ? m.cpiYoy + '% YoY' : 'k.A.'} ${m.cpiYoy > 3 ? '(über Ziel — Zinssenkungen unwahrscheinlich)' : m.cpiYoy < 2 ? '(unter Ziel — Zinssenkungen möglich)' : '(nahe Fed-Ziel von 2%)'}
+- US Arbeitslosigkeit: ${m.unemployment !== null ? m.unemployment + '%' : 'k.A.'}
+- US BIP Wachstum: ${m.gdpGrowth !== null ? m.gdpGrowth + '% (annualisiert)' : 'k.A.'}
+- Globale Themen: KI-Revolution (Nvidia dominiert KI-Chips), Handelsspannungen USA-China, Energiewende
+`;
+  } catch(e) {
+    return MACRO_FALLBACK;
+  }
+}
 
 const RULES = `
 STRIKTE REGELN — niemals verletzen:
@@ -86,7 +133,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { asset, price, changePct, isPos, frage, news, range, level, fundamentals } = req.body || {};
+  const { asset, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
@@ -137,6 +184,9 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // Live Makro-Daten laden
+  const MACRO_CONTEXT = await getLiveMacro();
+
   let system, user;
 
   if (frage) {
@@ -154,7 +204,7 @@ Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten 
   } else {
     system = `Du bist Finanzblick — ein präziser Finanzanalyst für Privatanleger.
 ${levelPrompt}
-${MACRO_CONTEXT}
+${buildMacroContext(macro)}
 ${RULES}
 
 Strukturiere deine Antwort EXAKT so:
