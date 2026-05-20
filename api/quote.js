@@ -1,5 +1,16 @@
 const https = require('https');
 
+const COINGECKO_IDS = {
+  'BTC':'bitcoin','ETH':'ethereum','BNB':'binancecoin','XRP':'ripple',
+  'SOL':'solana','ADA':'cardano','DOGE':'dogecoin','TRX':'tron',
+  'AVAX':'avalanche-2','LINK':'chainlink','DOT':'polkadot','UNI':'uniswap',
+  'ATOM':'cosmos','LTC':'litecoin','SHIB':'shiba-inu','BCH':'bitcoin-cash',
+  'XLM':'stellar','NEAR':'near','ARB':'arbitrum','OP':'optimism',
+  'SUI':'sui','APT':'aptos','FIL':'filecoin','ICP':'internet-computer',
+  'MATIC':'matic-network','POL':'matic-network','TON':'the-open-network',
+  'HBAR':'hedera-hashgraph','VET':'vechain','ALGO':'algorand','XTZ':'tezos',
+};
+
 const CONFIGS = {
   '1T': { range: '1d',  interval: '5m'  },
   '1W': { range: '5d',  interval: '60m' },
@@ -103,25 +114,51 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Krypto-Fundamentaldaten via Yahoo quoteSummary
+    // Krypto-Fundamentaldaten
     if (meta.instrumentType === 'CRYPTOCURRENCY' || meta.exchangeName === 'CCC') {
       fundamentals.isCrypto = true;
-      try {
-        const cryptoUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryDetail`;
-        const cryptoBody = await fetchUrl(cryptoUrl);
-        const cryptoJson = JSON.parse(cryptoBody);
-        const sd = cryptoJson?.quoteSummary?.result?.[0]?.summaryDetail;
-        if (sd) {
-          if (sd.marketCap?.raw) fundamentals.marketCap = sd.marketCap.raw;
-          if (sd.circulatingSupply?.raw) fundamentals.circulatingSupply = sd.circulatingSupply.raw;
-          if (sd.maxSupply?.raw) fundamentals.maxSupply = sd.maxSupply.raw;
-          if (sd.volume24Hr?.raw) fundamentals.volume24Hr = sd.volume24Hr.raw;
-          if (fundamentals.maxSupply && price) {
-            fundamentals.fdv = Math.round(price * fundamentals.maxSupply);
+      const ticker = symbol.replace(/-[A-Z]{3,4}$/, '');
+      const cgId = COINGECKO_IDS[ticker];
+
+      // Primär: CoinGecko (speziell für Krypto, kostenlos)
+      if (cgId) {
+        try {
+          const cgUrl = `https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`;
+          const cgBody = await fetchUrl(cgUrl);
+          const cgJson = JSON.parse(cgBody);
+          const md = cgJson?.market_data;
+          if (md) {
+            if (md.market_cap?.usd) fundamentals.marketCap = md.market_cap.usd;
+            if (md.circulating_supply) fundamentals.circulatingSupply = md.circulating_supply;
+            if (md.max_supply) fundamentals.maxSupply = md.max_supply;
+            if (md.total_volume?.usd) fundamentals.volume24Hr = md.total_volume.usd;
+            if (md.fully_diluted_valuation?.usd) fundamentals.fdv = md.fully_diluted_valuation.usd;
           }
+        } catch(e) {
+          // CoinGecko nicht verfügbar
         }
-      } catch(e) {
-        // quoteSummary nicht verfügbar
+      }
+
+      // Fallback: Yahoo Finance v7 quote
+      if (!fundamentals.marketCap) {
+        try {
+          const v7Url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
+          const v7Body = await fetchUrl(v7Url);
+          const v7Json = JSON.parse(v7Body);
+          const q = v7Json?.quoteResponse?.result?.[0];
+          if (q) {
+            if (q.marketCap) fundamentals.marketCap = q.marketCap;
+            if (q.circulatingSupply) fundamentals.circulatingSupply = q.circulatingSupply;
+            if (q.maxSupply) fundamentals.maxSupply = q.maxSupply;
+            if (q.volume24Hr || q.regularMarketVolume) fundamentals.volume24Hr = q.volume24Hr || q.regularMarketVolume;
+          }
+        } catch(e) {
+          // Yahoo v7 nicht verfügbar
+        }
+      }
+
+      if (fundamentals.maxSupply && price && !fundamentals.fdv) {
+        fundamentals.fdv = Math.round(price * fundamentals.maxSupply);
       }
     }
 
