@@ -117,43 +117,27 @@ module.exports = async function handler(req, res) {
     // Krypto-Fundamentaldaten
     if (meta.instrumentType === 'CRYPTOCURRENCY' || meta.exchangeName === 'CCC') {
       fundamentals.isCrypto = true;
+      // 24h Volumen direkt aus Chart-Meta (immer verfügbar)
+      if (meta.regularMarketVolume) fundamentals.volume24Hr = meta.regularMarketVolume;
+
+      // Market Cap + Supply via CoinGecko /coins/markets (ein Aufruf, alles drin)
       const ticker = symbol.replace(/-[A-Z]{3,4}$/, '');
       const cgId = COINGECKO_IDS[ticker];
-
-      // Primär: CoinGecko (speziell für Krypto, kostenlos)
       if (cgId) {
         try {
-          const cgUrl = `https://api.coingecko.com/api/v3/coins/${cgId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`;
+          const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgId}&per_page=1`;
           const cgBody = await fetchUrl(cgUrl);
           const cgJson = JSON.parse(cgBody);
-          const md = cgJson?.market_data;
-          if (md) {
-            if (md.market_cap?.usd) fundamentals.marketCap = md.market_cap.usd;
-            if (md.circulating_supply) fundamentals.circulatingSupply = md.circulating_supply;
-            if (md.max_supply) fundamentals.maxSupply = md.max_supply;
-            if (md.total_volume?.usd) fundamentals.volume24Hr = md.total_volume.usd;
-            if (md.fully_diluted_valuation?.usd) fundamentals.fdv = md.fully_diluted_valuation.usd;
+          const c = Array.isArray(cgJson) ? cgJson[0] : null;
+          if (c) {
+            if (c.market_cap) fundamentals.marketCap = c.market_cap;
+            if (c.circulating_supply) fundamentals.circulatingSupply = c.circulating_supply;
+            if (c.max_supply) fundamentals.maxSupply = c.max_supply;
+            if (c.total_volume) fundamentals.volume24Hr = c.total_volume;
+            if (c.fully_diluted_valuation) fundamentals.fdv = c.fully_diluted_valuation;
           }
         } catch(e) {
-          // CoinGecko nicht verfügbar
-        }
-      }
-
-      // Fallback: Yahoo Finance v7 quote
-      if (!fundamentals.marketCap) {
-        try {
-          const v7Url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
-          const v7Body = await fetchUrl(v7Url);
-          const v7Json = JSON.parse(v7Body);
-          const q = v7Json?.quoteResponse?.result?.[0];
-          if (q) {
-            if (q.marketCap) fundamentals.marketCap = q.marketCap;
-            if (q.circulatingSupply) fundamentals.circulatingSupply = q.circulatingSupply;
-            if (q.maxSupply) fundamentals.maxSupply = q.maxSupply;
-            if (q.volume24Hr || q.regularMarketVolume) fundamentals.volume24Hr = q.volume24Hr || q.regularMarketVolume;
-          }
-        } catch(e) {
-          // Yahoo v7 nicht verfügbar
+          // CoinGecko nicht verfügbar — volume24Hr aus Chart-Meta bleibt
         }
       }
 

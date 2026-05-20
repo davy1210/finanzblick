@@ -620,7 +620,7 @@ function setRangeTag(range){
 
 // ── QUOTE ─────────────────────────────────────────────────────────────────
 async function loadQuote(sym,range){
-  var ck='q_'+sym+'_'+range;
+  var ck='q2_'+sym+'_'+range;
   var cached=cGet(ck);
   if(cached){ currentData=cached; renderQuote(cached,sym); return; }
   try{
@@ -637,7 +637,7 @@ async function changeRange(range,btn){
   document.getElementById('hover-price').textContent='—';
   document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
   document.getElementById('news-wrap').style.display='none';
-  var ck='q_'+currentSymbol+'_'+range; delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
+  var ck='q2_'+currentSymbol+'_'+range; delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
   var name=currentData?currentData.name:currentSymbol;
   await Promise.all([loadQuote(currentSymbol,range), loadNews(name,range)]);
   await loadAutoAnalyse(name,range);
@@ -966,7 +966,7 @@ async function buildGrid(){
   }).join('');
   PINNED.forEach(async function(p){
     try{
-      var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_'), ck='q_'+p.symbol+'_1T';
+      var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_'), ck='q2_'+p.symbol+'_1T';
       var data=cGet(ck);
       if(!data){ var r=await fetch('/api/quote?symbol='+encodeURIComponent(p.symbol)+'&range=1T'); data=await r.json(); if(!data.error) cSet(ck,data); }
       if(!data||data.error) return;
