@@ -103,6 +103,28 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Krypto-Fundamentaldaten via Yahoo quoteSummary
+    if (meta.quoteType === 'CRYPTOCURRENCY') {
+      fundamentals.isCrypto = true;
+      try {
+        const cryptoUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryDetail`;
+        const cryptoBody = await fetchUrl(cryptoUrl);
+        const cryptoJson = JSON.parse(cryptoBody);
+        const sd = cryptoJson?.quoteSummary?.result?.[0]?.summaryDetail;
+        if (sd) {
+          if (sd.marketCap?.raw) fundamentals.marketCap = sd.marketCap.raw;
+          if (sd.circulatingSupply?.raw) fundamentals.circulatingSupply = sd.circulatingSupply.raw;
+          if (sd.maxSupply?.raw) fundamentals.maxSupply = sd.maxSupply.raw;
+          if (sd.volume24Hr?.raw) fundamentals.volume24Hr = sd.volume24Hr.raw;
+          if (fundamentals.maxSupply && price) {
+            fundamentals.fdv = Math.round(price * fundamentals.maxSupply);
+          }
+        }
+      } catch(e) {
+        // quoteSummary nicht verfügbar
+      }
+    }
+
     return res.status(200).json({
       symbol: meta.symbol || symbol,
       name: meta.shortName || symbol,

@@ -649,20 +649,29 @@ function fmtBig(n){
   if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
   return '$'+n.toLocaleString('de-DE');
 }
+function fmtCap(n){
+  if(!n) return '—';
+  if(n>=1e12) return '$'+(n/1e12).toFixed(2)+' Bio.';
+  if(n>=1e9) return '$'+(n/1e9).toFixed(1)+' Mrd';
+  if(n>=1e6) return '$'+(n/1e6).toFixed(1)+' M';
+  return '$'+n.toLocaleString('de-DE');
+}
+function fmtSupply(n){
+  if(!n) return '—';
+  if(n>=1e9) return (n/1e9).toFixed(2)+' Mrd';
+  if(n>=1e6) return (n/1e6).toFixed(2)+' M';
+  if(n>=1e3) return (n/1e3).toFixed(1)+' K';
+  return n.toLocaleString('de-DE');
+}
 function renderFundamentals(data){
   var f=data.fundamentals;
-  // Prüfen ob wirklich Fundamentaldaten vorhanden (nicht nur 52W)
   var hasFunds=f&&(f.pe||f.beta||f.eps||f.grossMargin||f.revenueGrowth);
   var has52W=f&&f.weekHigh52&&f.weekLow52;
+  var hasCrypto=f&&f.isCrypto;
 
-  if(!has52W&&!hasFunds){document.getElementById('fund-wrap').style.display='none';return;}
+  if(!has52W&&!hasFunds&&!hasCrypto){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';
-
-  // Für Krypto/Indizes ohne Fundamentaldaten: nur 52W Band zeigen
-  if(!hasFunds&&has52W){
-    document.getElementById('rec-gauge').style.display='none';
-    document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Für dieses Asset sind keine Fundamentaldaten verfügbar.</div>';
-  }
+  document.getElementById('rec-gauge').style.display='none';
 
   // 52W Bar
   if(f.weekHigh52&&f.weekLow52&&data.price){
@@ -675,24 +684,46 @@ function renderFundamentals(data){
       '<div class="w52-labels"><span>Tief: '+fmtP(f.weekLow52,data.currency)+'</span><span style="color:var(--blue);font-size:12px">'+pos52+'% vom Tief</span><span>Hoch: '+fmtP(f.weekHigh52,data.currency)+'</span></div>';
   }
 
-  // Fundamentaldaten Grid
-  var items=[
-    {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'},
-    {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
-    {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
-    {label:'EPS',value:f.eps?'$'+f.eps.toFixed(2):'—',sub:'Gewinn pro Aktie'},
-    {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
-    {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
-    {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
-    {label:'Nettomarge',value:f.netMargin?f.netMargin+'%':'—',sub:'Reingewinn/Umsatz'},
-    {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'YoY Wachstum'},
-    {label:'ROE',value:f.roe?f.roe+'%':'—',sub:'Eigenkapitalrendite'},
-  ].filter(function(it){return it.value!=='—';});
-
-  document.getElementById('fund-grid').innerHTML=items.map(function(it){
-    var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\'' + it.glossKey + '\')">' + it.label + '</span>':it.label;
-    return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
-  }).join('');
+  if(hasCrypto){
+    // Krypto-Fundamentaldaten
+    var sym=data.symbol?data.symbol.replace(/-USD$/,''):'';
+    var items=[];
+    if(f.marketCap) items.push({label:'Market Cap',value:fmtCap(f.marketCap),sub:'Gesamtwert aller Coins'});
+    if(f.fdv) items.push({label:'FDV',value:fmtCap(f.fdv),sub:'Vollst. verwässerte Marktkapitalisierung'});
+    if(f.circulatingSupply){
+      var supStr=fmtSupply(f.circulatingSupply);
+      if(f.maxSupply){var pct=Math.round((f.circulatingSupply/f.maxSupply)*100);supStr+=' / '+fmtSupply(f.maxSupply)+' ('+pct+'%)';}
+      items.push({label:'Umlaufmenge',value:supStr,sub:sym+' in Umlauf'+(f.maxSupply?' / Max.':'')});
+    }
+    if(f.volume24Hr) items.push({label:'24h Volumen',value:fmtCap(f.volume24Hr),sub:'Gehandelte Menge (24h)'});
+    if(!items.length){
+      document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Krypto-Marktdaten nicht verfügbar.</div>';
+    } else {
+      document.getElementById('fund-grid').innerHTML=items.map(function(it){
+        return '<div class="fund-card"><div class="fund-label">'+it.label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
+      }).join('');
+    }
+  } else if(hasFunds){
+    // Aktien-Fundamentaldaten
+    var items=[
+      {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'},
+      {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
+      {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
+      {label:'EPS',value:f.eps?'$'+f.eps.toFixed(2):'—',sub:'Gewinn pro Aktie'},
+      {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
+      {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
+      {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
+      {label:'Nettomarge',value:f.netMargin?f.netMargin+'%':'—',sub:'Reingewinn/Umsatz'},
+      {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'YoY Wachstum'},
+      {label:'ROE',value:f.roe?f.roe+'%':'—',sub:'Eigenkapitalrendite'},
+    ].filter(function(it){return it.value!=='—';});
+    document.getElementById('fund-grid').innerHTML=items.map(function(it){
+      var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\'' + it.glossKey + '\')">' + it.label + '</span>':it.label;
+      return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
+    }).join('');
+  } else {
+    document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Für dieses Asset sind keine Fundamentaldaten verfügbar.</div>';
+  }
 }
 
 function scrollToGloss(term){
