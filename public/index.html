@@ -667,7 +667,7 @@ function renderFundamentals(data){
   var f=data.fundamentals;
   var hasFunds=f&&(f.pe||f.beta||f.eps||f.grossMargin||f.revenueGrowth);
   var has52W=f&&f.weekHigh52&&f.weekLow52;
-  var hasCrypto=f&&f.isCrypto;
+  var hasCrypto=f&&(f.isCrypto||data.exchange==='CCC'||f.exchange==='CCC');
 
   if(!has52W&&!hasFunds&&!hasCrypto){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';

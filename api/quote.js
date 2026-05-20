@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Krypto-Fundamentaldaten via Yahoo quoteSummary
-    if (meta.quoteType === 'CRYPTOCURRENCY') {
+    if (meta.instrumentType === 'CRYPTOCURRENCY' || meta.exchangeName === 'CCC') {
       fundamentals.isCrypto = true;
       try {
         const cryptoUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryDetail`;
