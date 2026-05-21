@@ -265,6 +265,38 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .rec-strong-sell{background:#FEE2E2;color:#991B1B}
 .glossary-link{color:var(--blue);text-decoration:underline;text-decoration-style:dotted;cursor:pointer;font-weight:600}
 .disc{font-size:11px;color:var(--muted);text-align:center;padding:16px;border-top:1px solid var(--border);background:var(--card)}
+
+/* ANALYSE IMPROVEMENTS */
+.analyse-header{display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px;gap:8px}
+.analyse-meta{display:flex;align-items:center;gap:6px}
+.refresh-btn{padding:5px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;color:var(--muted);font-family:var(--font);transition:all .15s}
+.refresh-btn:hover{border-color:var(--blue);color:var(--blue)}
+.exp-box--primary{border-left:3px solid var(--blue)}
+.exp-box--secondary{border-left:3px solid var(--purple)}
+.exp-label-icon{margin-right:5px}
+.exp-text{font-size:13px;line-height:1.8;color:var(--text);white-space:pre-line}
+
+/* EVENTS IMPROVEMENTS */
+.ev-context{font-size:12px;color:var(--muted);line-height:1.6;padding:10px 12px;background:var(--blue-bg);border-radius:8px;border-left:3px solid var(--blue);margin-top:10px}
+.ev-extra{font-size:11px;font-weight:700;color:var(--purple);background:var(--purple-bg);padding:2px 8px;border-radius:5px;margin-top:6px;display:inline-block}
+.events-filter{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.ef-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid var(--border);background:var(--card);cursor:pointer;font-family:var(--font);color:var(--muted);transition:all .15s}
+.ef-btn.active,.ef-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+
+/* NEWS IMPROVEMENTS */
+.news-impact-bar{display:flex;align-items:center;gap:4px;margin-top:6px}
+.impact-dot{width:6px;height:6px;border-radius:50%}
+.impact-dot.high{background:var(--red)}
+.impact-dot.medium{background:var(--amber)}
+.impact-dot.low{background:var(--muted)}
+.impact-label{font-size:10px;color:var(--muted);font-weight:600}
+
+/* PROFESSIONAL DESIGN TOUCHES */
+.detail-panel{box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+.nav{box-shadow:0 1px 8px rgba(0,0,0,0.08)}
+.page-title{font-size:24px}
+.gloss-category{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px;margin-top:16px}
+.gloss-count{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -431,7 +463,12 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 <!-- EREIGNISSE -->
 <div id="page-events" class="page">
   <div class="page-title">Kommende Ereignisse</div>
-  <div class="page-sub">Was passiert bald — und wie könnte es die Märkte bewegen?</div>
+  <div class="page-sub">Quartalszahlen, Zinsentscheidungen, Wirtschaftsdaten — und warum sie Kurse bewegen</div>
+  <div class="events-filter">
+    <button class="ef-btn active" onclick="filterEvents('all',this)">Alle</button>
+    <button class="ef-btn" onclick="filterEvents('earnings',this)">Quartalszahlen</button>
+    <button class="ef-btn" onclick="filterEvents('economic',this)">Wirtschaft</button>
+  </div>
   <div id="ev-list"></div>
 </div>
 
@@ -756,7 +793,7 @@ async function loadAutoAnalyse(name,range){
   if(cached){ renderAnalyse(cached,true); return; }
   try{
     var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,3),range:range,level:userLevel})});
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,6),range:range,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
     var data=await r.json();
     if(data.error) throw new Error(data.error);
     cSet(ck,data); renderAnalyse(data,false);
@@ -766,11 +803,24 @@ async function loadAutoAnalyse(name,range){
 }
 function renderAnalyse(data,cached){
   var badge=cached?'<span class="cache-tag">gecacht</span>':'';
+  var refreshBtn='<button class="refresh-btn" onclick="refreshAnalyse()" title="Analyse aktualisieren">↻</button>';
   document.getElementById('auto-analyse').innerHTML=
+    '<div class="analyse-header">'+
+      '<div class="analyse-meta">'+badge+'</div>'+
+      refreshBtn+
+    '</div>'+
     '<div class="analyse-grid">'+
-    '<div class="exp-box"><div class="exp-label"><span>Marktlage</span>'+badge+'</div><div class="exp-text">'+(data.warum||'—')+'</div></div>'+
-    '<div class="exp-box"><div class="exp-label"><span>Ausblick</span></div><div class="exp-text">'+(data.ausblick||'—')+'</div></div>'+
+      '<div class="exp-box exp-box--primary"><div class="exp-label"><span class="exp-label-icon">📊</span><span>Marktlage & Treiber</span></div><div class="exp-text">'+(data.warum||'—')+'</div></div>'+
+      '<div class="exp-box exp-box--secondary"><div class="exp-label"><span class="exp-label-icon">🔭</span><span>Ausblick & Katalysatoren</span></div><div class="exp-text">'+(data.ausblick||'—')+'</div></div>'+
     '</div>';
+}
+function refreshAnalyse(){
+  if(!currentData) return;
+  var name=currentData.name||currentSymbol;
+  var ck='a_'+name+'_'+currentRange+'_'+userLevel;
+  delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
+  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird aktualisiert...</div>';
+  loadAutoAnalyse(name,currentRange);
 }
 
 // ── NEWS ──────────────────────────────────────────────────────────────────
@@ -829,7 +879,7 @@ async function askAI(){
   resp.classList.add('show'); resp.textContent='';
   try{
     var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,3),range:currentRange,level:userLevel})});
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,6),range:currentRange,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
     var data=await r.json();
     var text=data.antwort||'Keine Antwort.';
     var i=0; var iv=setInterval(function(){ resp.textContent+=text[i]; i++; if(i>=text.length){ clearInterval(iv); btn.disabled=false; btn.textContent='Fragen'; } },10);
@@ -907,7 +957,7 @@ var EVENTS=[
 ];
 var GLOSSARY=[
   // ── GRUNDLAGEN ────────────────────────────────────────────────────
-  {term:'Aktie',def:'Ein Anteil an einem Unternehmen. Wer eine Apple-Aktie besitzt, ist zu einem kleinen Teil Miteigentümer von Apple. Steigt das Unternehmen im Wert, steigt auch die Aktie — und umgekehrt.',level:'beginner'},
+  {term:'Aktie',def:'Ein Anteil an einem Unternehmen. Wer eine Apple-Aktie besitzt, ist zu einem kleinen Teil Miteigentümer von Apple. Steigt das Unternehmen im Wert, steigt auch die Aktie — und umgekehrt.',level:'beginner',cat:'Grundlagen'},
   {term:'ETF (Exchange Traded Fund)',def:'Ein Fonds der automatisch viele Aktien kauft — z.B. alle DAX-Firmen oder den weltweiten MSCI World. Günstig, breit gestreut, kein aktives Management nötig. Der MSCI World enthält ~1.500 Unternehmen aus 23 Ländern.',level:'beginner'},
   {term:'Anleihe (Bond)',def:'Ein Kredit den du einem Staat oder Unternehmen gibst. Du bekommst regelmäßige Zinszahlungen (Kupon) und am Ende dein Geld zurück. Sicherer als Aktien aber weniger Rendite. Staatsanleihen gelten als sicherste Form.',level:'beginner'},
   {term:'Dividende',def:'Ein Teil des Unternehmensgewinns der direkt an Aktionäre ausgezahlt wird — wie Miete auf dein Kapital. Nestlé, Coca-Cola oder Allianz zahlen verlässliche Dividenden. Die Dividendenrendite zeigt wie viel Prozent du jährlich bekommst.',level:'beginner'},
@@ -1012,26 +1062,39 @@ async function toggleEvent(id){
     body.innerHTML='<div style="font-size:13px;color:var(--muted)">Erklärung nicht verfügbar.</div>';
   }
 }
-function renderEvents(events){
-  if(!events||!events.length){
-    document.getElementById('ev-list').innerHTML='<div style="padding:20px;color:var(--muted);font-size:14px">Keine kommenden Ereignisse verfügbar.</div>';
+var allEventsData=[];
+function renderEvents(events,filter){
+  allEventsData=events||[];
+  var filtered=filter?events.filter(function(e){return e.type===filter;}):events;
+  if(!filtered||!filtered.length){
+    document.getElementById('ev-list').innerHTML='<div style="padding:20px;color:var(--muted);font-size:14px">Keine Ereignisse in dieser Kategorie.</div>';
     return;
   }
-  document.getElementById('ev-list').innerHTML=events.map(function(e,i){
-    var typeTag=e.type==='earnings'
+  document.getElementById('ev-list').innerHTML=filtered.map(function(e,i){
+    var isEarnings=e.type==='earnings';
+    var typeTag=isEarnings
       ?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--blue-bg);color:var(--blue);margin-right:6px">Quartalszahlen</span>'
       :'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--amber-bg);color:var(--amber);margin-right:6px">Wirtschaft</span>';
-    var safeTitle=e.title.replace(/"/g,'&quot;');
-    var explain='<div class="ev-explain" id="ex-'+i+'" data-title="'+safeTitle+'" data-type="'+e.type+'"><div id="ex-body-'+i+'"></div></div>';
+    var safeTitle=(e.title||'').replace(/"/g,'&quot;');
+    var safeType=(e.type||'economic');
+    var extraHtml=e.extra?'<span class="ev-extra">'+e.extra+'</span>':'';
+    var contextHtml=e.context?'<div class="ev-context">'+e.context+'</div>':'';
+    var explain='<div class="ev-explain" id="ex-'+i+'" data-title="'+safeTitle+'" data-type="'+safeType+'">'+contextHtml+'<div id="ex-body-'+i+'"></div></div>';
     return '<div class="ev-card" id="ev-'+i+'" onclick="toggleEvent('+i+')">' +
       '<div class="ev-date"><div class="ev-day">'+e.day+'</div><div class="ev-mon">'+e.mon+'</div></div>'+
       '<div class="ev-body">'+
-        '<div class="ev-title-row"><div class="ev-title">'+typeTag+e.title+'</div><span class="ev-toggle" id="tog-'+i+'">Details +</span></div>'+
-        '<div class="ev-tags"><span class="ev-impact '+e.impCls+'">'+e.impact+'</span>'+e.assets.map(function(a){return '<span class="ev-asset">'+a+'</span>';}).join('')+'</div>'+
+        '<div class="ev-title-row"><div class="ev-title">'+typeTag+e.title+'</div><span class="ev-toggle" id="tog-'+i+'">KI-Analyse +</span></div>'+
+        '<div class="ev-tags"><span class="ev-impact '+e.impCls+'">'+e.impact+'</span>'+(e.assets||[]).map(function(a){return '<span class="ev-asset">'+a+'</span>';}).join('')+'</div>'+
+        extraHtml+
         explain+
       '</div>'+
     '</div>';
   }).join('');
+}
+function filterEvents(type,btn){
+  document.querySelectorAll('.ef-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderEvents(allEventsData,type==='all'?null:type);
 }
 
 async function buildEvents(){

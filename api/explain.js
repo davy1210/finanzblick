@@ -1,18 +1,17 @@
 const https = require('https');
 
-// Cache pro Event-Titel
 const explainCache = {};
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
 function callGroq(prompt, apiKey) {
   const body = JSON.stringify({
     model: 'llama-3.1-8b-instant',
-    max_tokens: 250,
-    temperature: 0.2,
+    max_tokens: 350,
+    temperature: 0.1,
     messages: [
       {
         role: 'system',
-        content: 'Du bist Finanzblick. Erkläre Börsenereignisse sachlich auf Deutsch für Privatanleger. Antworte NUR als JSON ohne Markdown: {"was":"...","warum":"...","reaktion":"..."} — je 1-2 präzise Sätze.'
+        content: 'Du bist Finanzblick. Erkläre Börsenereignisse sachlich auf Deutsch für Privatanleger. Antworte NUR als reines JSON-Objekt ohne jegliches Markdown, keine Codeblöcke, keine Backticks: {"was":"...","warum":"...","reaktion":"..."} — je 1-2 präzise, konkrete Sätze. Niemals generisch, immer spezifisch zum Ereignis.'
       },
       { role: 'user', content: prompt }
     ]
@@ -35,15 +34,48 @@ function callGroq(prompt, apiKey) {
         try {
           const p = JSON.parse(d);
           if (p.error) return reject(new Error(p.error.message));
-          const text = (p.choices && p.choices[0] && p.choices[0].message && p.choices[0].message.content) || '';
-          const clean = text.replace(/```json|```/g, '').trim();
-          const parsed = JSON.parse(clean);
-          resolve({ what: parsed.was || '', why: parsed.warum || '', effect: parsed.reaktion || '' });
-        } catch(e) { reject(e); }
+          let text = (p.choices?.[0]?.message?.content) || '';
+
+          // Robust JSON extraction — strip all markdown wrappers
+          text = text
+            .replace(/```json\s*/gi, '')
+            .replace(/```\s*/g, '')
+            .replace(/^\s*json\s*/i, '')
+            .trim();
+
+          // Try to find JSON object in the text
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('No JSON found');
+
+          const parsed = JSON.parse(jsonMatch[0]);
+          resolve({
+            what: parsed.was || parsed.what || '',
+            why: parsed.warum || parsed.why || '',
+            effect: parsed.reaktion || parsed.effect || ''
+          });
+        } catch(e) {
+          // Last-resort: extract values with regex
+          try {
+            const raw = d;
+            const content = JSON.parse(raw)?.choices?.[0]?.message?.content || '';
+            const wasM = content.match(/"was"\s*:\s*"([^"]+)"/);
+            const warumM = content.match(/"warum"\s*:\s*"([^"]+)"/);
+            const reaktM = content.match(/"reaktion"\s*:\s*"([^"]+)"/);
+            if (wasM || warumM) {
+              resolve({
+                what: wasM ? wasM[1] : '',
+                why: warumM ? warumM[1] : '',
+                effect: reaktM ? reaktM[1] : ''
+              });
+            } else {
+              reject(new Error('Parse failed'));
+            }
+          } catch(e2) { reject(e); }
+        }
       });
     });
     r.on('error', reject);
-    r.setTimeout(9000, function() { this.destroy(); reject(new Error('Timeout')); });
+    r.setTimeout(10000, function() { this.destroy(); reject(new Error('Timeout')); });
     r.write(body);
     r.end();
   });
@@ -59,7 +91,7 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
-  const cacheKey = title;
+  const cacheKey = title + '_' + (type || 'economic');
   const now = Date.now();
 
   if (explainCache[cacheKey] && (now - explainCache[cacheKey].time) < CACHE_DURATION) {
@@ -67,14 +99,20 @@ module.exports = async function handler(req, res) {
   }
 
   const prompt = type === 'earnings'
-    ? `Erkläre das Börsenereignis "${title}" spezifisch: Was sind Quartalszahlen dieses Unternehmens? Warum schauen Anleger darauf? Was passiert wenn Ergebnisse besser/schlechter als erwartet sind?`
-    : `Erkläre den Wirtschaftstermin "${title}" spezifisch: Was wird hier gemessen oder entschieden? Warum ist das für Anleger wichtig? Wie reagieren Märkte typischerweise?`;
+    ? `Erkläre das Börsenereignis "${title}" präzise: Was genau wird hier veröffentlicht (EPS, Umsatz, Ausblick)? Warum ist das für Anleger entscheidend und wie beeinflusst es den Aktienkurs je nach Ergebnis? Sei konkret, nicht generisch.`
+    : `Erkläre den Wirtschaftstermin "${title}" präzise: Was wird gemessen oder entschieden? Warum reagieren Märkte so stark darauf? Welche konkreten Assets und Richtungen sind bei positivem vs. negativem Ergebnis zu erwarten?`;
 
   try {
     const data = await callGroq(prompt, apiKey);
     explainCache[cacheKey] = { data, time: now };
     return res.status(200).json({ ...data, fromCache: false });
   } catch(e) {
-    return res.status(500).json({ error: e.message });
+    // Fallback: return structured error that frontend can display
+    return res.status(200).json({
+      what: `${title} — Erklärung vorübergehend nicht verfügbar.`,
+      why: 'Bitte versuche es in einigen Minuten erneut.',
+      effect: '',
+      error: true
+    });
   }
 };
