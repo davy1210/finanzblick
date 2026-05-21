@@ -193,6 +193,27 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .nlink{font-size:13px;font-weight:600;color:var(--text);text-decoration:none;display:block;line-height:1.4}
 .nlink:hover{color:var(--blue)}
 .ndesc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.ncat{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;margin-right:4px;letter-spacing:.2px}
+.ncontext{font-size:12px;color:var(--text);background:var(--blue-bg);border-left:3px solid var(--blue);border-radius:0 7px 7px 0;padding:7px 10px;margin-top:8px;line-height:1.55}
+/* MARKTPULS */
+.mp-section{margin-bottom:20px}
+.mp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mp-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+.mp-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--green-bg);color:var(--green)}
+.mp-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;transition:border-color .15s;cursor:pointer}
+.mp-card:last-child{margin-bottom:0}
+.mp-card:hover{border-color:var(--blue)}
+.mp-card-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:0}
+.mp-headline{font-size:13px;font-weight:600;color:var(--text);line-height:1.4;flex:1}
+.mp-meta{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.mp-source{font-size:11px;font-weight:600;color:var(--muted)}
+.mp-time{font-size:11px;color:var(--muted)}
+.mp-context{font-size:12px;color:var(--text);line-height:1.55;padding:8px 10px;background:var(--blue-bg);border-left:3px solid var(--blue);border-radius:0 7px 7px 0;margin-top:9px}
+.mp-assets{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.mp-asset{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--bg);color:var(--muted);border:1px solid var(--border);cursor:pointer}
+.mp-asset:hover{border-color:var(--blue);color:var(--blue)}
+.mp-empty{font-size:13px;color:var(--muted);padding:20px 0;text-align:center}
+.mp-loading{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:12px 0}
 
 /* ASK AI */
 .ask-ai{background:linear-gradient(135deg,var(--purple-bg),var(--blue-bg));border:1.5px solid rgba(124,58,237,0.15);border-radius:14px;padding:20px}
@@ -375,6 +396,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
   <div class="logo"><div class="logo-icon">FB</div>Finanzblick</div>
   <div class="nav-links">
     <button class="nl active" onclick="gotoPage('dash',this)">Märkte</button>
+    <button class="nl" onclick="gotoPage('marktpuls',this)">Marktpuls</button>
     <button class="nl" onclick="gotoPage('events',this)">Ereignisse</button>
     <button class="nl" onclick="gotoPage('wissen',this)">Wissen</button>
   </div>
@@ -458,6 +480,23 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
       </div>
     </div>
   </div>
+</div>
+
+<!-- MARKTPULS -->
+<div id="page-marktpuls" class="page">
+  <div class="page-title">Marktpuls</div>
+  <div class="page-sub">Was die Märkte gerade bewegt — erklärt, kategorisiert, verstanden</div>
+  <div id="mp-filter" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="ef-btn active" onclick="filterMp('all',this)">Alle</button>
+    <button class="ef-btn" onclick="filterMp('ipo',this)">IPO</button>
+    <button class="ef-btn" onclick="filterMp('zentralbank',this)">Zentralbank</button>
+    <button class="ef-btn" onclick="filterMp('ki',this)">KI</button>
+    <button class="ef-btn" onclick="filterMp('krypto',this)">Krypto</button>
+    <button class="ef-btn" onclick="filterMp('geopolitik',this)">Geopolitik</button>
+    <button class="ef-btn" onclick="filterMp('ma',this)">M&A</button>
+  </div>
+  <div id="mp-list"><div class="mp-loading"><span class="dots"><span></span><span></span><span></span></span> Marktpuls wird geladen...</div></div>
+  <div class="disc" style="margin-top:16px;border-radius:10px">KI-Erklärungen: Groq · Marktdaten: Finnhub · Aktualisierung alle 25 Minuten</div>
 </div>
 
 <!-- EREIGNISSE -->
@@ -582,7 +621,69 @@ function gotoPage(id,el){
   document.querySelectorAll('.nl').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('page-'+id).classList.add('active');
   el.classList.add('active');
+  if(id==='marktpuls') loadMarketNews();
 }
+
+// ── MARKTPULS ─────────────────────────────────────────────────────────────
+var allMpArticles = [];
+var mpFilter = 'all';
+
+async function loadMarketNews(){
+  var ck='marktnews';
+  var cached=cGet(ck, 25*60*1000);
+  if(cached){ allMpArticles=cached.articles||[]; renderMarketNews(); return; }
+  document.getElementById('mp-list').innerHTML='<div class="mp-loading"><span class="dots"><span></span><span></span><span></span></span> Marktpuls wird geladen...</div>';
+  try{
+    var r=await fetch('/api/marketnews');
+    var data=await r.json();
+    if(data.articles){ allMpArticles=data.articles; cSet(ck,data,25*60*1000); renderMarketNews(); }
+    else { document.getElementById('mp-list').innerHTML='<div class="mp-empty">Keine Marktdaten verfügbar.</div>'; }
+  }catch(e){ document.getElementById('mp-list').innerHTML='<div class="mp-empty">Verbindungsfehler — bitte später versuchen.</div>'; }
+}
+
+function filterMp(cat,btn){
+  mpFilter=cat;
+  document.querySelectorAll('#mp-filter .ef-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderMarketNews();
+}
+
+function renderMarketNews(){
+  var arts=mpFilter==='all'?allMpArticles:allMpArticles.filter(function(a){ return a.category&&a.category.id===mpFilter; });
+  if(!arts.length){
+    document.getElementById('mp-list').innerHTML='<div class="mp-empty">Keine News in dieser Kategorie.</div>';
+    return;
+  }
+  var html='';
+  arts.forEach(function(a){
+    var catStyle=a.category?'background:'+a.category.bg+';color:'+a.category.color:'background:var(--bg);color:var(--muted)';
+    var catLabel=a.category?a.category.label:'News';
+    var ctx=a.context?'<div class="mp-context">'+escHtml(a.context)+'</div>':'';
+    var assets='';
+    if(a.affectedAssets&&a.affectedAssets.length){
+      assets='<div class="mp-assets">'+a.affectedAssets.map(function(as){
+        var sym=as.symbol||'';
+        var clickable=sym&&sym!=='USD';
+        return '<span class="mp-asset"'+(clickable?' onclick="mpAssetClick(\''+escAttr(sym)+'\',\''+escAttr(as.label||sym)+'\')"':'')+'>'+escHtml(as.label||sym)+'</span>';
+      }).join('')+'</div>';
+    }
+    var hasUrl=a.url&&a.url.indexOf('http')===0;
+    html+='<div class="mp-card"'+(hasUrl?' onclick="mpOpen(this)"':'')+' data-url="'+(hasUrl?escAttr(a.url):'')+'">';
+    html+='<div class="mp-card-top"><span class="ncat" style="'+catStyle+';flex-shrink:0">'+escHtml(catLabel)+'</span><div class="mp-headline">'+escHtml(a.headline)+'</div></div>';
+    html+='<div class="mp-meta"><span class="mp-source">'+escHtml(a.source||'')+'</span><span class="mp-time">'+timeAgo(a.publishedAt)+'</span></div>';
+    html+=ctx+assets;
+    html+='</div>';
+  });
+  document.getElementById('mp-list').innerHTML=html;
+}
+
+function mpOpen(el){ var u=el.dataset.url; if(u) window.open(u,'_blank','noopener'); }
+function mpAssetClick(sym,name){
+  selectAsset(sym,name);
+  gotoPage('dash', document.querySelector('.nl'));
+}
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 function fmtP(p,cur){
@@ -855,14 +956,18 @@ function renderNews(data){
   var html='';
   for(var i=0;i<arts.length;i++){
     var a=arts[i];
-    var desc=a.description&&a.description.length>10?'<div class="ndesc">'+a.description.slice(0,130)+'...</div>':'';
-    var badge=nbadge(a.sentiment,a.impactLevel);
+    var sentBadge=nbadge(a.sentiment,a.impactLevel);
+    var catTag='';
+    if(a.category&&a.category.label){
+      catTag='<span class="ncat" style="background:'+a.category.bg+';color:'+a.category.color+'">'+a.category.label+'</span>';
+    }
+    var desc=a.description&&a.description.length>10?'<div class="ndesc">'+escHtml(a.description.slice(0,130))+'...</div>':'';
     var hasUrl=a.url&&a.url.indexOf('http')===0;
     var item='<div class="news-item" style="cursor:'+(hasUrl?'pointer':'default')+'"';
     if(hasUrl){ item+=' onclick="openLink(this)"'; }
-    item+=' data-url="'+(hasUrl?a.url:'')+'">';
-    item+='<div class="news-top">'+badge+'<span class="nsource">'+a.source+'</span><span class="ntime">'+timeAgo(a.publishedAt)+'</span></div>';
-    item+='<div class="nlink">'+a.title+'</div>';
+    item+=' data-url="'+(hasUrl?escAttr(a.url):'')+'">';
+    item+='<div class="news-top">'+catTag+sentBadge+'<span class="nsource" style="margin-left:auto">'+escHtml(a.source)+'</span><span class="ntime">'+timeAgo(a.publishedAt)+'</span></div>';
+    item+='<div class="nlink">'+escHtml(a.title)+'</div>';
     item+=desc+'</div>';
     html+=item;
   }

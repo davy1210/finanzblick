@@ -319,12 +319,42 @@ function getProfile(assetName, fundamentals) {
 
 // ── RANGE CONTEXT ─────────────────────────────────────────────────────────
 const RANGE_CONTEXT = {
-  '1T': { label: 'Heute', tf: 'kurzfristig (Intraday)', focus: 'Heutige Ereignisse, aktuelle News, Pre-/After-Market-Bewegungen' },
-  '1W': { label: 'Diese Woche', tf: 'kurzfristig', focus: 'Wochenverlauf, Earnings, Makrodaten der Woche' },
-  '1M': { label: 'Letzter Monat', tf: 'mittelfristig', focus: 'Quartalszahlen, Zinsentscheidungen, Sektorbewegungen' },
-  '6M': { label: 'Letzte 6 Monate', tf: 'mittelfristig', focus: 'Halbjahrestrend, strukturelle Faktoren, Makro-Regime-Wechsel' },
-  '1J': { label: 'Letztes Jahr', tf: 'langfristig', focus: 'Jahresentwicklung, regulatorische Änderungen, Marktpositionierung' },
-  '5J': { label: 'Letzte 5 Jahre', tf: 'langfristig', focus: 'Mehrjährige Zyklen, technologische Disruption, strategische Neuausrichtungen' },
+  '1T': {
+    label: 'Heute', tf: 'Intraday',
+    focus: 'Analysiere NUR was HEUTE passiert ist: aktuelle News, Pre-/After-Market-Reaktionen, Intraday-Bewegungen. Keine Monats- oder Jahresrückblicke.',
+    timeWord: 'heute', perspective: 'kurzfristig',
+    ausblick: 'Was in den nächsten 1-3 Tagen relevant wird (z.B. bevorstehende Earnings, Makrodaten, Fed-Statements).',
+  },
+  '1W': {
+    label: 'Diese Woche', tf: '1-Wochen-Zeitraum',
+    focus: 'Analysiere die Entwicklung dieser Woche: welche News/Ereignisse haben die Bewegung der letzten 5 Handelstage getrieben?',
+    timeWord: 'diese Woche', perspective: 'kurzfristig',
+    ausblick: 'Was in den nächsten 1-2 Wochen relevant wird (Earnings-Saison, Makrodaten, Sektorbewegungen).',
+  },
+  '1M': {
+    label: 'Letzter Monat', tf: '1-Monats-Zeitraum',
+    focus: 'Analysiere die Monatsbewegung: Quartalszahlen, Zinsentscheidungen, strukturelle Sektorfaktoren der letzten 4 Wochen.',
+    timeWord: 'diesen Monat', perspective: 'mittelfristig',
+    ausblick: 'Was in den nächsten 4-6 Wochen relevant wird (nächste Earnings-Saison, Makro-Regime, Sektordynamik).',
+  },
+  '6M': {
+    label: 'Letzte 6 Monate', tf: '6-Monats-Zeitraum',
+    focus: 'Analysiere das Halbjahr: strukturelle Faktoren, Makro-Regime-Wechsel, strategische Entwicklungen die über Wochen wirkten.',
+    timeWord: 'in den letzten 6 Monaten', perspective: 'mittelfristig',
+    ausblick: 'Welche strukturellen Treiber in den nächsten 3-6 Monaten dominieren werden.',
+  },
+  '1J': {
+    label: 'Letztes Jahr', tf: '1-Jahres-Zeitraum',
+    focus: 'Analysiere das gesamte Jahr: regulatorische Änderungen, mehrere Earnings-Zyklen, Marktpositionierungsverschiebungen.',
+    timeWord: 'im letzten Jahr', perspective: 'langfristig',
+    ausblick: 'Langfristige strukturelle Faktoren und strategische Ausrichtung (12-24 Monate Horizont).',
+  },
+  '5J': {
+    label: 'Letzte 5 Jahre', tf: '5-Jahres-Zeitraum',
+    focus: 'Analysiere mehrjährige Zyklen: technologische Disruption, strategische Neuausrichtungen, Marktstrukturwandel über Wirtschaftszyklen.',
+    timeWord: 'in den letzten 5 Jahren', perspective: 'langfristig (mehrjährig)',
+    ausblick: 'Strategische Megatrends und strukturelle Verschiebungen (3-5+ Jahre Horizont).',
+  },
 };
 
 const LEVEL_PROMPTS = {
@@ -480,20 +510,23 @@ Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus 
 
 Du erhältst ein detailliertes Instrument-Profil mit den echten Kurstreibern sowie aktuelle Fundamentaldaten und Marktnachrichten.
 
-DEINE AUFGABE: Analysiere, WELCHE der Profil-Treiber die aktuelle Kursbewegung (${richtung}) am stärksten erklären. Wähle selbst die 2-3 relevantesten Faktoren — basierend darauf, was in den aktuellen Daten und News am stärksten heraussticht.
+ZEITRAUM-FOKUS: ${ctx.focus}
+Das bedeutet: ${ctx.perspective} Analyse. Beziehe dich zeitlich auf "${ctx.timeWord}" — nicht auf andere Zeiträume.
+
+DEINE AUFGABE: Analysiere, WELCHE der Profil-Treiber die aktuelle Kursbewegung (${richtung}) ${ctx.timeWord} am stärksten erklären. Wähle selbst die 2-3 relevantesten Faktoren — basierend auf den Daten und News.
 
 FORMAT (ohne Überschriften, ohne Markdown, Fließtext):
-Absatz 1 — MARKTLAGE: Was treibt die Bewegung gerade? Konkret, mit Zahlen, kausal erklärt.
-Absatz 2 — AUSBLICK: Welche Profil-Treiber werden als nächstes relevant sein? Wann, wie?
+Absatz 1 — MARKTLAGE (${ctx.timeWord}): Was hat die Bewegung getrieben? Konkret, mit Zahlen, kausal — zeitlich passend zum ${ctx.tf}.
+Absatz 2 — AUSBLICK: ${ctx.ausblick}
 
-STIL: Sachlich, präzise, individuell für dieses Asset — niemals generische Formeln. Keine Anlageberatung.`;
+STIL: Sachlich, präzise, individuell für ${asset} — niemals generische Formeln. Keine Anlageberatung.`;
 
     user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
 ${macroLine}
 Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}" (${ctx.tf}): ${richtung}
 
-Analysiere die Kursbewegung durch die Linse des Instrument-Profils. Nutze die Live-Marktdaten (Earnings-History, Analysten-Konsens) als konkrete Belege. Welche Profil-Treiber sind aktuell aktiv?`;
+Analysiere die Kursbewegung ${ctx.timeWord} durch die Linse des Instrument-Profils. Nutze Live-Marktdaten (Earnings-History, Analysten-Konsens) als Belege. Fokus: ${ctx.tf}-Perspektive.`;
   }
 
   try {
