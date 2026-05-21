@@ -1,4 +1,5 @@
 const https = require('https');
+const { enrichSymbol } = require('./enrich');
 
 // ── INSTRUMENT PROFILES ───────────────────────────────────────────────────
 // Jedes Asset bekommt seine echten Kurstreiber. Die KI wählt selbst,
@@ -427,7 +428,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { asset, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
+  const { asset, symbol, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
@@ -445,6 +446,14 @@ ${(profile.drivers || []).map(d => '  • ' + d).join('\n')}
 Worauf besonders achten: ${profile.watchFor || '—'}
 Makro-Sensitivität: ${profile.macroSensitivity || '—'}`;
 
+  // Live-Anreicherung: Earnings-History + Analysten-Konsens + Kursziele
+  const finnhubKey = process.env.FINNHUB_API_KEY;
+  const priceNum = parseFloat(String(price || '0').replace(/[^0-9.]/g, '')) || null;
+  const enrichResult = symbol && finnhubKey
+    ? await enrichSymbol(symbol, finnhubKey, priceNum).catch(() => ({ context: '' }))
+    : { context: '' };
+  const enrichBlock = enrichResult.context ? '\n\nLIVE-MARKTDATEN:\n' + enrichResult.context : '';
+
   const fundBlock = buildFundBlock(fundamentals);
   const newsBlock = buildNewsBlock(news);
   const macroLine = macro?.fedRate
@@ -457,14 +466,14 @@ Makro-Sensitivität: ${profile.macroSensitivity || '—'}`;
     system = `Du bist Finanzblick — präziser Finanzerklärer für Privatanleger. ${levelPrompt}
 Beantworte konkret, faktenbasiert, kausal. Keine Anlageberatung, keine Kursziele. Kein Markdown.`;
 
-    user = `${profileBlock}${fundBlock}${newsBlock}
+    user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
 ${macroLine}
 Asset: ${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}
 
 Frage: "${frage}"
 
-Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus dem Profil und den Fundamentaldaten. Max. 3 Absätze.`;
+Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus dem Profil, Fundamentaldaten und Live-Marktdaten. Max. 3 Absätze.`;
 
   } else {
     system = `Du bist ein erfahrener Finanzanalyst der Finanzblick-Plattform. ${levelPrompt}
@@ -479,12 +488,12 @@ Absatz 2 — AUSBLICK: Welche Profil-Treiber werden als nächstes relevant sein?
 
 STIL: Sachlich, präzise, individuell für dieses Asset — niemals generische Formeln. Keine Anlageberatung.`;
 
-    user = `${profileBlock}${fundBlock}${newsBlock}
+    user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
 ${macroLine}
 Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}" (${ctx.tf}): ${richtung}
 
-Analysiere die Kursbewegung durch die Linse des Instrument-Profils. Welche der aufgeführten Treiber sind aktuell aktiv? Stelle Verbindungen zwischen Profil-Treibern, Fundamentaldaten und den aktuellen News her.`;
+Analysiere die Kursbewegung durch die Linse des Instrument-Profils. Nutze die Live-Marktdaten (Earnings-History, Analysten-Konsens) als konkrete Belege. Welche Profil-Treiber sind aktuell aktiv?`;
   }
 
   try {

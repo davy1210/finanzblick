@@ -796,7 +796,7 @@ async function loadAutoAnalyse(name,range,silent){
   }
   try{
     var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,6),range:range,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,symbol:currentSymbol||'',price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,6),range:range,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
     var data=await r.json();
     if(data.error) throw new Error(data.error);
     data._ts=Date.now();
@@ -891,7 +891,7 @@ async function askAI(){
   resp.classList.add('show'); resp.textContent='';
   try{
     var cd=currentData||{price:'—',changePct:0,isPos:true,currency:'USD'};
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,6),range:currentRange,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:cd.name||currentSymbol,symbol:currentSymbol||'',price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,frage:frage,news:currentNews.slice(0,6),range:currentRange,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
     var data=await r.json();
     var text=data.antwort||'Keine Antwort.';
     var i=0; var iv=setInterval(function(){ resp.textContent+=text[i]; i++; if(i>=text.length){ clearInterval(iv); btn.disabled=false; btn.textContent='Fragen'; } },10);
