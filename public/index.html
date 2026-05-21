@@ -731,7 +731,6 @@ async function selectAsset(sym,name){
   document.querySelector('.range-btn').classList.add('active');
   setRangeTag('1T');
   document.getElementById('detail-panel').style.display='block';
-  document.getElementById('news-wrap').style.display='none';
   document.getElementById('ask-resp').classList.remove('show'); document.getElementById('ask-resp').textContent='';
   document.getElementById('ask-input').value=''; document.getElementById('ask-btn').disabled=false; document.getElementById('ask-btn').textContent='Fragen';
   document.getElementById('d-symbol').textContent=sym;
@@ -739,14 +738,27 @@ async function selectAsset(sym,name){
   document.getElementById('d-price').textContent='—';
   document.getElementById('hover-price').textContent='—';
   document.getElementById('hover-chg').textContent=''; document.getElementById('hover-chg').className='hover-chg';
-  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
   document.querySelectorAll('.asset-card').forEach(function(c){ c.classList.remove('active'); });
   var card=document.getElementById('ac-'+sym.replace(/[^a-zA-Z0-9]/g,'_'));
   if(card) card.classList.add('active');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
-  await Promise.all([loadQuote(sym,'1T'), loadNews(name||sym,'1T')]);
 
-  await loadAutoAnalyse(name||sym,'1T');
+  // Cache zuerst prüfen — Spinner nur zeigen wenn wirklich nötig
+  var assetName=name||sym;
+  var analyseKey='a_'+assetName+'_1T_'+userLevel;
+  var analyseCached=cGet(analyseKey, ANALYSE_TTL['1T']);
+  if(analyseCached){ renderAnalyse(analyseCached,true,false); }
+  else { document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>'; }
+
+  var newsKey='n_'+assetName+'_1T';
+  var newsCached=cGet(newsKey, cacheMs('1T'));
+  if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
+  else { document.getElementById('news-wrap').style.display='none'; }
+
+  await loadQuote(sym,'1T');
+  if(!newsCached) await loadNews(assetName,'1T');
+  if(!analyseCached) await loadAutoAnalyse(assetName,'1T');
+  else scheduleAnalyseRefresh(assetName,'1T');
 }
 
 function setRangeTag(range){
@@ -773,11 +785,24 @@ async function changeRange(range,btn){
   currentRange=range; setRangeTag(range);
   if(!currentSymbol) return;
   document.getElementById('hover-price').textContent='—';
-  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
-  document.getElementById('news-wrap').style.display='none';
-  var ck='q2_'+currentSymbol+'_'+range; delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
   var name=currentData?currentData.name:currentSymbol;
-  await Promise.all([loadQuote(currentSymbol,range), loadNews(name,range)]);
+
+  // Zeige Lade-Spinner NUR wenn analyse nicht im Cache
+  var analyseKey='a_'+name+'_'+range+'_'+userLevel;
+  var analyseCached=cGet(analyseKey, ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
+  if(!analyseCached){
+    document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
+  }
+
+  // News: zeige gecachte sofort, verstecke nur wenn kein Cache
+  var newsKey='n_'+name+'_'+range;
+  var newsCached=cGet(newsKey, cacheMs(range));
+  if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
+  else { document.getElementById('news-wrap').style.display='none'; }
+
+  // Quote immer neu laden (Chart aktualisieren)
+  var qck='q2_'+currentSymbol+'_'+range; delete MEM[qck]; try{localStorage.removeItem('fb_'+qck);}catch(e){}
+  await Promise.all([loadQuote(currentSymbol,range), newsCached?Promise.resolve():loadNews(name,range)]);
   await loadAutoAnalyse(name,range);
 }
 function fmtBig(n){
@@ -937,16 +962,33 @@ function renderAnalyse(data,cached,silent){
 }
 
 // ── NEWS ──────────────────────────────────────────────────────────────────
+var newsTimer=null;
+// TTL für Auto-Refresh (etwas kürzer als Server-Cache, um sinnvoll zu refreshen)
+var NEWS_REFRESH_TTL={'1T':20*60*1000,'1W':2*60*60*1000,'1M':4*60*60*1000,'6M':8*60*60*1000,'1J':12*60*60*1000,'5J':24*60*60*1000};
+
 async function loadNews(name,range){
   var ck='n_'+name+'_'+range;
   var cached=cGet(ck, cacheMs(range));
-  if(cached){ currentNews=cached.articles||[]; renderNews(cached); return; }
+  if(cached){ currentNews=cached.articles||[]; renderNews(cached); scheduleNewsRefresh(name,range); return; }
   try{
-    var bust='&t='+Math.floor(Date.now()/3600000); // Cache buster per Stunde
-    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range+bust);
+    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range);
     var data=await r.json();
     currentNews=data.articles||[]; cSet(ck,data,cacheMs(range)); renderNews(data);
+    scheduleNewsRefresh(name,range);
   }catch(e){}
+}
+
+function scheduleNewsRefresh(name,range){
+  if(newsTimer) clearTimeout(newsTimer);
+  var delay=NEWS_REFRESH_TTL[range]||NEWS_REFRESH_TTL['1T'];
+  newsTimer=setTimeout(function(){
+    if(!currentSymbol) return;
+    var curName=currentData?currentData.name||currentSymbol:currentSymbol;
+    if(curName!==name||currentRange!==range) return; // Nutzer hat gewechselt
+    var ck='n_'+name+'_'+range;
+    delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
+    loadNews(name,range); // silent reload — renderNews aktualisiert die Liste
+  },delay);
 }
 function renderNews(data){
   var arts=data.articles||[];
