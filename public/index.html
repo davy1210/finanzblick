@@ -318,6 +318,38 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .page-title{font-size:24px}
 .gloss-category{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:8px;margin-top:16px}
 .gloss-count{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:12px}
+
+/* ANALYST PANEL */
+.analyst-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:16px 0 10px}
+.cons-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.cons-verdict{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.cons-verdict.bullish{background:var(--green-bg);color:var(--green)}
+.cons-verdict.bearish{background:var(--red-bg);color:var(--red)}
+.cons-verdict.neutral{background:var(--amber-bg);color:var(--amber)}
+.cons-bar-outer{flex:1;min-width:140px;border-radius:6px;overflow:hidden;height:9px;display:flex;background:var(--border)}
+.cons-seg-buy{background:var(--green);height:100%}
+.cons-seg-hold{background:var(--amber);height:100%}
+.cons-seg-sell{background:var(--red);height:100%}
+.cons-sub{font-size:11px;color:var(--muted);white-space:nowrap}
+.target-band-wrap{position:relative;height:28px;background:var(--bg);border-radius:8px;margin:4px 0 12px;border:1px solid var(--border)}
+.target-band-fill{position:absolute;top:0;bottom:0;background:rgba(37,99,235,0.08);border-radius:8px}
+.target-dot{position:absolute;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,0.2)}
+.target-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-2px;margin-bottom:12px}
+.earnings-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.earnings-table th{color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);font-size:11px}
+.earnings-table td{padding:5px 6px;border-bottom:1px solid var(--border)}
+.beat-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;display:inline-block}
+.beat-tag.beat{background:var(--green-bg);color:var(--green)}
+.beat-tag.miss{background:var(--red-bg);color:var(--red)}
+
+/* 4-CARD ANALYSE GRID */
+.analyse-4grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+@media(max-width:600px){.analyse-4grid{grid-template-columns:1fr}}
+.acard{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.acard-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.acard-icon{font-size:15px;line-height:1}
+.acard-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.acard-body{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-line}
 </style>
 </head>
 <body>
@@ -450,6 +482,10 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
     <div class="stats-row" id="stats-row"></div>
     <div id="fund-wrap" style="display:none">
       <div class="w52-wrap" id="w52-wrap"></div>
+      <div id="analyst-wrap" style="display:none">
+        <div class="analyst-title">Analysten-Konsens & Kennzahlen</div>
+        <div id="analyst-inner"></div>
+      </div>
       <div class="gauge-wrap" id="rec-gauge" style="display:none"></div>
       <div class="fund-section">
         <div class="fund-title">Fundamentaldaten</div>
@@ -726,7 +762,8 @@ document.addEventListener('click',function(e){ if(!document.getElementById('sear
 
 // ── SELECT ASSET ──────────────────────────────────────────────────────────
 async function selectAsset(sym,name){
-  currentSymbol=sym; currentNews=[]; currentRange='1T';
+  currentSymbol=sym; currentNews=[]; currentRange='1T'; currentEnrich=null;
+  document.getElementById('analyst-wrap').style.display='none';
   document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('active'); });
   document.querySelector('.range-btn').classList.add('active');
   setRangeTag('1T');
@@ -745,7 +782,7 @@ async function selectAsset(sym,name){
 
   // Cache zuerst prüfen — Spinner nur zeigen wenn wirklich nötig
   var assetName=name||sym;
-  var analyseKey='a_'+assetName+'_1T_'+userLevel;
+  var analyseKey='a2_'+assetName+'_1T_'+userLevel;
   var analyseCached=cGet(analyseKey, ANALYSE_TTL['1T']);
   if(analyseCached){ renderAnalyse(analyseCached,true,false); }
   else { document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>'; }
@@ -756,6 +793,7 @@ async function selectAsset(sym,name){
   else { document.getElementById('news-wrap').style.display='none'; }
 
   await loadQuote(sym,'1T');
+  loadEnrich(sym, currentData?.price);
   if(!newsCached) await loadNews(assetName,'1T');
   if(!analyseCached) await loadAutoAnalyse(assetName,'1T');
   else scheduleAnalyseRefresh(assetName,'1T');
@@ -788,7 +826,7 @@ async function changeRange(range,btn){
   var name=currentData?currentData.name:currentSymbol;
 
   // Zeige Lade-Spinner NUR wenn analyse nicht im Cache
-  var analyseKey='a_'+name+'_'+range+'_'+userLevel;
+  var analyseKey='a2_'+name+'_'+range+'_'+userLevel;
   var analyseCached=cGet(analyseKey, ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
   if(!analyseCached){
     document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
@@ -869,25 +907,31 @@ function renderFundamentals(data){
   } else if(hasFunds){
     // Aktien-Fundamentaldaten
     function fmtCapFund(n){if(!n)return'—';if(n>=1e12)return(n/1e12).toFixed(2)+' Bio.';if(n>=1e9)return(n/1e9).toFixed(1)+' Mrd.';if(n>=1e6)return(n/1e6).toFixed(0)+' Mio.';return n.toLocaleString('de-DE');}
+    var LEVEL_KEYS={
+      beginner:['marketCap','pe','beta','dividendYield','revenueGrowth','earningsGrowth','grossMargin'],
+      intermediate:['marketCap','pe','forwardPE','beta','dividendYield','revenueGrowth','earningsGrowth','grossMargin','operatingMargin','netMargin','freeCashflow','revenue'],
+      expert:null
+    };
+    var levelKeys=LEVEL_KEYS[userLevel]||null;
     var items=[
-      f.marketCap?{label:'Marktkapitalisierung',value:fmtCapFund(f.marketCap),sub:'Börsenwert gesamt'}:null,
-      f.pe?{label:'KGV',value:f.pe.toFixed(1),sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'}:null,
-      f.forwardPE?{label:'Forward KGV',value:f.forwardPE.toFixed(1),sub:'Erwartetes KGV (nächste 12M)'}:null,
-      f.pegRatio?{label:'PEG-Ratio',value:f.pegRatio.toFixed(2),sub:'KGV / Gewinnwachstum'}:null,
-      f.pb?{label:'Kurs-Buchwert',value:f.pb.toFixed(1)+'x',sub:'P/B Ratio'}:null,
-      f.eps?{label:'EPS',value:(data.currency==='EUR'?'€':'$')+Math.abs(f.eps).toFixed(2),sub:'Gewinn pro Aktie (TTM)'}:null,
-      f.beta?{label:'Beta',value:f.beta.toFixed(2),sub:'Marktrisiko (1 = Markt)',glossKey:'Beta'}:null,
-      f.dividendYield?{label:'Dividende',value:f.dividendYield+'%',sub:'Rendite p.a.',glossKey:'Dividende'}:null,
-      f.revenue?{label:'Umsatz',value:fmtCapFund(f.revenue),sub:'Jahresumsatz (TTM)'}:null,
-      f.revenueGrowth!=null?{label:'Umsatzwachstum',value:(f.revenueGrowth>0?'+':'')+f.revenueGrowth+'%',sub:'YoY Wachstum'}:null,
-      f.earningsGrowth!=null?{label:'Gewinnwachstum',value:(f.earningsGrowth>0?'+':'')+f.earningsGrowth+'%',sub:'EPS-Wachstum YoY'}:null,
-      f.grossMargin!=null?{label:'Bruttomarge',value:f.grossMargin+'%',sub:'Bruttogewinn / Umsatz'}:null,
-      f.operatingMargin!=null?{label:'Op. Marge',value:f.operatingMargin+'%',sub:'Betriebsgewinn / Umsatz'}:null,
-      f.netMargin!=null?{label:'Nettomarge',value:f.netMargin+'%',sub:'Reingewinn / Umsatz'}:null,
-      f.roe!=null?{label:'ROE',value:f.roe+'%',sub:'Eigenkapitalrendite'}:null,
-      f.freeCashflow?{label:'Free Cash Flow',value:fmtCapFund(f.freeCashflow),sub:'Operativer FCF (TTM)'}:null,
-      f.debtToEquity!=null?{label:'Verschuldung',value:f.debtToEquity+'%',sub:'Fremdkapital / Eigenkapital'}:null,
-    ].filter(Boolean);
+      f.marketCap?{key:'marketCap',label:'Marktkapitalisierung',value:fmtCapFund(f.marketCap),sub:'Börsenwert gesamt'}:null,
+      f.pe?{key:'pe',label:'KGV',value:f.pe.toFixed(1),sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'}:null,
+      f.forwardPE?{key:'forwardPE',label:'Forward KGV',value:f.forwardPE.toFixed(1),sub:'Erwartetes KGV (nächste 12M)'}:null,
+      f.pegRatio?{key:'pegRatio',label:'PEG-Ratio',value:f.pegRatio.toFixed(2),sub:'KGV / Gewinnwachstum'}:null,
+      f.pb?{key:'pb',label:'Kurs-Buchwert',value:f.pb.toFixed(1)+'x',sub:'P/B Ratio'}:null,
+      f.eps?{key:'eps',label:'EPS',value:(data.currency==='EUR'?'€':'$')+Math.abs(f.eps).toFixed(2),sub:'Gewinn pro Aktie (TTM)'}:null,
+      f.beta?{key:'beta',label:'Beta',value:f.beta.toFixed(2),sub:'Marktrisiko (1 = Markt)',glossKey:'Beta'}:null,
+      f.dividendYield?{key:'dividendYield',label:'Dividende',value:f.dividendYield+'%',sub:'Rendite p.a.',glossKey:'Dividende'}:null,
+      f.revenue?{key:'revenue',label:'Umsatz',value:fmtCapFund(f.revenue),sub:'Jahresumsatz (TTM)'}:null,
+      f.revenueGrowth!=null?{key:'revenueGrowth',label:'Umsatzwachstum',value:(f.revenueGrowth>0?'+':'')+f.revenueGrowth+'%',sub:'YoY Wachstum'}:null,
+      f.earningsGrowth!=null?{key:'earningsGrowth',label:'Gewinnwachstum',value:(f.earningsGrowth>0?'+':'')+f.earningsGrowth+'%',sub:'EPS-Wachstum YoY'}:null,
+      f.grossMargin!=null?{key:'grossMargin',label:'Bruttomarge',value:f.grossMargin+'%',sub:'Bruttogewinn / Umsatz'}:null,
+      f.operatingMargin!=null?{key:'operatingMargin',label:'Op. Marge',value:f.operatingMargin+'%',sub:'Betriebsgewinn / Umsatz'}:null,
+      f.netMargin!=null?{key:'netMargin',label:'Nettomarge',value:f.netMargin+'%',sub:'Reingewinn / Umsatz'}:null,
+      f.roe!=null?{key:'roe',label:'ROE',value:f.roe+'%',sub:'Eigenkapitalrendite'}:null,
+      f.freeCashflow?{key:'freeCashflow',label:'Free Cash Flow',value:fmtCapFund(f.freeCashflow),sub:'Operativer FCF (TTM)'}:null,
+      f.debtToEquity!=null?{key:'debtToEquity',label:'Verschuldung',value:f.debtToEquity+'%',sub:'Fremdkapital / Eigenkapital'}:null,
+    ].filter(Boolean).filter(function(it){return !levelKeys||levelKeys.indexOf(it.key)!==-1;});
     if(!items.length){
       document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Fundamentaldaten werden geladen…</div>';
     } else {
@@ -924,9 +968,74 @@ function renderQuote(data,sym){
   drawChart(data);
 }
 
+// ── ENRICH / ANALYST PANEL ───────────────────────────────────────────────
+var currentEnrich=null;
+async function loadEnrich(symbol,price){
+  if(!symbol||symbol.startsWith('^')||symbol.endsWith('-USD')||symbol.endsWith('=F')) return;
+  var ck='enr_'+symbol;
+  var cached=cGet(ck,6*60*60*1000);
+  if(cached){ currentEnrich=cached; renderEnrich(cached,price); return; }
+  try{
+    var url='/api/enrich?symbol='+encodeURIComponent(symbol)+(price?'&price='+encodeURIComponent(price):'');
+    var r=await fetch(url);
+    var data=await r.json();
+    if(data.error) return;
+    currentEnrich=data; cSet(ck,data,6*60*60*1000); renderEnrich(data,price);
+  }catch(e){}
+}
+function renderEnrich(data,currentPrice){
+  var wrap=document.getElementById('analyst-wrap');
+  var inner=document.getElementById('analyst-inner');
+  if(!data){ wrap.style.display='none'; return; }
+  var html='';
+  // Analyst consensus bar — data.recs (flat, not nested under raw)
+  if(data.recs&&data.recs.total>0){
+    var rc=data.recs;
+    var buyPct=Math.round(((rc.strongBuy||0)+(rc.buy||0))/rc.total*100);
+    var holdPct=Math.round((rc.hold||0)/rc.total*100);
+    var sellPct=100-buyPct-holdPct;
+    var verdictCls=rc.bullishPct>=60?'bullish':rc.bullishPct<=35?'bearish':'neutral';
+    var verdictLbl=rc.bullishPct>=60?'Kaufen':rc.bullishPct<=35?'Verkaufen':'Halten';
+    html+='<div class="cons-row">'+
+      '<span class="cons-verdict '+verdictCls+'">'+verdictLbl+'</span>'+
+      '<div class="cons-bar-outer"><div class="cons-seg-buy" style="width:'+buyPct+'%"></div>'+
+      '<div class="cons-seg-hold" style="width:'+holdPct+'%"></div>'+
+      '<div class="cons-seg-sell" style="width:'+sellPct+'%"></div></div>'+
+      '<span class="cons-sub">'+rc.total+' Analysten · '+rc.bullishPct+'% bullish</span>'+
+    '</div>';
+  }
+  // Price target band
+  if(data.targets&&data.targets.mean&&data.targets.low&&data.targets.high){
+    var tg=data.targets;
+    var bandRange=tg.high-tg.low; var dotPct=50;
+    if(bandRange>0&&currentPrice){
+      var cp=parseFloat(String(currentPrice).replace(/[^0-9.]/g,''));
+      if(!isNaN(cp)) dotPct=Math.max(2,Math.min(98,Math.round((cp-tg.low)/bandRange*100)));
+    }
+    html+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Kursziel-Band (Analysten)</div>'+
+      '<div class="target-band-wrap">'+
+        '<div class="target-dot" style="left:'+dotPct+'%"></div>'+
+      '</div>'+
+      '<div class="target-labels"><span>Tief $'+tg.low.toFixed(0)+'</span>'+
+      '<span style="color:var(--blue)">Ø $'+tg.mean.toFixed(0)+'</span>'+
+      '<span>Hoch $'+tg.high.toFixed(0)+'</span></div>';
+  }
+  // Earnings lines (pre-formatted strings)
+  if(data.earnings&&data.earnings.lines&&data.earnings.lines.length){
+    html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px;margin-top:8px">'+
+      'Quartalszahlen · '+(data.earnings.summary||'')+'</div>'+
+      '<div style="font-size:12px;line-height:1.9;font-family:monospace;background:var(--bg);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">'+
+      data.earnings.lines.map(function(l){return escHtml(l.trim());}).join('<br>')+
+    '</div>';
+  }
+  if(!html){ wrap.style.display='none'; return; }
+  inner.innerHTML=html;
+  wrap.style.display='block';
+}
+
 // ── ANALYSE ───────────────────────────────────────────────────────────────
 async function loadAutoAnalyse(name,range,silent){
-  var ck='a_'+name+'_'+range+'_'+userLevel;
+  var ck='a2_'+name+'_'+range+'_'+userLevel;
   var cached=cGet(ck,ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
   if(cached){ renderAnalyse(cached,true,false); scheduleAnalyseRefresh(name,range); return; }
   if(!silent){
@@ -955,7 +1064,7 @@ function scheduleAnalyseRefresh(name,range){
     if(!currentSymbol) return;
     var curName=currentData?currentData.name||currentSymbol:currentSymbol;
     if(curName!==name||currentRange!==range) return; // Nutzer hat gewechselt
-    var ck='a_'+name+'_'+range+'_'+userLevel;
+    var ck='a2_'+name+'_'+range+'_'+userLevel;
     delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
     loadAutoAnalyse(name,range,true);
   },delay);
@@ -965,12 +1074,21 @@ function renderAnalyse(data,cached,silent){
   var ts=data._ts?new Date(data._ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
   var timeTag=ts?'<span class="analyse-time">Stand: '+ts+'</span>':'';
   var updateTag=silent?'<span class="analyse-updated">aktualisiert</span>':'';
-  document.getElementById('auto-analyse').innerHTML=
-    '<div class="analyse-header">'+timeTag+updateTag+'</div>'+
-    '<div class="analyse-grid">'+
+  var body='';
+  if(data.modell){
+    body='<div class="analyse-4grid">'+
+      '<div class="acard"><div class="acard-hdr"><span class="acard-icon">🏢</span><span class="acard-title">Geschäftsmodell</span></div><div class="acard-body">'+escHtml(data.modell)+'</div></div>'+
+      '<div class="acard"><div class="acard-hdr"><span class="acard-icon">📊</span><span class="acard-title">Bewertung & Treiber</span></div><div class="acard-body">'+escHtml(data.bewertung)+'</div></div>'+
+      '<div class="acard"><div class="acard-hdr"><span class="acard-icon">📈</span><span class="acard-title">Wachstum & Qualität</span></div><div class="acard-body">'+escHtml(data.wachstum)+'</div></div>'+
+      '<div class="acard"><div class="acard-hdr"><span class="acard-icon">⚡</span><span class="acard-title">Risiken & Katalysatoren</span></div><div class="acard-body">'+escHtml(data.risiken)+'</div></div>'+
+    '</div>';
+  } else {
+    body='<div class="analyse-grid">'+
       '<div class="exp-box exp-box--primary"><div class="exp-label"><span class="exp-label-icon">📊</span><span>Marktlage & Treiber</span></div><div class="exp-text">'+(data.warum||'—')+'</div></div>'+
       '<div class="exp-box exp-box--secondary"><div class="exp-label"><span class="exp-label-icon">🔭</span><span>Ausblick & Katalysatoren</span></div><div class="exp-text">'+(data.ausblick||'—')+'</div></div>'+
     '</div>';
+  }
+  document.getElementById('auto-analyse').innerHTML='<div class="analyse-header">'+timeTag+updateTag+'</div>'+body;
 }
 
 // ── NEWS ──────────────────────────────────────────────────────────────────

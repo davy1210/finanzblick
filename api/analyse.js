@@ -481,6 +481,16 @@ function buildFundBlock(f) {
   return `\n\nFUNDAMENTALDATEN: ${rows.join(' | ')}`;
 }
 
+function parseSections(raw) {
+  const sections = {};
+  const re = /\[(MODELL|BEWERTUNG|WACHSTUM|RISIKEN)\]\s*([\s\S]*?)(?=\s*\[(MODELL|BEWERTUNG|WACHSTUM|RISIKEN)\]|$)/g;
+  let m;
+  while ((m = re.exec(raw)) !== null) {
+    sections[m[1].toLowerCase()] = m[2].replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').trim();
+  }
+  return sections;
+}
+
 function buildNewsBlock(news) {
   if (!news || news.length === 0) return '';
   const sorted = [...news].sort((a, b) => {
@@ -525,7 +535,7 @@ async function fetchYahooProfile(symbol) {
 
 function callGroq(model, system, user, apiKey) {
   const body = JSON.stringify({
-    model, max_tokens: 900, temperature: 0.2,
+    model, max_tokens: 1400, temperature: 0.2,
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }]
   });
   return new Promise((resolve, reject) => {
@@ -640,28 +650,32 @@ Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus 
 Du erhältst aktuelle Daten für ${asset}: Geschäftsmodell, Fundamentalkennzahlen, Earnings-History, Analysten-Konsens und Marktnachrichten.
 
 ZEITRAUM-FOKUS: ${ctx.focus}
-Beziehe dich zeitlich auf "${ctx.timeWord}" — nicht auf andere Zeiträume.
-
 AUFGABE: ${taskInstruction}
 
-PFLICHTREGELN — diese Regeln sind verbindlich:
-1. Nenne mindestens 2 konkrete Zahlen aus den vorliegenden Daten (KGV, Marge, Umsatzwachstum, EPS-Überraschung, Kurszielabstand, Beta o.ä.)
-2. Erwähne Zinspolitik, Fed oder allgemeine Marktlage NUR wenn die aktuellen Nachrichten einen direkten Bezug zu ${asset} herstellen — nicht als generellen Kontext
-3. Analysiere das UNTERNEHMEN und seine spezifischen Treiber, nicht den Gesamtmarkt
-4. Fehlen Fundamentaldaten, sage es kurz und stütze dich auf verfügbare News und Earnings
+PFLICHTREGELN:
+1. Nenne mindestens 2 konkrete Zahlen aus den Daten (KGV, Marge, EPS-Überraschung, Kurszielabstand, Wachstumsrate o.ä.)
+2. Fed/Zinsen NUR bei direktem Nachrichtenbezug zu ${asset}
+3. Analysiere ${asset} spezifisch — nicht den Gesamtmarkt
+4. Fehlen Daten, sage es kurz
 
-FORMAT (kein Markdown, kein Fett, keine Überschriften, reiner Fließtext):
-Absatz 1 — Was hat die Kursbewegung (${richtung}) ${ctx.timeWord} bei ${asset} konkret verursacht? Kausal, mit Zahlen.
-Absatz 2 — Ausblick: ${ctx.ausblick}
+FORMAT — EXAKT diese 4 Abschnitte mit Bezeichnungen in eckigen Klammern, kein anderer Text davor oder danach, kein Markdown:
+[MODELL]
+Geschäftsmodell & Marktposition: Womit verdient ${asset} Geld, welche Segmente/Produkte sind die Haupttreiber?
+[BEWERTUNG]
+Bewertung & aktuelle Kursbewegung (${richtung} ${ctx.timeWord}): Was hat den Kurs konkret bewegt? Kausal, mit Zahlen aus den Fundamentaldaten.
+[WACHSTUM]
+Wachstum & Qualität: Umsatzentwicklung, Margen, Gewinnqualität — mit konkreten Werten aus den vorliegenden Daten.
+[RISIKEN]
+Risiken & Katalysatoren: ${ctx.ausblick} Was sind die wichtigsten Chancen und Risiken für ${asset}?
 
-Sachlich, präzise, spezifisch für ${asset}. Keine Anlageberatung.`;
+Keine Anlageberatung. Spezifisch, kausal, zahlenbasiert.`;
 
     user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
 ${macroLine}
-Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}" (${ctx.tf}): ${richtung}
+Asset: ${asset} | Kurs: ${price} | ${ctx.label} (${ctx.tf}): ${richtung}
 
-Analysiere die Kursbewegung von ${asset} ${ctx.timeWord}. Nutze ausschließlich die vorliegenden Daten — nicht allgemeines Börsenwissen. Fokus: ${ctx.tf}-Perspektive.`;
+Erstelle die 4-Abschnitt-Analyse für ${asset}. Nutze ausschließlich die vorliegenden Daten.`;
   }
 
   try {
@@ -680,12 +694,17 @@ Analysiere die Kursbewegung von ${asset} ${ctx.timeWord}. Nutze ausschließlich 
       return res.status(200).json({ antwort: clean, typ: 'frage' });
     }
 
-    // Versuche Absätze zu trennen; Fallback: gesamter Text als Marktlage
+    const sections = parseSections(clean);
+    if (Object.keys(sections).length >= 3) {
+      return res.status(200).json({
+        modell: sections.modell || '', bewertung: sections.bewertung || '',
+        wachstum: sections.wachstum || '', risiken: sections.risiken || '',
+        range: range || '1T', typ: 'auto',
+      });
+    }
+    // Fallback: 2-box format if section parsing fails
     const parts = clean.split(/\n\n+/);
-    const warum = parts[0] || clean;
-    const ausblick = parts.slice(1).join('\n\n') || '';
-
-    return res.status(200).json({ warum, ausblick, range: range || '1T', typ: 'auto' });
+    return res.status(200).json({ warum: parts[0] || clean, ausblick: parts.slice(1).join('\n\n') || '', range: range || '1T', typ: 'auto' });
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
