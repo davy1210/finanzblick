@@ -562,6 +562,21 @@ function callGroq(model, system, user, apiKey) {
   });
 }
 
+// ── SERVER-SIDE CACHE & REQUEST-DEDUPLICATION ─────────────────────────────
+// Auto-Analysen werden pro warmer Vercel-Instanz gecacht. Bei parallelen
+// Anfragen für denselben Key wartet die zweite auf die laufende statt
+// einen zweiten Groq-Call zu starten.
+const analyseCache = {};
+const analyseInflight = {};
+const ANALYSE_SERVER_TTL = {
+  '1T': 30 * 60 * 1000,      // 30 min
+  '1W': 3 * 60 * 60 * 1000,  // 3 h
+  '1M': 6 * 60 * 60 * 1000,  // 6 h
+  '6M': 12 * 60 * 60 * 1000, // 12 h
+  '1J': 18 * 60 * 60 * 1000, // 18 h
+  '5J': 24 * 60 * 60 * 1000, // 24 h
+};
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
@@ -569,6 +584,23 @@ module.exports = async function handler(req, res) {
   const { asset, symbol, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
+
+  // Server-Cache Lookup für Auto-Analysen (nicht für Freitext-Fragen)
+  const cacheKey = !frage ? `${asset}|${symbol}|${range || '1T'}|${level || 'beginner'}` : null;
+  if (cacheKey) {
+    const ttl = ANALYSE_SERVER_TTL[range] || ANALYSE_SERVER_TTL['1T'];
+    const hit = analyseCache[cacheKey];
+    if (hit && (Date.now() - hit.ts) < ttl) {
+      return res.status(200).json({ ...hit.data, fromServerCache: true });
+    }
+    // Request-Deduplication: parallel call zum selben Key → auf laufendes Promise warten
+    if (analyseInflight[cacheKey]) {
+      try {
+        const data = await analyseInflight[cacheKey];
+        return res.status(200).json({ ...data, fromInflight: true });
+      } catch(e) { /* falls inflight failed, normal weiter */ }
+    }
+  }
 
   const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
   const levelPrompt = LEVEL_PROMPTS[level] || LEVEL_PROMPTS['beginner'];
@@ -678,33 +710,50 @@ Asset: ${asset} | Kurs: ${price} | ${ctx.label} (${ctx.tf}): ${richtung}
 Erstelle die 4-Abschnitt-Analyse für ${asset}. Nutze ausschließlich die vorliegenden Daten.`;
   }
 
-  try {
+  // Fragen → 8b (schneller/günstiger); Auto-Analysen → 70b (Qualität)
+  const primaryModel = frage ? 'llama-3.1-8b-instant' : 'llama-3.3-70b-versatile';
+
+  const runCall = async () => {
     let raw;
     try {
-      raw = await callGroq('llama-3.3-70b-versatile', system, user, apiKey);
+      raw = await callGroq(primaryModel, system, user, apiKey);
     } catch(e) {
-      if (e.message === 'rate_limit') {
+      if (e.message === 'rate_limit' && primaryModel !== 'llama-3.1-8b-instant') {
         raw = await callGroq('llama-3.1-8b-instant', system, user, apiKey);
       } else throw e;
     }
-
     const clean = raw.replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').replace(/\n{3,}/g,'\n\n').trim();
 
-    if (frage) {
-      return res.status(200).json({ antwort: clean, typ: 'frage' });
-    }
+    if (frage) return { antwort: clean, typ: 'frage' };
 
     const sections = parseSections(clean);
     if (Object.keys(sections).length >= 3) {
-      return res.status(200).json({
+      return {
         modell: sections.modell || '', bewertung: sections.bewertung || '',
         wachstum: sections.wachstum || '', risiken: sections.risiken || '',
         range: range || '1T', typ: 'auto',
-      });
+      };
     }
-    // Fallback: 2-box format if section parsing fails
     const parts = clean.split(/\n\n+/);
-    return res.status(200).json({ warum: parts[0] || clean, ausblick: parts.slice(1).join('\n\n') || '', range: range || '1T', typ: 'auto' });
+    return { warum: parts[0] || clean, ausblick: parts.slice(1).join('\n\n') || '', range: range || '1T', typ: 'auto' };
+  };
+
+  try {
+    let data;
+    if (cacheKey) {
+      // Promise in inflight-map ablegen damit parallele Requests es teilen
+      const p = runCall();
+      analyseInflight[cacheKey] = p;
+      try {
+        data = await p;
+        analyseCache[cacheKey] = { data, ts: Date.now() };
+      } finally {
+        delete analyseInflight[cacheKey];
+      }
+    } else {
+      data = await runCall();
+    }
+    return res.status(200).json(data);
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }

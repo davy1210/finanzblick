@@ -1054,21 +1054,13 @@ async function loadAutoAnalyse(name,range,silent){
     if(!silent) document.getElementById('auto-analyse').innerHTML='<div class="loading-box" style="color:var(--muted)">Analyse nicht verfügbar. Stelle eine eigene Frage unten.</div>';
   }
 }
-// ── AUTO-REFRESH TIMER ────────────────────────────────────────────────
-var analyseTimer=null;
-var ANALYSE_TTL={'1T':25*60*1000,'1W':2.5*60*60*1000,'1M':5*60*60*1000,'6M':10*60*60*1000,'1J':14*60*60*1000,'5J':22*60*60*1000};
-function scheduleAnalyseRefresh(name,range){
-  if(analyseTimer) clearTimeout(analyseTimer);
-  var delay=ANALYSE_TTL[range]||ANALYSE_TTL['1T'];
-  analyseTimer=setTimeout(function(){
-    if(!currentSymbol) return;
-    var curName=currentData?currentData.name||currentSymbol:currentSymbol;
-    if(curName!==name||currentRange!==range) return; // Nutzer hat gewechselt
-    var ck='a2_'+name+'_'+range+'_'+userLevel;
-    delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
-    loadAutoAnalyse(name,range,true);
-  },delay);
-}
+// ── ANALYSE-CACHE TTL ────────────────────────────────────────────────
+// Längere TTLs schonen das Groq-Rate-Limit. Server-side Cache fängt
+// parallele Requests zusätzlich ab.
+var ANALYSE_TTL={'1T':45*60*1000,'1W':4*60*60*1000,'1M':8*60*60*1000,'6M':14*60*60*1000,'1J':20*60*60*1000,'5J':24*60*60*1000};
+// Auto-Refresh deaktiviert — verhinderte unnötige Groq-Calls bei inaktiven
+// Tabs. Cache läuft bei Bedarf beim nächsten echten Aufruf neu.
+function scheduleAnalyseRefresh(){}
 
 function renderAnalyse(data,cached,silent){
   var ts=data._ts?new Date(data._ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
