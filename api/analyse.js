@@ -433,27 +433,50 @@ async function getLiveMacro() {
   } catch(e) { return MACRO_FALLBACK; }
 }
 
+function fmtBn(n) { return n >= 1e12 ? (n/1e12).toFixed(2)+'B €/$ (Bio.)' : n >= 1e9 ? (n/1e9).toFixed(1)+'B' : n >= 1e6 ? (n/1e6).toFixed(0)+'M' : n.toLocaleString(); }
+
 function buildFundBlock(f) {
   if (!f || Object.keys(f).length === 0) return '';
   const rows = [];
-  if (f.pe) rows.push(`KGV ${f.pe.toFixed(1)}${f.pe > 40 ? ' (hoch)' : f.pe < 12 ? ' (günstig)' : ''}`);
+
+  // Bewertung
+  if (f.marketCap && !f.isCrypto) rows.push(`Market Cap ${fmtBn(f.marketCap)}`);
+  if (f.pe)        rows.push(`KGV ${f.pe.toFixed(1)}${f.pe > 40 ? ' (hoch)' : f.pe < 12 ? ' (günstig)' : ''}`);
   if (f.forwardPE) rows.push(`Forward-KGV ${f.forwardPE.toFixed(1)}`);
-  if (f.eps) rows.push(`EPS $${f.eps.toFixed(2)}`);
-  if (f.grossMargin) rows.push(`Bruttomarge ${f.grossMargin}%`);
-  if (f.netMargin || f.profitMargin) rows.push(`Nettomarge ${f.netMargin || f.profitMargin}%`);
+  if (f.pegRatio)  rows.push(`PEG ${f.pegRatio.toFixed(2)}`);
+  if (f.pb)        rows.push(`P/B ${f.pb.toFixed(1)}x`);
+  if (f.eps)       rows.push(`EPS ${f.eps.toFixed(2)}`);
+  if (f.beta)      rows.push(`Beta ${f.beta.toFixed(2)}`);
+  if (f.dividendYield) rows.push(`Dividende ${f.dividendYield}%`);
+
+  // Umsatz & Wachstum
+  if (f.revenue)       rows.push(`Umsatz ${fmtBn(f.revenue)}`);
   if (f.revenueGrowth) rows.push(`Umsatzwachstum ${f.revenueGrowth}%`);
-  if (f.roe) rows.push(`ROE ${f.roe}%`);
-  if (f.beta) rows.push(`Beta ${f.beta.toFixed(2)}`);
-  if (f.ebitda) rows.push(`EBITDA $${(f.ebitda/1e9).toFixed(1)}B`);
-  if (f.marketCap) rows.push(`Market Cap $${(f.marketCap/1e9).toFixed(0)}B`);
-  if (f.dividendYield) rows.push(`Dividendenrendite ${f.dividendYield}%`);
+  if (f.earningsGrowth !== undefined && f.earningsGrowth !== null) rows.push(`Gewinnwachstum ${f.earningsGrowth}%`);
+
+  // Rentabilität
+  if (f.grossMargin)    rows.push(`Bruttomarge ${f.grossMargin}%`);
+  if (f.operatingMargin !== undefined && f.operatingMargin !== null) rows.push(`Op.Marge ${f.operatingMargin}%`);
+  if (f.netMargin || f.profitMargin) rows.push(`Nettomarge ${f.netMargin || f.profitMargin}%`);
+  if (f.roe)            rows.push(`ROE ${f.roe}%`);
+
+  // Bilanz / Cash
+  if (f.freeCashflow)  rows.push(`FCF ${fmtBn(f.freeCashflow)}`);
+  if (f.debtToEquity !== undefined && f.debtToEquity !== null) rows.push(`Verschuldung ${f.debtToEquity}%`);
+
+  // 52W Position
   if (f.weekHigh52 && f.weekLow52) {
-    const pct = f.price ? Math.round(((f.price - f.weekLow52) / (f.weekHigh52 - f.weekLow52)) * 100) : null;
-    rows.push(`52W ${f.weekLow52.toLocaleString()}–${f.weekHigh52.toLocaleString()}${pct !== null ? ` (${pct}% vom Tief)` : ''}`);
+    rows.push(`52W ${f.weekLow52.toLocaleString('de-DE')}–${f.weekHigh52.toLocaleString('de-DE')}`);
   }
+
   // Krypto-spezifisch
-  if (f.marketCap && f.isCrypto) rows.push(`Market Cap $${(f.marketCap/1e9).toFixed(0)}B`);
-  if (f.volume24Hr) rows.push(`24h-Volumen $${(f.volume24Hr/1e9).toFixed(1)}B`);
+  if (f.isCrypto) {
+    if (f.marketCap)  rows.push(`Market Cap ${fmtBn(f.marketCap)}`);
+    if (f.volume24Hr) rows.push(`24h-Volumen ${fmtBn(f.volume24Hr)}`);
+  }
+
+  if (f.ebitda) rows.push(`EBITDA ${fmtBn(f.ebitda)}`);
+
   if (rows.length === 0) return '';
   return `\n\nFUNDAMENTALDATEN: ${rows.join(' | ')}`;
 }
@@ -474,6 +497,30 @@ function buildNewsBlock(news) {
     const desc = n.description?.length > 30 ? ` — ${n.description.slice(0, 100)}` : '';
     return `${tag}${imp} ${n.title}${desc}`;
   }).join('\n');
+}
+
+async function fetchYahooProfile(symbol) {
+  if (!symbol || symbol.startsWith('^') || symbol.endsWith('-USD') || symbol.endsWith('=F')) return null;
+  try {
+    const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryProfile`;
+    const raw = await new Promise((resolve, reject) => {
+      const req = https.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+        timeout: 3500
+      }, res => {
+        let d = ''; res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+      });
+      req.on('error', reject).on('timeout', function() { this.destroy(); reject(new Error('t')); });
+    });
+    const sp = raw?.quoteSummary?.result?.[0]?.summaryProfile;
+    if (!sp) return null;
+    return {
+      description: sp.longBusinessSummary ? sp.longBusinessSummary.slice(0, 480) : null,
+      industry: sp.industry || null,
+      sector: sp.sector || null,
+    };
+  } catch(e) { return null; }
 }
 
 function callGroq(model, system, user, apiKey) {
@@ -519,37 +566,60 @@ module.exports = async function handler(req, res) {
 
   // Instrument-Profil bestimmen
   const profile = getProfile(asset, fundamentals);
-  const narrativeLine = profile.narrative ? `\nInvestment-Narrativ: ${profile.narrative}` : '';
+
+  // Parallel: Enrich + Makro + Yahoo Unternehmensprofil (für unbekannte Instrumente)
+  const finnhubKey = process.env.FINNHUB_API_KEY;
+  const priceNum = parseFloat(String(price || '0').replace(/[^0-9.]/g, '')) || null;
+
+  const [enrichResult, macroLine, yahooProfile] = await Promise.all([
+    symbol && finnhubKey
+      ? enrichSymbol(symbol, finnhubKey, priceNum).catch(() => ({ context: '' }))
+      : Promise.resolve({ context: '' }),
+    macro?.fedRate
+      ? Promise.resolve(`Makro: Fed ${macro.fedRate}% | EZB ${macro.ecbRate || '?'}% | CPI ${macro.cpiYoy || '?'}%`)
+      : getLiveMacro(),
+    !profile.found && !fundamentals?.isCrypto && !fundamentals?.description
+      ? fetchYahooProfile(symbol).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
+  // Unternehmenskontext für unbekannte Instrumente:
+  // 1. Bevorzugt: description kommt direkt aus quote.js (Yahoo quoteSummary)
+  // 2. Fallback: fetchYahooProfile wenn quote.js keine description geliefert hat
+  if (!profile.found) {
+    if (fundamentals?.description) {
+      profile.narrative = fundamentals.description;
+      if (fundamentals.industry) profile.sector = fundamentals.industry;
+      else if (fundamentals.sector) profile.sector = fundamentals.sector;
+    } else if (yahooProfile) {
+      if (yahooProfile.description) profile.narrative = yahooProfile.description;
+      if (yahooProfile.industry) profile.sector = yahooProfile.industry;
+      else if (yahooProfile.sector) profile.sector = yahooProfile.sector;
+    }
+  }
+
+  const enrichBlock = enrichResult.context ? '\n\nLIVE-MARKTDATEN:\n' + enrichResult.context : '';
+  const fundBlock = buildFundBlock(fundamentals);
+  const newsBlock = buildNewsBlock(news);
+
+  // Profil-Block: bei bekannten Instrumenten detaillierte Treiber, sonst datenbasiert
+  const narrativeLine = profile.narrative ? `\nGeschäftsmodell: ${profile.narrative}` : '';
   const scenarioLines = (profile.bullScenario || profile.bearScenario)
     ? `\nBull-Szenario: ${profile.bullScenario || '—'}\nBear-Szenario: ${profile.bearScenario || '—'}`
     : '';
+  const driversSection = profile.found
+    ? `Kurstreiber (mit Schwellenwerten und Kausalzusammenhängen):\n${(profile.drivers || []).map(d => '  • ' + d).join('\n')}${scenarioLines}\nWorauf achten: ${profile.watchFor || '—'}\nMakro-Sensitivität: ${profile.macroSensitivity || '—'}`
+    : `Analysiere die Kurstreiber anhand der vorliegenden Fundamentaldaten, Earnings-History, Analysten-Konsens und Nachrichten.`;
   const profileBlock = `
 INSTRUMENT-PROFIL: ${asset}
 Sektor: ${profile.sector}${narrativeLine}
-Bekannte Kurstreiber (mit spezifischen Schwellenwerten und Kausalzusammenhängen):
-${(profile.drivers || []).map(d => '  • ' + d).join('\n')}${scenarioLines}
-Worauf besonders achten: ${profile.watchFor || '—'}
-Makro-Sensitivität: ${profile.macroSensitivity || '—'}`;
-
-  // Live-Anreicherung: Earnings-History + Analysten-Konsens + Kursziele
-  const finnhubKey = process.env.FINNHUB_API_KEY;
-  const priceNum = parseFloat(String(price || '0').replace(/[^0-9.]/g, '')) || null;
-  const enrichResult = symbol && finnhubKey
-    ? await enrichSymbol(symbol, finnhubKey, priceNum).catch(() => ({ context: '' }))
-    : { context: '' };
-  const enrichBlock = enrichResult.context ? '\n\nLIVE-MARKTDATEN:\n' + enrichResult.context : '';
-
-  const fundBlock = buildFundBlock(fundamentals);
-  const newsBlock = buildNewsBlock(news);
-  const macroLine = macro?.fedRate
-    ? `Makro: Fed ${macro.fedRate}% | EZB ${macro.ecbRate || '?'}% | CPI ${macro.cpiYoy || '?'}%`
-    : await getLiveMacro();
+${driversSection}`;
 
   let system, user;
 
   if (frage) {
     system = `Du bist Finanzblick — präziser Finanzerklärer für Privatanleger. ${levelPrompt}
-Beantworte konkret, faktenbasiert, kausal. Keine Anlageberatung, keine Kursziele. Kein Markdown.`;
+Beantworte konkret, faktenbasiert, kausal. Nenne konkrete Zahlen aus den vorliegenden Daten. Keine Anlageberatung, keine Kursziele. Kein Markdown.`;
 
     user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
@@ -558,30 +628,40 @@ Asset: ${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}
 
 Frage: "${frage}"
 
-Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus dem Profil, Fundamentaldaten und Live-Marktdaten. Max. 3 Absätze.`;
+Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus Fundamentaldaten und Live-Marktdaten. Beziehe dich auf ${asset} spezifisch. Max. 3 Absätze.`;
 
   } else {
+    const taskInstruction = profile.found
+      ? `Analysiere, WELCHE der Kurstreiber im Profil die aktuelle Bewegung (${richtung}) ${ctx.timeWord} am stärksten erklären. Wähle die 2-3 relevantesten — basierend auf den konkreten Daten und News.`
+      : `Kein vorgefertigtes Profil vorhanden. Analysiere ${asset} direkt anhand der vorliegenden Daten: Fundamentalkennzahlen, Earnings-History, Analysten-Konsens und Nachrichten. Leite die 2-3 Haupttreiber der Kursbewegung aus diesen konkreten Zahlen ab.`;
+
     system = `Du bist ein erfahrener Finanzanalyst der Finanzblick-Plattform. ${levelPrompt}
 
-Du erhältst ein detailliertes Instrument-Profil mit den echten Kurstreibern sowie aktuelle Fundamentaldaten und Marktnachrichten.
+Du erhältst aktuelle Daten für ${asset}: Geschäftsmodell, Fundamentalkennzahlen, Earnings-History, Analysten-Konsens und Marktnachrichten.
 
 ZEITRAUM-FOKUS: ${ctx.focus}
-Das bedeutet: ${ctx.perspective} Analyse. Beziehe dich zeitlich auf "${ctx.timeWord}" — nicht auf andere Zeiträume.
+Beziehe dich zeitlich auf "${ctx.timeWord}" — nicht auf andere Zeiträume.
 
-DEINE AUFGABE: Analysiere, WELCHE der Profil-Treiber die aktuelle Kursbewegung (${richtung}) ${ctx.timeWord} am stärksten erklären. Wähle selbst die 2-3 relevantesten Faktoren — basierend auf den Daten und News.
+AUFGABE: ${taskInstruction}
 
-FORMAT (ohne Überschriften, ohne Markdown, Fließtext):
-Absatz 1 — MARKTLAGE (${ctx.timeWord}): Was hat die Bewegung getrieben? Konkret, mit Zahlen, kausal — zeitlich passend zum ${ctx.tf}.
-Absatz 2 — AUSBLICK: ${ctx.ausblick}
+PFLICHTREGELN — diese Regeln sind verbindlich:
+1. Nenne mindestens 2 konkrete Zahlen aus den vorliegenden Daten (KGV, Marge, Umsatzwachstum, EPS-Überraschung, Kurszielabstand, Beta o.ä.)
+2. Erwähne Zinspolitik, Fed oder allgemeine Marktlage NUR wenn die aktuellen Nachrichten einen direkten Bezug zu ${asset} herstellen — nicht als generellen Kontext
+3. Analysiere das UNTERNEHMEN und seine spezifischen Treiber, nicht den Gesamtmarkt
+4. Fehlen Fundamentaldaten, sage es kurz und stütze dich auf verfügbare News und Earnings
 
-STIL: Sachlich, präzise, individuell für ${asset} — niemals generische Formeln. Keine Anlageberatung.`;
+FORMAT (kein Markdown, kein Fett, keine Überschriften, reiner Fließtext):
+Absatz 1 — Was hat die Kursbewegung (${richtung}) ${ctx.timeWord} bei ${asset} konkret verursacht? Kausal, mit Zahlen.
+Absatz 2 — Ausblick: ${ctx.ausblick}
+
+Sachlich, präzise, spezifisch für ${asset}. Keine Anlageberatung.`;
 
     user = `${profileBlock}${fundBlock}${enrichBlock}${newsBlock}
 
 ${macroLine}
 Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}" (${ctx.tf}): ${richtung}
 
-Analysiere die Kursbewegung ${ctx.timeWord} durch die Linse des Instrument-Profils. Nutze Live-Marktdaten (Earnings-History, Analysten-Konsens) als Belege. Fokus: ${ctx.tf}-Perspektive.`;
+Analysiere die Kursbewegung von ${asset} ${ctx.timeWord}. Nutze ausschließlich die vorliegenden Daten — nicht allgemeines Börsenwissen. Fokus: ${ctx.tf}-Perspektive.`;
   }
 
   try {

@@ -79,71 +79,141 @@ module.exports = async function handler(req, res) {
     const rangeChange = price - first;
     const rangeChangePct = first ? (rangeChange / first) * 100 : 0;
 
-    // Fundamentaldaten aus Finnhub
+    // ── FUNDAMENTALDATEN: Finnhub + Yahoo Finance quoteSummary parallel ────────
+    const isCryptoMeta = meta.instrumentType === 'CRYPTOCURRENCY' || meta.exchangeName === 'CCC';
+    const isIndexOrFuture = symbol.startsWith('^') || symbol.endsWith('=F');
+    const finnhubKey = process.env.FINNHUB_API_KEY;
+
     let fundamentals = {
       weekHigh52: meta.fiftyTwoWeekHigh || null,
       weekLow52: meta.fiftyTwoWeekLow || null,
       exchange: meta.exchangeName || null,
     };
-    const finnhubKey = process.env.FINNHUB_API_KEY;
-    if (finnhubKey) {
+
+    // Parallel: Finnhub metrics + Yahoo quoteSummary (nicht für Krypto/Indizes/Futures)
+    const fhUrl = finnhubKey && !isCryptoMeta
+      ? `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${finnhubKey}`
+      : null;
+    const yhUrl = !isCryptoMeta && !isIndexOrFuture
+      ? `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryProfile%2CdefaultKeyStatistics%2CfinancialData%2CsummaryDetail`
+      : null;
+
+    const [fhRaw, yhRaw] = await Promise.all([
+      fhUrl ? fetchUrl(fhUrl).catch(() => null) : Promise.resolve(null),
+      yhUrl ? fetchUrl(yhUrl).catch(() => null) : Promise.resolve(null),
+    ]);
+
+    // Finnhub verarbeiten (Priorität bei Metriken)
+    if (fhRaw) {
       try {
-        // Finnhub basic financials
-        const fhUrl = 'https://finnhub.io/api/v1/stock/metric?symbol=' + encodeURIComponent(symbol) + '&metric=all&token=' + finnhubKey;
-        const fhBody = await fetchUrl(fhUrl);
-        const fhJson = JSON.parse(fhBody);
-        const m = fhJson?.metric || {};
-        fundamentals = {
-          weekHigh52: m['52WeekHigh'] || meta.fiftyTwoWeekHigh || null,
-          weekLow52: m['52WeekLow'] || meta.fiftyTwoWeekLow || null,
-          pe: m.peExclExtraTTM || m.peTTM || null,
-          forwardPE: m.peNormalizedAnnual || null,
-          pb: m.pbAnnual || null,
-          ps: m.psAnnual || null,
-          beta: m.beta || null,
+        const m = JSON.parse(fhRaw)?.metric || {};
+        Object.assign(fundamentals, {
+          weekHigh52: m['52WeekHigh'] || fundamentals.weekHigh52,
+          weekLow52:  m['52WeekLow']  || fundamentals.weekLow52,
+          pe:            m.peExclExtraTTM || m.peTTM || null,
+          forwardPE:     m.peNormalizedAnnual || null,
+          pb:            m.pbAnnual || null,
+          ps:            m.psAnnual || null,
+          beta:          m.beta || null,
           dividendYield: m.dividendYieldIndicatedAnnual ? Math.round(m.dividendYieldIndicatedAnnual * 100) / 100 : null,
-          eps: m.epsBasicExclExtraItemsTTM || null,
-          revenueGrowth: m.revenueGrowthTTMYoy ? Math.round(m.revenueGrowthTTMYoy * 100) / 100 : null,
-          grossMargin: m.grossMarginTTM ? Math.round(m.grossMarginTTM) : null,
-          netMargin: m.netProfitMarginTTM ? Math.round(m.netProfitMarginTTM) : null,
-          roe: m.roeTTM ? Math.round(m.roeTTM) : null,
-          exchange: meta.exchangeName || null,
-        };
-      } catch(e) {
-        // Finnhub nicht verfügbar
-      }
+          eps:           m.epsBasicExclExtraItemsTTM || null,
+          revenueGrowth: m.revenueGrowthTTMYoy ? Math.round(m.revenueGrowthTTMYoy * 10) / 10 : null,
+          grossMargin:   m.grossMarginTTM   ? Math.round(m.grossMarginTTM)        : null,
+          netMargin:     m.netProfitMarginTTM ? Math.round(m.netProfitMarginTTM)  : null,
+          roe:           m.roeTTM           ? Math.round(m.roeTTM)               : null,
+        });
+      } catch(e) {}
     }
 
-    // Krypto-Fundamentaldaten
-    if (meta.instrumentType === 'CRYPTOCURRENCY' || meta.exchangeName === 'CCC') {
+    // Yahoo quoteSummary verarbeiten (füllt Lücken + neue Felder)
+    if (yhRaw) {
+      try {
+        const r = JSON.parse(yhRaw)?.quoteSummary?.result?.[0];
+        if (r) {
+          const sp = r.summaryProfile     || {};
+          const ks = r.defaultKeyStatistics || {};
+          const fd = r.financialData       || {};
+          const sd = r.summaryDetail       || {};
+
+          // Unternehmensprofil — Kern für die KI-Analyse
+          const desc = sp.longBusinessSummary;
+          if (desc && desc.length > 30) fundamentals.description = desc.slice(0, 600);
+          if (sp.industry) fundamentals.industry  = sp.industry;
+          if (sp.sector)   fundamentals.sector    = sp.sector;
+          if (sp.country)  fundamentals.country   = sp.country;
+          if (sp.fullTimeEmployees) fundamentals.employees = sp.fullTimeEmployees;
+
+          // Marktkapitalisierung (kritisch — bisher nur für Krypto vorhanden)
+          const mc = sd.marketCap?.raw;
+          if (mc && mc > 0) fundamentals.marketCap = mc;
+
+          // Bewertungskennzahlen (Yahoo als Fallback wenn Finnhub leer)
+          const safe = (v, factor = 1, digits = 1) => {
+            const n = typeof v === 'number' ? v : v?.raw;
+            if (!n || !isFinite(n)) return null;
+            return Math.round(n * factor * Math.pow(10, digits)) / Math.pow(10, digits);
+          };
+          if (!fundamentals.pe)           fundamentals.pe           = safe(sd.trailingPE);
+          if (!fundamentals.forwardPE)    fundamentals.forwardPE    = safe(ks.forwardPE);
+          if (!fundamentals.beta)         fundamentals.beta         = safe(sd.beta, 1, 2);
+          if (!fundamentals.eps)          fundamentals.eps          = safe(ks.trailingEps, 1, 2);
+          if (!fundamentals.pb)           fundamentals.pb           = safe(ks.priceToBook);
+          if (!fundamentals.dividendYield && sd.dividendYield?.raw)
+            fundamentals.dividendYield = Math.round(sd.dividendYield.raw * 100 * 100) / 100;
+
+          // Wachstum & Rentabilität (Yahoo-exklusive oder Fallback)
+          const rev = fd.totalRevenue?.raw;
+          if (rev && rev > 0) fundamentals.revenue = rev;
+          if (!fundamentals.revenueGrowth && fd.revenueGrowth?.raw)
+            fundamentals.revenueGrowth = Math.round(fd.revenueGrowth.raw * 100 * 10) / 10;
+          if (!fundamentals.grossMargin && fd.grossMargins?.raw)
+            fundamentals.grossMargin = Math.round(fd.grossMargins.raw * 100);
+          if (!fundamentals.netMargin && fd.profitMargins?.raw)
+            fundamentals.netMargin = Math.round(fd.profitMargins.raw * 100);
+          if (!fundamentals.roe && fd.returnOnEquity?.raw)
+            fundamentals.roe = Math.round(fd.returnOnEquity.raw * 100);
+
+          // Neue Kennzahlen (nur via Yahoo)
+          if (fd.operatingMargins?.raw)
+            fundamentals.operatingMargin = Math.round(fd.operatingMargins.raw * 100);
+          if (fd.freeCashflow?.raw && isFinite(fd.freeCashflow.raw))
+            fundamentals.freeCashflow = fd.freeCashflow.raw;
+          if (fd.debtToEquity?.raw && isFinite(fd.debtToEquity.raw))
+            fundamentals.debtToEquity = Math.round(fd.debtToEquity.raw * 10) / 10;
+          if (fd.earningsGrowth?.raw && isFinite(fd.earningsGrowth.raw))
+            fundamentals.earningsGrowth = Math.round(fd.earningsGrowth.raw * 100 * 10) / 10;
+          if (ks.pegRatio?.raw && isFinite(ks.pegRatio.raw) && ks.pegRatio.raw > 0)
+            fundamentals.pegRatio = Math.round(ks.pegRatio.raw * 100) / 100;
+          if (ks.enterpriseValue?.raw && ks.enterpriseValue.raw > 0)
+            fundamentals.enterpriseValue = ks.enterpriseValue.raw;
+        }
+      } catch(e) {}
+    }
+
+    // Krypto-Fundamentaldaten (CoinGecko, unverändert)
+    if (isCryptoMeta) {
       fundamentals.isCrypto = true;
-      // 24h Volumen direkt aus Chart-Meta (immer verfügbar)
       if (meta.regularMarketVolume) fundamentals.volume24Hr = meta.regularMarketVolume;
 
-      // Market Cap + Supply via CoinGecko /coins/markets (ein Aufruf, alles drin)
       const ticker = symbol.replace(/-[A-Z]{3,4}$/, '');
       const cgId = COINGECKO_IDS[ticker];
       if (cgId) {
         try {
           const cgUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cgId}&per_page=1`;
-          const cgBody = await fetchUrl(cgUrl);
-          const cgJson = JSON.parse(cgBody);
+          const cgJson = JSON.parse(await fetchUrl(cgUrl));
           const c = Array.isArray(cgJson) ? cgJson[0] : null;
           if (c) {
-            if (c.market_cap) fundamentals.marketCap = c.market_cap;
-            if (c.circulating_supply) fundamentals.circulatingSupply = c.circulating_supply;
-            if (c.max_supply) fundamentals.maxSupply = c.max_supply;
-            if (c.total_volume) fundamentals.volume24Hr = c.total_volume;
-            if (c.fully_diluted_valuation) fundamentals.fdv = c.fully_diluted_valuation;
+            if (c.market_cap)              fundamentals.marketCap        = c.market_cap;
+            if (c.circulating_supply)      fundamentals.circulatingSupply = c.circulating_supply;
+            if (c.max_supply)              fundamentals.maxSupply        = c.max_supply;
+            if (c.total_volume)            fundamentals.volume24Hr       = c.total_volume;
+            if (c.fully_diluted_valuation) fundamentals.fdv              = c.fully_diluted_valuation;
           }
-        } catch(e) {
-          // CoinGecko nicht verfügbar — volume24Hr aus Chart-Meta bleibt
-        }
+        } catch(e) {}
       }
 
-      if (fundamentals.maxSupply && price && !fundamentals.fdv) {
+      if (fundamentals.maxSupply && price && !fundamentals.fdv)
         fundamentals.fdv = Math.round(price * fundamentals.maxSupply);
-      }
     }
 
     return res.status(200).json({

@@ -828,7 +828,7 @@ function fmtSupply(n){
 }
 function renderFundamentals(data){
   var f=data.fundamentals;
-  var hasFunds=f&&(f.pe||f.beta||f.eps||f.grossMargin||f.revenueGrowth);
+  var hasFunds=f&&(f.pe||f.beta||f.eps||f.grossMargin||f.revenueGrowth||f.marketCap||f.revenue);
   var has52W=f&&f.weekHigh52&&f.weekLow52;
   var hasCrypto=f&&(f.isCrypto||data.exchange==='CCC'||f.exchange==='CCC');
 
@@ -868,22 +868,34 @@ function renderFundamentals(data){
     }
   } else if(hasFunds){
     // Aktien-Fundamentaldaten
+    function fmtCapFund(n){if(!n)return'—';if(n>=1e12)return(n/1e12).toFixed(2)+' Bio.';if(n>=1e9)return(n/1e9).toFixed(1)+' Mrd.';if(n>=1e6)return(n/1e6).toFixed(0)+' Mio.';return n.toLocaleString('de-DE');}
     var items=[
-      {label:'KGV',value:f.pe?f.pe.toFixed(1):'—',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'},
-      {label:'Forward KGV',value:f.forwardPE?f.forwardPE.toFixed(1):'—',sub:'Erwartetes KGV'},
-      {label:'Kurs-Buchwert',value:f.pb?f.pb.toFixed(1)+'x':'—',sub:'P/B Ratio'},
-      {label:'EPS',value:f.eps?'$'+f.eps.toFixed(2):'—',sub:'Gewinn pro Aktie'},
-      {label:'Beta',value:f.beta?f.beta.toFixed(2):'—',sub:'Marktrisiko',glossKey:'Beta'},
-      {label:'Dividende',value:f.dividendYield?f.dividendYield+'%':'—',sub:'Rendite p.a.',glossKey:'Dividende'},
-      {label:'Bruttomarge',value:f.grossMargin?f.grossMargin+'%':'—',sub:'Bruttogewinn/Umsatz'},
-      {label:'Nettomarge',value:f.netMargin?f.netMargin+'%':'—',sub:'Reingewinn/Umsatz'},
-      {label:'Umsatzwachstum',value:f.revenueGrowth?f.revenueGrowth+'%':'—',sub:'YoY Wachstum'},
-      {label:'ROE',value:f.roe?f.roe+'%':'—',sub:'Eigenkapitalrendite'},
-    ].filter(function(it){return it.value!=='—';});
-    document.getElementById('fund-grid').innerHTML=items.map(function(it){
-      var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\'' + it.glossKey + '\')">' + it.label + '</span>':it.label;
-      return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
-    }).join('');
+      f.marketCap?{label:'Marktkapitalisierung',value:fmtCapFund(f.marketCap),sub:'Börsenwert gesamt'}:null,
+      f.pe?{label:'KGV',value:f.pe.toFixed(1),sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'}:null,
+      f.forwardPE?{label:'Forward KGV',value:f.forwardPE.toFixed(1),sub:'Erwartetes KGV (nächste 12M)'}:null,
+      f.pegRatio?{label:'PEG-Ratio',value:f.pegRatio.toFixed(2),sub:'KGV / Gewinnwachstum'}:null,
+      f.pb?{label:'Kurs-Buchwert',value:f.pb.toFixed(1)+'x',sub:'P/B Ratio'}:null,
+      f.eps?{label:'EPS',value:(data.currency==='EUR'?'€':'$')+Math.abs(f.eps).toFixed(2),sub:'Gewinn pro Aktie (TTM)'}:null,
+      f.beta?{label:'Beta',value:f.beta.toFixed(2),sub:'Marktrisiko (1 = Markt)',glossKey:'Beta'}:null,
+      f.dividendYield?{label:'Dividende',value:f.dividendYield+'%',sub:'Rendite p.a.',glossKey:'Dividende'}:null,
+      f.revenue?{label:'Umsatz',value:fmtCapFund(f.revenue),sub:'Jahresumsatz (TTM)'}:null,
+      f.revenueGrowth!=null?{label:'Umsatzwachstum',value:(f.revenueGrowth>0?'+':'')+f.revenueGrowth+'%',sub:'YoY Wachstum'}:null,
+      f.earningsGrowth!=null?{label:'Gewinnwachstum',value:(f.earningsGrowth>0?'+':'')+f.earningsGrowth+'%',sub:'EPS-Wachstum YoY'}:null,
+      f.grossMargin!=null?{label:'Bruttomarge',value:f.grossMargin+'%',sub:'Bruttogewinn / Umsatz'}:null,
+      f.operatingMargin!=null?{label:'Op. Marge',value:f.operatingMargin+'%',sub:'Betriebsgewinn / Umsatz'}:null,
+      f.netMargin!=null?{label:'Nettomarge',value:f.netMargin+'%',sub:'Reingewinn / Umsatz'}:null,
+      f.roe!=null?{label:'ROE',value:f.roe+'%',sub:'Eigenkapitalrendite'}:null,
+      f.freeCashflow?{label:'Free Cash Flow',value:fmtCapFund(f.freeCashflow),sub:'Operativer FCF (TTM)'}:null,
+      f.debtToEquity!=null?{label:'Verschuldung',value:f.debtToEquity+'%',sub:'Fremdkapital / Eigenkapital'}:null,
+    ].filter(Boolean);
+    if(!items.length){
+      document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Fundamentaldaten werden geladen…</div>';
+    } else {
+      document.getElementById('fund-grid').innerHTML=items.map(function(it){
+        var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\''+it.glossKey+'\')">'+it.label+'</span>':it.label;
+        return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
+      }).join('');
+    }
   } else {
     document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Für dieses Asset sind keine Fundamentaldaten verfügbar.</div>';
   }
