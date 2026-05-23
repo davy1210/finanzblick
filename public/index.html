@@ -272,12 +272,14 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .gauge-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#DC2626,#F59E0B,#059669);position:relative;margin-bottom:6px}
 .gauge-needle{position:absolute;top:-3px;width:14px;height:14px;background:var(--card);border:2px solid var(--text);border-radius:50%;transform:translateX(-50%)}
 .gauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600}
-.w52-wrap{margin:0 20px 20px}
-.w52-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px}
-.w52-bar{height:6px;background:var(--border);border-radius:3px;position:relative;margin-bottom:6px}
+.w52-wrap{padding:16px 20px 14px;border-bottom:1px solid var(--border)}
+.w52-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.w52-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+.w52-pct{font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-bg);padding:2px 9px;border-radius:6px}
+.w52-bar{height:6px;background:var(--border);border-radius:3px;position:relative;margin-bottom:8px}
 .w52-fill{height:6px;background:linear-gradient(to right,var(--red),var(--green));border-radius:3px}
 .w52-dot{position:absolute;top:-4px;width:14px;height:14px;background:var(--blue);border:2px solid var(--card);border-radius:50%;transform:translateX(-50%)}
-.w52-labels{display:flex;justify-content:space-between;font-size:11px;font-weight:600}
+.w52-labels{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted)}
 .rec-wrap{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;margin:0 20px 20px}
 .rec-strong-buy{background:#DCFCE7;color:#15803D}
 .rec-buy{background:#D1FAE5;color:#059669}
@@ -320,27 +322,30 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .gloss-count{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:12px}
 
 /* ANALYST PANEL */
-.analyst-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:16px 0 10px}
-.cons-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.cons-verdict{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+#analyst-wrap{padding:14px 20px 16px;border-bottom:1px solid var(--border)}
+.analyst-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
+.ap-sublabel{font-size:11px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+.cons-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.cons-verdict{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
 .cons-verdict.bullish{background:var(--green-bg);color:var(--green)}
 .cons-verdict.bearish{background:var(--red-bg);color:var(--red)}
 .cons-verdict.neutral{background:var(--amber-bg);color:var(--amber)}
-.cons-bar-outer{flex:1;min-width:140px;border-radius:6px;overflow:hidden;height:9px;display:flex;background:var(--border)}
+.cons-bar-outer{flex:1;min-width:120px;border-radius:6px;overflow:hidden;height:8px;display:flex;background:var(--border)}
 .cons-seg-buy{background:var(--green);height:100%}
 .cons-seg-hold{background:var(--amber);height:100%}
 .cons-seg-sell{background:var(--red);height:100%}
 .cons-sub{font-size:11px;color:var(--muted);white-space:nowrap}
-.target-band-wrap{position:relative;height:28px;background:var(--bg);border-radius:8px;margin:4px 0 12px;border:1px solid var(--border)}
-.target-band-fill{position:absolute;top:0;bottom:0;background:rgba(37,99,235,0.08);border-radius:8px}
-.target-dot{position:absolute;top:50%;transform:translateY(-50%);width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,0.2)}
-.target-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-2px;margin-bottom:12px}
+.target-band-wrap{position:relative;height:8px;background:var(--border);border-radius:4px;margin:6px 0 6px}
+.target-band-fill{position:absolute;top:0;bottom:0;left:0;background:var(--blue-bg);border-radius:4px}
+.target-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;background:var(--blue);border:2px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,0.25)}
+.target-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
 .earnings-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
-.earnings-table th{color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);font-size:11px}
-.earnings-table td{padding:5px 6px;border-bottom:1px solid var(--border)}
-.beat-tag{font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;display:inline-block}
-.beat-tag.beat{background:var(--green-bg);color:var(--green)}
-.beat-tag.miss{background:var(--red-bg);color:var(--red)}
+.earnings-table th{color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}
+.earnings-table th.num,.earnings-table td.num{text-align:right}
+.earnings-table td{padding:7px 6px;border-bottom:1px solid var(--border)}
+.beat-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:inline-block}
+.beat-badge.beat{background:var(--green-bg);color:var(--green)}
+.beat-badge.miss{background:var(--red-bg);color:var(--red)}
 
 /* 4-CARD ANALYSE GRID */
 .analyse-4grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
@@ -880,9 +885,9 @@ function renderFundamentals(data){
     var pos52=range52>0?Math.round(((data.price-f.weekLow52)/range52)*100):50;
     pos52=Math.max(0,Math.min(100,pos52));
     document.getElementById('w52-wrap').innerHTML=
-      '<div class="w52-title">Position im 52-Wochen-Band</div>'+
+      '<div class="w52-header"><span class="w52-title">52-Wochen-Band</span><span class="w52-pct">'+pos52+'% vom Tief</span></div>'+
       '<div class="w52-bar"><div class="w52-fill" style="width:100%"></div><div class="w52-dot" style="left:'+pos52+'%"></div></div>'+
-      '<div class="w52-labels"><span>Tief: '+fmtP(f.weekLow52,data.currency)+'</span><span style="color:var(--blue);font-size:12px">'+pos52+'% vom Tief</span><span>Hoch: '+fmtP(f.weekHigh52,data.currency)+'</span></div>';
+      '<div class="w52-labels"><span>'+fmtP(f.weekLow52,data.currency)+'</span><span>'+fmtP(f.weekHigh52,data.currency)+'</span></div>';
   }
 
   if(hasCrypto){
@@ -988,7 +993,8 @@ function renderEnrich(data,currentPrice){
   var inner=document.getElementById('analyst-inner');
   if(!data){ wrap.style.display='none'; return; }
   var html='';
-  // Analyst consensus bar — data.recs (flat, not nested under raw)
+
+  // ── Analysten-Konsens ──────────────────────────────────────────────────
   if(data.recs&&data.recs.total>0){
     var rc=data.recs;
     var buyPct=Math.round(((rc.strongBuy||0)+(rc.buy||0))/rc.total*100);
@@ -996,38 +1002,74 @@ function renderEnrich(data,currentPrice){
     var sellPct=100-buyPct-holdPct;
     var verdictCls=rc.bullishPct>=60?'bullish':rc.bullishPct<=35?'bearish':'neutral';
     var verdictLbl=rc.bullishPct>=60?'Kaufen':rc.bullishPct<=35?'Verkaufen':'Halten';
-    html+='<div class="cons-row">'+
-      '<span class="cons-verdict '+verdictCls+'">'+verdictLbl+'</span>'+
-      '<div class="cons-bar-outer"><div class="cons-seg-buy" style="width:'+buyPct+'%"></div>'+
-      '<div class="cons-seg-hold" style="width:'+holdPct+'%"></div>'+
-      '<div class="cons-seg-sell" style="width:'+sellPct+'%"></div></div>'+
-      '<span class="cons-sub">'+rc.total+' Analysten · '+rc.bullishPct+'% bullish</span>'+
-    '</div>';
+    html+=
+      '<div class="cons-row">'+
+        '<span class="cons-verdict '+verdictCls+'">'+verdictLbl+'</span>'+
+        '<div class="cons-bar-outer">'+
+          '<div class="cons-seg-buy" style="width:'+buyPct+'%"></div>'+
+          '<div class="cons-seg-hold" style="width:'+holdPct+'%"></div>'+
+          '<div class="cons-seg-sell" style="width:'+sellPct+'%"></div>'+
+        '</div>'+
+        '<span class="cons-sub">'+rc.total+' Analysten · '+rc.bullishPct+'% bullish</span>'+
+      '</div>';
   }
-  // Price target band
+
+  // ── Kursziel-Band ──────────────────────────────────────────────────────
   if(data.targets&&data.targets.mean&&data.targets.low&&data.targets.high){
     var tg=data.targets;
-    var bandRange=tg.high-tg.low; var dotPct=50;
+    var bandRange=tg.high-tg.low;
+    var dotPct=50;
+    var updown='';
     if(bandRange>0&&currentPrice){
       var cp=parseFloat(String(currentPrice).replace(/[^0-9.]/g,''));
-      if(!isNaN(cp)) dotPct=Math.max(2,Math.min(98,Math.round((cp-tg.low)/bandRange*100)));
+      if(!isNaN(cp)){
+        dotPct=Math.max(2,Math.min(98,Math.round((cp-tg.low)/bandRange*100)));
+        var pct=((tg.mean-cp)/cp*100);
+        updown=' ('+(pct>0?'+':'')+pct.toFixed(1)+'%)';
+      }
     }
-    html+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Kursziel-Band (Analysten)</div>'+
+    html+=
+      '<div class="ap-sublabel">Kursziel-Band</div>'+
       '<div class="target-band-wrap">'+
+        '<div class="target-band-fill" style="width:'+dotPct+'%"></div>'+
         '<div class="target-dot" style="left:'+dotPct+'%"></div>'+
       '</div>'+
-      '<div class="target-labels"><span>Tief $'+tg.low.toFixed(0)+'</span>'+
-      '<span style="color:var(--blue)">Ø $'+tg.mean.toFixed(0)+'</span>'+
-      '<span>Hoch $'+tg.high.toFixed(0)+'</span></div>';
+      '<div class="target-labels">'+
+        '<span>Tief '+tg.low.toFixed(0)+'</span>'+
+        '<span style="color:var(--blue);font-weight:700">Ø '+tg.mean.toFixed(0)+escHtml(updown)+'</span>'+
+        '<span>Hoch '+tg.high.toFixed(0)+'</span>'+
+      '</div>';
   }
-  // Earnings lines (pre-formatted strings)
-  if(data.earnings&&data.earnings.lines&&data.earnings.lines.length){
-    html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px;margin-top:8px">'+
-      'Quartalszahlen · '+(data.earnings.summary||'')+'</div>'+
-      '<div style="font-size:12px;line-height:1.9;font-family:monospace;background:var(--bg);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">'+
-      data.earnings.lines.map(function(l){return escHtml(l.trim());}).join('<br>')+
-    '</div>';
+
+  // ── Quartalszahlen ─────────────────────────────────────────────────────
+  if(data.earnings&&data.earnings.rows&&data.earnings.rows.length){
+    var rows=data.earnings.rows;
+    var summary=data.earnings.summary||'';
+    html+='<div class="ap-sublabel">Quartalszahlen'+(summary?' · <span style="color:var(--green);font-weight:700">'+escHtml(summary)+'</span>':'')+'</div>'+
+      '<table class="earnings-table">'+
+        '<thead><tr>'+
+          '<th>Quartal</th>'+
+          '<th class="num">EPS</th>'+
+          '<th class="num">Schätzung</th>'+
+          '<th class="num">Überraschung</th>'+
+        '</tr></thead><tbody>'+
+      rows.map(function(e){
+        var sp=e.surprisePct;
+        var badgeCls=sp===null?'':Math.abs(sp)>=5?(sp>0?'beat':'miss'):'';
+        var spLabel=sp===null?'—':(sp>0?'+':'')+sp.toFixed(1)+'%';
+        var badgeHtml=badgeCls
+          ?'<span class="beat-badge '+badgeCls+'">'+spLabel+'</span>'
+          :'<span style="color:var(--muted)">'+spLabel+'</span>';
+        return '<tr>'+
+          '<td style="font-weight:600">'+escHtml(e.period)+'</td>'+
+          '<td class="num">'+(e.actual!==null?e.actual.toFixed(2):'—')+'</td>'+
+          '<td class="num" style="color:var(--muted)">'+(e.estimate!==null?e.estimate.toFixed(2):'—')+'</td>'+
+          '<td class="num">'+badgeHtml+'</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table>';
   }
+
   if(!html){ wrap.style.display='none'; return; }
   inner.innerHTML=html;
   wrap.style.display='block';

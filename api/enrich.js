@@ -66,6 +66,12 @@ function formatEarnings(data) {
 
   return {
     lines,
+    rows: quarters.map(e => ({
+      period: e.period || `Q${e.quarter || '?'} ${e.year || ''}`,
+      actual: typeof e.actual === 'number' ? e.actual : null,
+      estimate: typeof e.estimate === 'number' ? e.estimate : null,
+      surprisePct: typeof e.surprisePercent === 'number' ? e.surprisePercent : null,
+    })),
     summary: trend,
     lastSurprisePct: lastBeat,
   };
