@@ -1067,7 +1067,13 @@ function renderAnalyse(data,cached,silent){
   var timeTag=ts?'<span class="analyse-time">Stand: '+ts+'</span>':'';
   var updateTag=silent?'<span class="analyse-updated">aktualisiert</span>':'';
   var body='';
-  if(data.modell){
+  if(data.sections && data.sectionConfig){
+    var cards=data.sectionConfig.map(function(s){
+      var content=data.sections[s.key]||'';
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-icon">'+s.icon+'</span><span class="acard-title">'+escHtml(s.label)+'</span></div><div class="acard-body">'+escHtml(content)+'</div></div>';
+    }).join('');
+    body='<div class="analyse-4grid">'+cards+'</div>';
+  } else if(data.modell){
     body='<div class="analyse-4grid">'+
       '<div class="acard"><div class="acard-hdr"><span class="acard-icon">🏢</span><span class="acard-title">Geschäftsmodell</span></div><div class="acard-body">'+escHtml(data.modell)+'</div></div>'+
       '<div class="acard"><div class="acard-hdr"><span class="acard-icon">📊</span><span class="acard-title">Bewertung & Treiber</span></div><div class="acard-body">'+escHtml(data.bewertung)+'</div></div>'+

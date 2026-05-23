@@ -414,6 +414,117 @@ const LEVEL_PROMPTS = {
   expert: 'Professionelle Finanzsprache. Makroökonomische Analyse, technische und fundamentale Faktoren, institutionelle Perspektive. Quantitative Argumente bevorzugen.',
 };
 
+// ── SECTION CONFIGS ────────────────────────────────────────────────────────
+// Defines which analysis sections the AI produces per instrument type + range.
+// key   = bracket tag the AI writes, also used for parsing
+// label = display name in the frontend card header
+// icon  = emoji icon in the frontend card header
+// instr = instruction text injected into the system prompt for that section
+const SECTION_CONFIGS = {
+  aktie_short: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Welche konkreten Ereignisse (News, Quartalszahlen, Makrodaten, Sektorbewegung) haben die Kursbewegung von {asset} ({richtung} {timeWord}) ausgelöst? Erkläre den direkten Kausalzusammenhang mit Zahlen. Risk-On/Off-Stimmung und Branchenkontext einbeziehen.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Anstehende Ereignisse (Earnings, Makrodaten, Fed/EZB-Termine) die {asset} in den nächsten 1-2 Wochen bewegen könnten. 52W-Position: Liegt der Kurs nahe am Hoch oder Tief?' },
+  ],
+  aktie_mittel: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat die Kursbewegung von {asset} ({richtung} {timeWord}) getrieben? Sektordynamik, Kapitalflüsse, übergeordnete Marktbewegung — kausal und konkret mit Zahlen.' },
+    { key: 'FUNDAMENTALS', label: 'Fundamentals', icon: '🏢',
+      instr: 'Analysiere die vorliegenden Fundamentaldaten: KGV, EBITDA, Margen, EPS, Umsatzwachstum. Welche Kennzahlen rechtfertigen oder widerlegen die aktuelle Bewertung? Quartalsergebnisse einbeziehen wenn relevant.' },
+    { key: 'MAKRO_GEOPOLITIK', label: 'Makro & Geopolitik', icon: '🌍',
+      instr: 'Wie haben Fed/EZB-Entscheidungen, Zinsen, Inflation und geopolitische Ereignisse {asset} in diesem Zeitraum beeinflusst? Erkläre den konkreten Mechanismus (z.B. "Neue Exportbeschränkungen auf Halbleiter belasten {asset} direkt, weil X% des Umsatzes aus China kommen").' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Nächste Quartalszahlen, Zinspfad (Fed/EZB-Richtung), strukturelle Chancen und Risiken für {asset} in den nächsten Monaten. 52W-Position als technischen Kontext einbeziehen.' },
+  ],
+  krypto_short: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat {asset} ({richtung} {timeWord}) bewegt? Konkrete News (Regulierung, Makro, Marktstruktur) mit direktem Mechanismus erklären. PFLICHT: Krypto ist kein sicherer Hafen — in Risk-off-Phasen fällt Krypto oft stärker als Aktien.' },
+    { key: 'SENTIMENT_LIQUIDITAET', label: 'Sentiment & Liquidität', icon: '💧',
+      instr: 'Risk-On oder Risk-Off? ETF-Zuflüsse/-Abflüsse (BlackRock IBIT, Fidelity FBTC), Exchange-Reserven, On-Chain-Aktivität — was sagen die Liquiditätsdaten über die kurzfristige Marktstruktur von {asset}?' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Anstehende Fed/EZB-Termine, Regulierungsentscheidungen (SEC, EU MiCA), geopolitische Risiken die {asset} in den nächsten 1-2 Wochen bewegen könnten.' },
+  ],
+  krypto_mittel: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat {asset} ({richtung} {timeWord}) bewegt? Krypto-Marktdynamik, relevante strukturelle Entwicklungen — kausal erklärt. PFLICHT: Krypto ist kein sicherer Hafen.' },
+    { key: 'MAKRO_LIQUIDITAET', label: 'Makro & Liquidität', icon: '💧',
+      instr: 'Zinszyklus (Fed/EZB): Steigende Zinsen = Kapital flieht aus spekulativen Assets; sinkende Zinsen = mehr Risikobereitschaft für Krypto. ETF-Nettomittelflüsse (institutionelle Adoption), globale Liquiditätsbedingungen — erkläre den konkreten Mechanismus zum Kursverlauf von {asset}.' },
+    { key: 'ADOPTION_REGULIERUNG', label: 'Adoption & Regulierung', icon: '⚖️',
+      instr: 'Institutionelle Adoption (ETF-Zuflüsse, MicroStrategy, staatliche Adoption), Halving-Zyklus bei Bitcoin, Regulierungsumfeld (SEC-Entscheide, EU MiCA, Custody-Genehmigungen) — was sind die strukturellen Treiber für {asset}?' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Zinspfad (Fed/EZB), ETF-Dynamik, Regulierungskalender — die wichtigsten Weichenstellungen für {asset} in den nächsten Monaten.' },
+  ],
+  gold: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat den Goldpreis ({richtung} {timeWord}) konkret bewegt? Kursveränderung, Volumen, 52W-Position, übergeordnete Marktdynamik.' },
+    { key: 'REALZINSEN_DOLLAR', label: 'Realzinsen & Dollar', icon: '💵',
+      instr: 'Reale Zinsen (10Y TIPS-Yield), USD-Stärke (DXY), Fed-Signale, Zentralbankkäufe (China, Indien etc.) — erkläre den konkreten Mechanismus: Fallende Realzinsen = Gold steigt (Opportunitätskosten sinken); steigender Dollar = Preisdruck auf Gold.' },
+    { key: 'GEOPOLITIK', label: 'Geopolitik', icon: '🌍',
+      instr: 'Welche geopolitischen Ereignisse haben Gold als sicheren Hafen angetrieben oder belastet? Erkläre den Mechanismus konkret (Kapitalflucht, Sanktionsdruck, Entdollarisierungstrend). Gold IST ein sicherer Hafen — erkläre warum in diesem Zeitraum.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Zinspfad (Fed), Dollar-Entwicklung (DXY), geopolitische Eskalationsrisiken, Zentralbanktrend (Käufe/Verkäufe) — was spricht mittelfristig für oder gegen Gold?' },
+  ],
+  anleihen: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat den Anleihekurs ({richtung} {timeWord}) bewegt? PFLICHT: Erkläre die inverse Zins-Kurs-Beziehung konkret an den aktuellen Datenpunkten (steigende Zinsen = fallende Anleihekurse und umgekehrt — erkläre den Mechanismus).' },
+    { key: 'ZINSEN_INFLATION', label: 'Zinsen & Inflation', icon: '📈',
+      instr: 'Zinsniveau (Fed/EZB), Inflationsentwicklung (CPI/PCE), Realrendite — erkläre den direkten Mechanismus zur Kursbewegung. Duration-Risiko einbeziehen. Zentralbank-Kommunikation konkret zitieren wenn vorhanden.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Zinspfad (Fed/EZB-Erwartungen), anstehende CPI/PCE-Daten, geopolitische Flucht-in-Qualität-Szenarien — wichtigste Treiber für diese Anleihe in den nächsten Monaten.' },
+  ],
+  etf_short: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat den ETF ({richtung} {timeWord}) bewegt? Schwergewichte des Index, geopolitische/Makro-News, Sektor-Performance — erkläre kausal mit konkreten Zahlen.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Anstehende Makrodaten, Fed/EZB-Termine, geopolitische Entwicklungen die diesen ETF in den nächsten 1-2 Wochen bewegen könnten.' },
+  ],
+  etf_mittel: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat den ETF ({richtung} {timeWord}) bewegt? Indexentwicklung, Schwergewichte, Sektordynamik, Kapitalflüsse — erkläre kausal mit konkreten Zahlen.' },
+    { key: 'MAKRO_ZINSEN', label: 'Makro & Zinsen', icon: '🏦',
+      instr: 'Zinszyklus (Fed/EZB), Inflation, Wirtschaftswachstum — wie hat das Makro-Umfeld diesen ETF beeinflusst? Erkläre den Mechanismus: höhere Zinsen = günstigere Anleihen = Konkurrenz für Aktien.' },
+    { key: 'BEWERTUNG', label: 'Bewertung', icon: '💹',
+      instr: 'KGV des Index im historischen Vergleich, Gewinnwachstum der Indexkomponenten, Earnings-Saison-Ergebnis — ist der ETF fundamental gerechtfertigt bewertet? Sektorverschiebung innerhalb des Index einbeziehen.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'Zinspfad (Fed/EZB), Gewinnwachstum der Unternehmen im Index, geopolitische Strukturveränderungen — wichtigste Treiber in den nächsten Monaten.' },
+  ],
+  rohstoff: [
+    { key: 'MARKTLAGE', label: 'Marktlage', icon: '📊',
+      instr: 'Was hat den Rohstoffpreis ({richtung} {timeWord}) bewegt? Kursveränderung, Volumen, übergeordnete Marktdynamik — kausal erklärt.' },
+    { key: 'ANGEBOT_NACHFRAGE', label: 'Angebot & Nachfrage', icon: '⚖️',
+      instr: 'OPEC-Entscheidungen (bei Öl), Produktionsdaten, Lagerdaten, China-Konjunktur (größter Rohstoffverbraucher weltweit), Dollar-Entwicklung (stärkerer Dollar = günstiger Rohstoff in USD) — erkläre den konkreten Preismechanismus.' },
+    { key: 'AUSBLICK', label: 'Ausblick', icon: '🔭',
+      instr: 'OPEC-Kalender (bei Öl), geopolitische Lage in Förderregionen, China-Konjunkturausblick, Dollar-Zinspfad — wichtigste Preistreiber in den nächsten Monaten.' },
+  ],
+};
+
+function detectAssetType(asset, symbol, fundamentals, profile) {
+  if (fundamentals?.isCrypto || (symbol || '').endsWith('-USD')) return 'krypto';
+  const sectorLow = (profile.sector || '').toLowerCase();
+  const assetLow = (asset || '').toLowerCase();
+  const symUp = (symbol || '').toUpperCase();
+  if (symUp === 'GC=F' || assetLow.includes('gold') || sectorLow.includes('edelmetall')) return 'gold';
+  if (symUp.startsWith('^') || assetLow.includes('etf') || assetLow.includes('msci') ||
+      sectorLow.includes('index') || sectorLow.includes('etf')) return 'etf';
+  if (assetLow.includes('anleihe') || assetLow.includes('bond') || assetLow.includes('treasury') ||
+      sectorLow.includes('anleihe') || sectorLow.includes('bond')) return 'anleihen';
+  if ((symUp.endsWith('=F') && symUp !== 'GC=F') || assetLow.includes('öl') || assetLow.includes('oil') ||
+      assetLow.includes('silber') || assetLow.includes('kupfer') ||
+      sectorLow.includes('rohstoff') || sectorLow.includes('commodity')) return 'rohstoff';
+  return 'aktie';
+}
+
+function getSectionConfig(assetType, range) {
+  const isShort = range === '1T' || range === '1W';
+  if (assetType === 'krypto') return isShort ? SECTION_CONFIGS.krypto_short : SECTION_CONFIGS.krypto_mittel;
+  if (assetType === 'gold')   return SECTION_CONFIGS.gold;
+  if (assetType === 'anleihen') return SECTION_CONFIGS.anleihen;
+  if (assetType === 'etf')    return isShort ? SECTION_CONFIGS.etf_short : SECTION_CONFIGS.etf_mittel;
+  if (assetType === 'rohstoff') return SECTION_CONFIGS.rohstoff;
+  return isShort ? SECTION_CONFIGS.aktie_short : SECTION_CONFIGS.aktie_mittel;
+}
+
 const MACRO_FALLBACK = `Makro-Kontext (Mai 2026):
 Fed: ~4.25-4.50% (restriktiv) | EZB: ~2.65% (Zinssenkungszyklus) | US CPI: ~2.4% | Globale Themen: KI-Investitionsboom, US-China Handelskonflikte, Energiewende`;
 
@@ -481,12 +592,14 @@ function buildFundBlock(f) {
   return `\n\nFUNDAMENTALDATEN: ${rows.join(' | ')}`;
 }
 
-function parseSections(raw) {
+function parseDynamicSections(raw, sectionConfig) {
   const sections = {};
-  const re = /\[(MODELL|BEWERTUNG|WACHSTUM|RISIKEN)\]\s*([\s\S]*?)(?=\s*\[(MODELL|BEWERTUNG|WACHSTUM|RISIKEN)\]|$)/g;
+  const keys = sectionConfig.map(s => s.key);
+  const keyPattern = keys.join('|');
+  const re = new RegExp(`\\[(${keyPattern})\\]\\s*([\\s\\S]*?)(?=\\s*\\[(?:${keyPattern})\\]|$)`, 'g');
   let m;
   while ((m = re.exec(raw)) !== null) {
-    sections[m[1].toLowerCase()] = m[2].replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').trim();
+    sections[m[1]] = m[2].replace(/\*\*/g,'').replace(/\*/g,'').replace(/#{1,6}\s/g,'').trim();
   }
   return sections;
 }
@@ -657,7 +770,7 @@ INSTRUMENT-PROFIL: ${asset}
 Sektor: ${profile.sector}${narrativeLine}
 ${driversSection}`;
 
-  let system, user;
+  let system, user, sectionConfig;
 
   if (frage) {
     system = `Du bist Finanzblick — präziser Finanzerklärer für Privatanleger. ${levelPrompt}
@@ -673,9 +786,20 @@ Frage: "${frage}"
 Antworte direkt und konkret — erkläre Kausalzusammenhänge, nenne Zahlen aus Fundamentaldaten und Live-Marktdaten. Beziehe dich auf ${asset} spezifisch. Max. 3 Absätze.`;
 
   } else {
+    const assetType = detectAssetType(asset, symbol, fundamentals, profile);
+    sectionConfig = getSectionConfig(assetType, range);
+
     const taskInstruction = profile.found
       ? `Analysiere, WELCHE der Kurstreiber im Profil die aktuelle Bewegung (${richtung}) ${ctx.timeWord} am stärksten erklären. Wähle die 2-3 relevantesten — basierend auf den konkreten Daten und News.`
-      : `Kein vorgefertigtes Profil vorhanden. Analysiere ${asset} direkt anhand der vorliegenden Daten: Fundamentalkennzahlen, Earnings-History, Analysten-Konsens und Nachrichten. Leite die 2-3 Haupttreiber der Kursbewegung aus diesen konkreten Zahlen ab.`;
+      : `Kein vorgefertigtes Profil vorhanden. Analysiere ${asset} direkt anhand der vorliegenden Daten: Fundamentalkennzahlen, News und Makro-Kontext. Leite die Haupttreiber der Kursbewegung aus diesen konkreten Zahlen ab.`;
+
+    const formatSections = sectionConfig.map(s => {
+      const instrFilled = s.instr
+        .replace(/{asset}/g, asset)
+        .replace(/{richtung}/g, richtung)
+        .replace(/{timeWord}/g, ctx.timeWord);
+      return `[${s.key}]\n${instrFilled}`;
+    }).join('\n');
 
     system = `Du bist ein erfahrener Finanzanalyst der Finanzblick-Plattform. ${levelPrompt}
 
@@ -685,20 +809,14 @@ ZEITRAUM-FOKUS: ${ctx.focus}
 AUFGABE: ${taskInstruction}
 
 PFLICHTREGELN:
-1. Nenne mindestens 2 konkrete Zahlen aus den Daten (KGV, Marge, EPS-Überraschung, Kurszielabstand, Wachstumsrate o.ä.)
-2. Fed/Zinsen NUR bei direktem Nachrichtenbezug zu ${asset}
+1. Nenne mindestens 2 konkrete Zahlen aus den Daten
+2. Erkläre immer den direkten Kausalzusammenhang (Mechanismus), nicht nur den Effekt
 3. Analysiere ${asset} spezifisch — nicht den Gesamtmarkt
 4. Fehlen Daten, sage es kurz
+5. Kein Markdown, kein **, kein #, keine Aufzählungsstriche
 
-FORMAT — EXAKT diese 4 Abschnitte mit Bezeichnungen in eckigen Klammern, kein anderer Text davor oder danach, kein Markdown:
-[MODELL]
-Geschäftsmodell & Marktposition: Womit verdient ${asset} Geld, welche Segmente/Produkte sind die Haupttreiber?
-[BEWERTUNG]
-Bewertung & aktuelle Kursbewegung (${richtung} ${ctx.timeWord}): Was hat den Kurs konkret bewegt? Kausal, mit Zahlen aus den Fundamentaldaten.
-[WACHSTUM]
-Wachstum & Qualität: Umsatzentwicklung, Margen, Gewinnqualität — mit konkreten Werten aus den vorliegenden Daten.
-[RISIKEN]
-Risiken & Katalysatoren: ${ctx.ausblick} Was sind die wichtigsten Chancen und Risiken für ${asset}?
+FORMAT — EXAKT diese ${sectionConfig.length} Abschnitte mit Bezeichnungen in eckigen Klammern, kein anderer Text davor oder danach:
+${formatSections}
 
 Keine Anlageberatung. Spezifisch, kausal, zahlenbasiert.`;
 
@@ -707,7 +825,7 @@ Keine Anlageberatung. Spezifisch, kausal, zahlenbasiert.`;
 ${macroLine}
 Asset: ${asset} | Kurs: ${price} | ${ctx.label} (${ctx.tf}): ${richtung}
 
-Erstelle die 4-Abschnitt-Analyse für ${asset}. Nutze ausschließlich die vorliegenden Daten.`;
+Erstelle die ${sectionConfig.length}-Abschnitt-Analyse für ${asset}. Nutze ausschließlich die vorliegenden Daten.`;
   }
 
   // Fragen → 8b (schneller/günstiger); Auto-Analysen → 70b (Qualität)
@@ -726,11 +844,11 @@ Erstelle die 4-Abschnitt-Analyse für ${asset}. Nutze ausschließlich die vorlie
 
     if (frage) return { antwort: clean, typ: 'frage' };
 
-    const sections = parseSections(clean);
-    if (Object.keys(sections).length >= 3) {
+    const parsed = parseDynamicSections(clean, sectionConfig);
+    if (Object.keys(parsed).length >= sectionConfig.length - 1) {
       return {
-        modell: sections.modell || '', bewertung: sections.bewertung || '',
-        wachstum: sections.wachstum || '', risiken: sections.risiken || '',
+        sections: parsed,
+        sectionConfig: sectionConfig.map(({ key, label, icon }) => ({ key, label, icon })),
         range: range || '1T', typ: 'auto',
       };
     }
