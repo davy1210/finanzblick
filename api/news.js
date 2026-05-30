@@ -11,6 +11,13 @@ const CACHE_BY_RANGE = {
   '5J': 24 * 60 * 60 * 1000,
 };
 
+// ── REUTERS RSS FEEDS ─────────────────────────────────────────────────────
+const REUTERS_FEEDS = {
+  business:   'https://feeds.reuters.com/reuters/businessNews',
+  technology: 'https://feeds.reuters.com/reuters/technologyNews',
+  markets:    'https://feeds.reuters.com/reuters/marketsNews',
+};
+
 // ── CATEGORY DETECTION ────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: 'earnings', label: 'Quartalszahlen', color: '#7C3AED', bg: '#F5F3FF',
@@ -112,19 +119,43 @@ function fetchSafe(url, ms) {
   });
 }
 
-// Yahoo Finance RSS fallback
-function fetchRSS(url) {
+// ── RSS FETCH ─────────────────────────────────────────────────────────────
+function fetchRSSFromUrl(url, sourceName) {
   return new Promise(resolve => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }, res => {
       if (res.statusCode !== 200) { resolve([]); return; }
       let raw = '';
       res.on('data', c => raw += c);
-      res.on('end', () => { try { resolve(parseRSS(raw)); } catch(e) { resolve([]); } });
+      res.on('end', () => { try { resolve(parseRSS(raw, sourceName)); } catch(e) { resolve([]); } });
     }).on('error', () => resolve([])).on('timeout', function() { this.destroy(); resolve([]); });
   });
 }
 
-function parseRSS(xml) {
+// PRIMARY: Reuters RSS (businessNews, technologyNews, marketsNews)
+function fetchReutersRSS(feedKeys) {
+  const keys = feedKeys || ['business', 'markets'];
+  return Promise.all(keys.map(k => fetchRSSFromUrl(REUTERS_FEEDS[k], 'Reuters')))
+    .then(results => {
+      const seen = new Set();
+      const merged = [];
+      results.flat().forEach(a => {
+        const key = a.title.slice(0, 50).toLowerCase();
+        if (!seen.has(key)) { seen.add(key); merged.push(a); }
+      });
+      return merged;
+    });
+}
+
+// FALLBACK: Yahoo Finance RSS (symbol-specific)
+function fetchYahooRSS(symbol) {
+  if (!symbol) return Promise.resolve([]);
+  return fetchRSSFromUrl(
+    `https://finance.yahoo.com/rss/headline?s=${encodeURIComponent(symbol)}`,
+    'Yahoo Finance'
+  );
+}
+
+function parseRSS(xml, sourceName) {
   const items = [];
   const matches = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
   matches.slice(0, 8).forEach(item => {
@@ -133,7 +164,7 @@ function parseRSS(xml) {
     const description = stripHTML(extractTag(item, 'description') || '');
     const pubDate = extractTag(item, 'pubDate') || new Date().toISOString();
     if (title && title.length > 10 && link && link.startsWith('http')) {
-      items.push({ title, source: 'Yahoo Finance', url: link, publishedAt: new Date(pubDate).toISOString(), description: description.slice(0, 250) });
+      items.push({ title, source: sourceName || 'RSS', url: link, publishedAt: new Date(pubDate).toISOString(), description: description.slice(0, 250) });
     }
   });
   return items;
@@ -154,6 +185,17 @@ function stripHTML(str) {
   return str.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// ── REUTERS FEED SELECTION ────────────────────────────────────────────────
+function selectReutersFeeds(symbol) {
+  if (!symbol) return ['business', 'markets'];
+  const isCrypto = symbol.endsWith('-USD');
+  const isIndex = symbol.startsWith('^');
+  const isCommodity = symbol.endsWith('=F');
+  if (isCrypto || isIndex || isCommodity) return ['business', 'markets'];
+  // For stocks: include technology feed for broader coverage
+  return ['business', 'technology', 'markets'];
 }
 
 // ── HANDLER ───────────────────────────────────────────────────────────────
@@ -178,7 +220,6 @@ module.exports = async function handler(req, res) {
 
     // ── PRIMARY: Finnhub company-news (wenn Symbol vorhanden) ──────────────
     if (symbol && finnhubKey) {
-      // Für Krypto oder Indizes keinen company-news Endpunkt verwenden
       const isCrypto = symbol.endsWith('-USD');
       const isIndex = symbol.startsWith('^');
       const isCommodity = symbol.endsWith('=F');
@@ -203,11 +244,22 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // ── FALLBACK: Yahoo Finance RSS ────────────────────────────────────────
-    if (articles.length < 3 && symbol) {
-      const rssArticles = await fetchRSS(`https://finance.yahoo.com/rss/headline?s=${encodeURIComponent(symbol)}`);
+    // ── SECONDARY: Reuters RSS (wenn Finnhub < 3 Artikel liefert) ──────────
+    if (articles.length < 3) {
+      const feedKeys = selectReutersFeeds(symbol);
+      const reutersArticles = await fetchReutersRSS(feedKeys);
       const seen = new Set(articles.map(a => a.title.slice(0, 50).toLowerCase()));
-      rssArticles.forEach(a => {
+      reutersArticles.forEach(a => {
+        const key = a.title.slice(0, 50).toLowerCase();
+        if (!seen.has(key)) { seen.add(key); articles.push(a); }
+      });
+    }
+
+    // ── FALLBACK: Yahoo Finance RSS (wenn Reuters nicht verfügbar) ──────────
+    if (articles.length < 3 && symbol) {
+      const yahooArticles = await fetchYahooRSS(symbol);
+      const seen = new Set(articles.map(a => a.title.slice(0, 50).toLowerCase()));
+      yahooArticles.forEach(a => {
         const key = a.title.slice(0, 50).toLowerCase();
         if (!seen.has(key)) { seen.add(key); articles.push(a); }
       });
