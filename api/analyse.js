@@ -87,8 +87,8 @@ STRIKTE REGELN — niemals verletzen:
 function callGroq(model, system, user, apiKey) {
   const body = JSON.stringify({
     model,
-    max_tokens: 700,
-    temperature: 0.2,
+    max_tokens: 350,
+    temperature: 0.15,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: user }
@@ -455,17 +455,30 @@ AUSBLICK: Anstehende Ereignisse, 52W-Position, wichtigste Risikofaktoren.`;
     }
 
     system = `Du bist Finanzblick — ein präziser Finanzanalyst für Privatanleger in Deutschland und Österreich.
+
 ${levelPrompt}
+
 ${MACRO_CONTEXT}
+
 ${RULES}
 
-Strukturiere deine Antwort EXAKT mit diesen Abschnitten — jede Überschrift in Großbuchstaben gefolgt von einem Doppelpunkt:
+AUSGABE-REGELN — strikt einhalten:
+- Jeder Abschnitt: MAXIMAL 2 Sätze — nicht mehr, nicht weniger
+- Kein Einleitungssatz, kein Fazit, keine Wiederholungen
+- Direkt zum Punkt: Faktor nennen → Mechanismus in einem Satz erklären → fertig
+- Kein "Es ist wichtig zu beachten dass..." oder ähnliche Füllsätze
+- Der Nutzer soll jeden Abschnitt in 10 Sekunden lesen können
+
+STRUKTUR — genau diese Abschnitte, keine anderen:
 ${sections}
 
-Anweisungen je Abschnitt:
+WAS IN JEDEM ABSCHNITT STEHEN SOLL (Orientierung, nicht wörtlich kopieren):
 ${instructions}
 
-Wichtig: Immer konkreten Mechanismus erklären. Keine Anlageberatung.`;
+BEISPIEL für guten Stil (2 Sätze, konkret, Mechanismus klar):
+"MARKTLAGE: Nvidia stieg nach Quartalszahlen die Erwartungen um 15% übertrafen — Umsatz im KI-Chip-Segment verdoppelte sich. Der gesamte Halbleitersektor profitierte vom positiven Sentiment."
+
+Keine Anlageberatung.`;
 
     user = `Asset: ${asset}
 Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}${newsBlock}
