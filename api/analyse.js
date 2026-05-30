@@ -87,7 +87,7 @@ STRIKTE REGELN — niemals verletzen:
 function callGroq(model, system, user, apiKey) {
   const body = JSON.stringify({
     model,
-    max_tokens: 350,
+    max_tokens: 1000,
     temperature: 0.15,
     messages: [
       { role: 'system', content: system },
@@ -463,11 +463,11 @@ ${MACRO_CONTEXT}
 ${RULES}
 
 AUSGABE-REGELN — strikt einhalten:
-- Jeder Abschnitt: MAXIMAL 2 Sätze — nicht mehr, nicht weniger
+- Jeder Abschnitt: 2-4 prägnante Sätze — vollständige Gedanken, nie mitten im Satz abbrechen
 - Kein Einleitungssatz, kein Fazit, keine Wiederholungen
-- Direkt zum Punkt: Faktor nennen → Mechanismus in einem Satz erklären → fertig
+- Direkt zum Punkt: Faktor nennen → Mechanismus in 1-2 Sätzen erklären → fertig
 - Kein "Es ist wichtig zu beachten dass..." oder ähnliche Füllsätze
-- Der Nutzer soll jeden Abschnitt in 10 Sekunden lesen können
+- Der Nutzer soll jeden Abschnitt in 15 Sekunden lesen können
 
 STRUKTUR — genau diese Abschnitte, keine anderen:
 ${sections}
@@ -475,8 +475,8 @@ ${sections}
 WAS IN JEDEM ABSCHNITT STEHEN SOLL (Orientierung, nicht wörtlich kopieren):
 ${instructions}
 
-BEISPIEL für guten Stil (2 Sätze, konkret, Mechanismus klar):
-"MARKTLAGE: Nvidia stieg nach Quartalszahlen die Erwartungen um 15% übertrafen — Umsatz im KI-Chip-Segment verdoppelte sich. Der gesamte Halbleitersektor profitierte vom positiven Sentiment."
+BEISPIEL für guten Stil (konkret, Mechanismus klar, vollständige Sätze):
+"MARKTLAGE: Nvidia stieg nach Quartalszahlen die Erwartungen um 15% übertrafen — Umsatz im KI-Chip-Segment verdoppelte sich. Der gesamte Halbleitersektor profitierte vom positiven Sentiment und zog nach."
 
 Keine Anlageberatung.`;
 

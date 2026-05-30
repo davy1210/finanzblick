@@ -269,11 +269,14 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
 .fund-section{padding:0 20px 20px}
 .fund-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:12px}
-.fund-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-.fund-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
-.fund-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.fund-value{font-size:15px;font-weight:800;letter-spacing:-.3px}
-.fund-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.fund-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:10px}
+.fund-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.fund-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fund-value{font-size:15px;font-weight:800;letter-spacing:-.3px;margin-bottom:3px}
+.fund-value.fv-pos{color:var(--green)}
+.fund-value.fv-neg{color:var(--red)}
+.fund-value.fv-warn{color:var(--amber)}
+.fund-sub{font-size:11px;color:var(--muted);line-height:1.4}
 .gauge-wrap{margin:0 20px 20px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px}
 .gauge-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:10px}
 .gauge-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#DC2626,#F59E0B,#059669);position:relative;margin-bottom:6px}
@@ -500,7 +503,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
         <div id="analyst-inner"></div>
       </div>
       <div class="gauge-wrap" id="rec-gauge" style="display:none"></div>
-      <div class="fund-section">
+      <div class="fund-section" id="fund-section">
         <div class="fund-title">Fundamentaldaten</div>
         <div class="fund-grid" id="fund-grid"></div>
       </div>
@@ -886,6 +889,8 @@ function renderFundamentals(data){
   if(!has52W&&!hasFunds&&!hasCrypto){document.getElementById('fund-wrap').style.display='none';return;}
   document.getElementById('fund-wrap').style.display='block';
   document.getElementById('rec-gauge').style.display='none';
+  // fund-section nur anzeigen wenn echte Daten vorhanden
+  document.getElementById('fund-section').style.display=(hasFunds||hasCrypto)?'block':'none';
 
   // 52W Bar
   if(f.weekHigh52&&f.weekLow52&&data.price){
@@ -928,29 +933,30 @@ function renderFundamentals(data){
     var levelKeys=LEVEL_KEYS[userLevel]||null;
     var items=[
       f.marketCap?{key:'marketCap',label:'Marktkapitalisierung',value:fmtCapFund(f.marketCap),sub:'Börsenwert gesamt'}:null,
-      f.pe?{key:'pe',label:'KGV',value:f.pe.toFixed(1),sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'}:null,
-      f.forwardPE?{key:'forwardPE',label:'Forward KGV',value:f.forwardPE.toFixed(1),sub:'Erwartetes KGV (nächste 12M)'}:null,
+      f.pe?{key:'pe',label:'KGV',value:f.pe.toFixed(1),cls:f.pe>40?'fv-warn':f.pe<0?'fv-neg':'',sub:'Kurs-Gewinn-Verhältnis',glossKey:'KGV'}:null,
+      f.forwardPE?{key:'forwardPE',label:'Forward KGV',value:f.forwardPE.toFixed(1),cls:f.forwardPE>40?'fv-warn':'',sub:'Erwartetes KGV (nächste 12M)'}:null,
       f.pegRatio?{key:'pegRatio',label:'PEG-Ratio',value:f.pegRatio.toFixed(2),sub:'KGV / Gewinnwachstum'}:null,
       f.pb?{key:'pb',label:'Kurs-Buchwert',value:f.pb.toFixed(1)+'x',sub:'P/B Ratio'}:null,
-      f.eps?{key:'eps',label:'EPS',value:(data.currency==='EUR'?'€':'$')+Math.abs(f.eps).toFixed(2),sub:'Gewinn pro Aktie (TTM)'}:null,
-      f.beta?{key:'beta',label:'Beta',value:f.beta.toFixed(2),sub:'Marktrisiko (1 = Markt)',glossKey:'Beta'}:null,
-      f.dividendYield?{key:'dividendYield',label:'Dividende',value:f.dividendYield+'%',sub:'Rendite p.a.',glossKey:'Dividende'}:null,
-      f.revenue?{key:'revenue',label:'Umsatz',value:fmtCapFund(f.revenue),sub:'Jahresumsatz (TTM)'}:null,
-      f.revenueGrowth!=null?{key:'revenueGrowth',label:'Umsatzwachstum',value:(f.revenueGrowth>0?'+':'')+f.revenueGrowth+'%',sub:'YoY Wachstum'}:null,
-      f.earningsGrowth!=null?{key:'earningsGrowth',label:'Gewinnwachstum',value:(f.earningsGrowth>0?'+':'')+f.earningsGrowth+'%',sub:'EPS-Wachstum YoY'}:null,
-      f.grossMargin!=null?{key:'grossMargin',label:'Bruttomarge',value:f.grossMargin+'%',sub:'Bruttogewinn / Umsatz'}:null,
-      f.operatingMargin!=null?{key:'operatingMargin',label:'Op. Marge',value:f.operatingMargin+'%',sub:'Betriebsgewinn / Umsatz'}:null,
-      f.netMargin!=null?{key:'netMargin',label:'Nettomarge',value:f.netMargin+'%',sub:'Reingewinn / Umsatz'}:null,
-      f.roe!=null?{key:'roe',label:'ROE',value:f.roe+'%',sub:'Eigenkapitalrendite'}:null,
-      f.freeCashflow?{key:'freeCashflow',label:'Free Cash Flow',value:fmtCapFund(f.freeCashflow),sub:'Operativer FCF (TTM)'}:null,
-      f.debtToEquity!=null?{key:'debtToEquity',label:'Verschuldung',value:f.debtToEquity+'%',sub:'Fremdkapital / Eigenkapital'}:null,
+      f.eps?{key:'eps',label:'EPS',value:(data.currency==='EUR'?'€':'$')+Math.abs(f.eps).toFixed(2),cls:f.eps<0?'fv-neg':'',sub:'Gewinn pro Aktie (TTM)'}:null,
+      f.beta?{key:'beta',label:'Beta',value:f.beta.toFixed(2),cls:f.beta>1.5?'fv-warn':f.beta<0.8?'fv-pos':'',sub:'Marktrisiko (1 = Markt)',glossKey:'Beta'}:null,
+      f.dividendYield?{key:'dividendYield',label:'Dividende',value:f.dividendYield+'%',cls:f.dividendYield>=3?'fv-pos':'',sub:'Rendite p.a.',glossKey:'Dividende'}:null,
+      f.revenue?{key:'revenue',label:'Umsatz (TTM)',value:fmtCapFund(f.revenue),sub:'Jahresumsatz'}:null,
+      f.revenueGrowth!=null?{key:'revenueGrowth',label:'Umsatzwachstum',value:(f.revenueGrowth>0?'+':'')+f.revenueGrowth+'%',cls:f.revenueGrowth>0?'fv-pos':f.revenueGrowth<0?'fv-neg':'',sub:'YoY Wachstum'}:null,
+      f.earningsGrowth!=null?{key:'earningsGrowth',label:'Gewinnwachstum',value:(f.earningsGrowth>0?'+':'')+f.earningsGrowth+'%',cls:f.earningsGrowth>0?'fv-pos':f.earningsGrowth<0?'fv-neg':'',sub:'EPS-Wachstum YoY'}:null,
+      f.grossMargin!=null?{key:'grossMargin',label:'Bruttomarge',value:f.grossMargin+'%',cls:f.grossMargin>=50?'fv-pos':f.grossMargin<20?'fv-warn':'',sub:'Bruttogewinn / Umsatz'}:null,
+      f.operatingMargin!=null?{key:'operatingMargin',label:'Op. Marge',value:f.operatingMargin+'%',cls:f.operatingMargin<0?'fv-neg':f.operatingMargin>=20?'fv-pos':'',sub:'Betriebsgewinn / Umsatz'}:null,
+      f.netMargin!=null?{key:'netMargin',label:'Nettomarge',value:f.netMargin+'%',cls:f.netMargin<0?'fv-neg':f.netMargin>=15?'fv-pos':'',sub:'Reingewinn / Umsatz'}:null,
+      f.roe!=null?{key:'roe',label:'ROE',value:f.roe+'%',cls:f.roe>=15?'fv-pos':f.roe<0?'fv-neg':'',sub:'Eigenkapitalrendite'}:null,
+      f.freeCashflow?{key:'freeCashflow',label:'Free Cash Flow',value:fmtCapFund(f.freeCashflow),cls:f.freeCashflow<0?'fv-neg':'',sub:'Operativer FCF (TTM)'}:null,
+      f.debtToEquity!=null?{key:'debtToEquity',label:'Verschuldung',value:f.debtToEquity+'%',cls:f.debtToEquity>200?'fv-warn':'',sub:'Fremdkapital / Eigenkapital'}:null,
     ].filter(Boolean).filter(function(it){return !levelKeys||levelKeys.indexOf(it.key)!==-1;});
     if(!items.length){
       document.getElementById('fund-grid').innerHTML='<div style="font-size:13px;color:var(--muted);padding:4px 0">Fundamentaldaten werden geladen…</div>';
     } else {
       document.getElementById('fund-grid').innerHTML=items.map(function(it){
         var label=it.glossKey?'<span class="glossary-link" onclick="scrollToGloss(\''+it.glossKey+'\')">'+it.label+'</span>':it.label;
-        return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="fund-value">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
+        var valCls='fund-value'+(it.cls?' '+it.cls:'');
+        return '<div class="fund-card"><div class="fund-label">'+label+'</div><div class="'+valCls+'">'+it.value+'</div><div class="fund-sub">'+it.sub+'</div></div>';
       }).join('');
     }
   } else {
