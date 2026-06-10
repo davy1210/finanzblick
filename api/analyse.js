@@ -1,5 +1,16 @@
 const https = require('https');
 
+// ── SERVER-SEITIGER GETEILTER CACHE ───────────────────────────────────────
+const analyseCache = {};
+const CACHE_TTL = {
+  '1T':  30 * 60 * 1000,
+  '1W':   2 * 60 * 60 * 1000,
+  '1M':   6 * 60 * 60 * 1000,
+  '6M':  12 * 60 * 60 * 1000,
+  '1J':  24 * 60 * 60 * 1000,
+  '5J':  48 * 60 * 60 * 1000,
+};
+
 const RANGE_CONTEXT = {
   '1T': { label: 'Heute', timeframe: 'kurzfristig', focus: 'Tageshandel, intraday Bewegungen, heutige Nachrichten und kurzfristige Markttreiber.' },
   '1W': { label: 'Diese Woche', timeframe: 'kurzfristig', focus: 'Wochenverlauf, wichtige Ereignisse der letzten 7 Tage.' },
@@ -9,13 +20,17 @@ const RANGE_CONTEXT = {
   '5J': { label: 'Letzte 5 Jahre', timeframe: 'langfristig', focus: 'Mehrjährige Marktzyklen, technologische Disruption, makroökonomische Zyklen.' },
 };
 
+const RANGE_SEARCH_WINDOW = {
+  '1T': '24 Stunden', '1W': '7 Tage', '1M': '30 Tage',
+  '6M': '6 Monate',  '1J': '12 Monate', '5J': '5 Jahre',
+};
+
 const LEVEL_PROMPTS = {
   beginner: 'Schreibe für Einsteiger ohne Finanzwissen. Erkläre jeden Fachbegriff sofort in einfachen Worten. Kurze, klare Sätze.',
   intermediate: 'Schreibe für Investoren mit Grundwissen. Fachbegriffe sind okay, erkläre komplexe Zusammenhänge kurz.',
   expert: 'Professionelle Finanzsprache. Makroökonomische Analyse, technische Faktoren, institutionelle Perspektive.',
 };
 
-// Makro-Kontext wird dynamisch aus Request-Body oder Fallback gebaut
 function buildMacroContext(macro) {
   if (!macro || Object.keys(macro).length === 0) {
     return `Aktueller Makro-Kontext:
@@ -34,7 +49,6 @@ function buildMacroContext(macro) {
   return parts.join('\n');
 }
 
-// Makro-Kontext wird live von FRED geladen
 const MACRO_FALLBACK = `
 Aktueller Makro-Kontext (Mai 2026):
 - Fed Leitzins: ~4.25-4.50% (restriktiv — dämpft Wirtschaft und Inflation)
@@ -84,7 +98,8 @@ STRIKTE REGELN — niemals verletzen:
 8. News sind NUR ein Faktor — nicht übergewichten
 `;
 
-function callGroq(model, system, user, apiKey) {
+// ── GROQ API ──────────────────────────────────────────────────────────────
+function callGroq(model, system, user, apiKey, timeoutMs) {
   const body = JSON.stringify({
     model,
     max_tokens: 1000,
@@ -123,10 +138,35 @@ function callGroq(model, system, user, apiKey) {
       });
     });
     r.on('error', reject);
-    r.setTimeout(15000, function() { this.destroy(); reject(new Error('Timeout')); });
+    r.setTimeout(timeoutMs || 15000, function() { this.destroy(); reject(new Error('Timeout')); });
     r.write(body);
     r.end();
   });
+}
+
+// Modell-Hierarchie: compound-beta → llama-3.3-70b → llama-3.1-8b
+async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
+  // 1. Compound Beta (mit Websuche, 8s Timeout)
+  const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
+  try {
+    const raw = await callGroq('compound-beta', system, userCompound, apiKey, 8000);
+    return { raw, model: 'compound-beta' };
+  } catch(e) {
+    // Timeout oder anderer Fehler → weiter zu 70b
+  }
+
+  // 2. LLaMA 3.3 70B
+  try {
+    const raw = await callGroq('llama-3.3-70b-versatile', system, userBase, apiKey, 15000);
+    return { raw, model: 'llama-3.3-70b-versatile' };
+  } catch(e) {
+    if (e.message === 'rate_limit') {
+      // 3. LLaMA 3.1 8B (Rate-Limit Fallback)
+      const raw = await callGroq('llama-3.1-8b-instant', system, userBase, apiKey, 15000);
+      return { raw, model: 'llama-3.1-8b-instant' };
+    }
+    throw e;
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -134,8 +174,27 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { asset, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
+  const symbol = (req.body.symbol || '').toUpperCase();
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
+
+  // ── Cache-Check (nur für Auto-Analysen, nicht für Fragen) ─────────────
+  const ttl = CACHE_TTL[range || '1T'] || CACHE_TTL['1T'];
+  const cacheKey = !frage
+    ? (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (range || '1T')
+    : null;
+
+  if (cacheKey) {
+    const hit = analyseCache[cacheKey];
+    if (hit && (Date.now() - hit.ts) < ttl) {
+      return res.status(200).json({
+        ...hit.data,
+        fromCache: true,
+        cachedAt: hit.data.cachedAt,
+        cacheExpiresIn: Math.round((ttl - (Date.now() - hit.ts)) / 1000),
+      });
+    }
+  }
 
   const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
   const levelPrompt = LEVEL_PROMPTS[level] || LEVEL_PROMPTS['beginner'];
@@ -162,7 +221,7 @@ module.exports = async function handler(req, res) {
     if (parts.length > 0) fundBlock = '\n\nFundamentaldaten:\n' + parts.join(' | ');
   }
 
-  // News nur als Ergänzung — nicht als Hauptquelle
+  // News
   let newsBlock = '';
   if (news && news.length > 0) {
     const highImpact = news.filter(n => n.impactLevel === 'high');
@@ -173,7 +232,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // 52W Position berechnen
+  // 52W-Position
   let weekPosition = '';
   if (fundamentals?.weekHigh52 && fundamentals?.weekLow52 && price) {
     const pNum = parseFloat(price.replace(/[^0-9.]/g,''));
@@ -184,7 +243,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Live Makro-Daten laden
+  // Live Makro
   const MACRO_CONTEXT = await getLiveMacro();
 
   let system, user;
@@ -202,9 +261,8 @@ Frage: "${frage}"
 Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten Faktoren und ${asset}. Max. 3 Absätze.`;
 
   } else {
-    // Instrument-Typ bestimmen
     const assetLower = (asset || '').toLowerCase();
-    const sym = (req.body.symbol || '').toUpperCase();
+    const sym = symbol;
 
     const isCrypto = assetLower.includes('bitcoin') || assetLower.includes('ethereum') ||
       assetLower.includes('crypto') || sym.includes('BTC') || sym.includes('ETH') || sym.includes('-USD');
@@ -217,7 +275,6 @@ Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten 
     const isCommodity = (isOil || isSilver || isCopper || assetLower.includes('rohstoff') || assetLower.includes('commodity') || sym.includes('=F')) && !isGold;
     const hasFunds = fundamentals && (fundamentals.pe || fundamentals.beta || fundamentals.grossMargin);
     const isShort = ['1T','1W'].includes(range);
-    const isMid = ['1M','6M'].includes(range);
 
     let sections, instructions;
 
@@ -309,7 +366,6 @@ AUSBLICK: Konkrete Faktoren die als nächstes wirken:
 ZINSEN & INFLATION: Fed/EZB-Entscheidungen, CPI-Entwicklung, Duration-Risiko — alle mit Mechanismus.
 AUSBLICK: Zinspfad, Inflationstrend, geopolitische Risiken.`;
     } else if (isCommodity) {
-      // Rohstoff-Analyse — spezifisch je nach Typ
       if (isShort) {
         sections = 'MARKTLAGE, ANGEBOT & NACHFRAGE, DOLLAR & MAKRO, AUSBLICK';
         instructions = `MARKTLAGE: Was hat ${asset} heute/diese Woche konkret bewegt? Nenne spezifische Ereignisse — kein allgemeines Marktkommentar.
@@ -376,7 +432,6 @@ AUSBLICK:
 - Geopolitische Neuordnung: Neue Handelsrouten, Lieferketten, Sanktionen`;
       }
     } else if (isETF) {
-      // ETF-spezifische Analyse
       const isDax = sym.includes('GDAXI') || assetLower.includes('dax');
       const isSP = sym.includes('GSPC') || assetLower.includes('s&p') || assetLower.includes('sp500');
       const isMSCI = assetLower.includes('msci') || assetLower.includes('world');
@@ -486,15 +541,15 @@ Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}
 Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}).
 Fokus: ${ctx.focus}`;
   }
+
+  // ── Compound Beta Suchprefix für Auto-Analysen ────────────────────────
+  const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
+  const compoundPrefix = !frage
+    ? `Suche zuerst nach aktuellen News und Ereignissen zu "${asset}" der letzten ${searchWindow}.\nBeziehe konkrete Ereignisse (Earnings, regulatorische Entscheidungen, makroökonomische Daten, geopolitische Entwicklungen) in deine Analyse ein.`
+    : null;
+
   try {
-    let raw;
-    try {
-      raw = await callGroq('llama-3.3-70b-versatile', system, user, apiKey);
-    } catch(e) {
-      if (e.message === 'rate_limit') {
-        raw = await callGroq('llama-3.1-8b-instant', system, user, apiKey);
-      } else throw e;
-    }
+    const { raw, model } = await callWithFallback(system, user, apiKey, compoundPrefix);
 
     const clean = raw
       .replace(/\*\*/g, '')
@@ -503,13 +558,21 @@ Fokus: ${ctx.focus}`;
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
+    const nowIso = new Date().toISOString();
+
     if (frage) {
-      return res.status(200).json({ antwort: clean, typ: 'frage' });
+      return res.status(200).json({
+        antwort: clean,
+        typ: 'frage',
+        fromCache: false,
+        model_used: model,
+        cachedAt: nowIso,
+      });
     }
 
-    // Abschnitte dynamisch parsen — Überschrift = Großbuchstaben gefolgt von Doppelpunkt
+    // Abschnitte dynamisch parsen
     const lines = clean.split('\n');
-    const sections = [];
+    const parsedSections = [];
     let currentTitle = null;
     let currentContent = [];
 
@@ -517,7 +580,7 @@ Fokus: ${ctx.focus}`;
       const headerMatch = line.match(/^([A-ZÄÖÜ][A-ZÄÖÜ\s&]{2,40}):\s*(.*)/);
       if (headerMatch) {
         if (currentTitle && currentContent.join(' ').trim().length > 10) {
-          sections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+          parsedSections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
         }
         currentTitle = headerMatch[1].trim();
         currentContent = headerMatch[2] ? [headerMatch[2]] : [];
@@ -526,30 +589,46 @@ Fokus: ${ctx.focus}`;
       }
     }
     if (currentTitle && currentContent.join(' ').trim().length > 10) {
-      sections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+      parsedSections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
     }
 
-    if (sections.length >= 2) {
-      return res.status(200).json({
-        sections,
-        warum: sections[0].content,
-        ausblick: sections[sections.length - 1].content,
+    let result;
+    if (parsedSections.length >= 2) {
+      result = {
+        sections: parsedSections,
+        warum: parsedSections[0].content,
+        ausblick: parsedSections[parsedSections.length - 1].content,
         range: range || '1T',
-        typ: 'auto'
-      });
+        typ: 'auto',
+        fromCache: false,
+        model_used: model,
+        cachedAt: nowIso,
+        cacheExpiresIn: Math.round(ttl / 1000),
+      };
+    } else {
+      const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
+      const aMatch = clean.match(/AUSBLICK[\s\S]*?:([\s\S]*?)$/i);
+      result = {
+        warum: mMatch ? mMatch[1].trim() : clean,
+        ausblick: aMatch ? aMatch[1].trim() : '',
+        sections: [],
+        range: range || '1T',
+        typ: 'auto',
+        fromCache: false,
+        model_used: model,
+        cachedAt: nowIso,
+        cacheExpiresIn: Math.round(ttl / 1000),
+      };
     }
 
-    // Fallback: altes Format
-    const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
-    const aMatch = clean.match(/AUSBLICK[\s\S]*?:([\s\S]*?)$/i);
-    return res.status(200).json({
-      warum: mMatch ? mMatch[1].trim() : clean,
-      ausblick: aMatch ? aMatch[1].trim() : '',
-      sections: [],
-      range: range || '1T',
-      typ: 'auto'
-    });
-    } catch(e) {
+    // Im Cache speichern
+    if (cacheKey) {
+      analyseCache[cacheKey] = { data: result, ts: Date.now() };
+    }
+
+    return res.status(200).json(result);
+
+  } catch(e) {
     return res.status(500).json({ error: e.message });
   }
 };

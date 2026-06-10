@@ -1127,10 +1127,10 @@ function renderEnrich(data,currentPrice){
 }
 
 // ── ANALYSE ───────────────────────────────────────────────────────────────
+// Client-seitiger Cache entfernt — Server cached geteilte Analyse pro Asset+Range
+function scheduleAnalyseRefresh(){}
+
 async function loadAutoAnalyse(name,range,silent){
-  var ck='a2_'+name+'_'+range+'_'+userLevel;
-  var cached=cGet(ck,ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
-  if(cached){ renderAnalyse(cached,true,false); scheduleAnalyseRefresh(name,range); return; }
   if(!silent){
     document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird erstellt...</div>';
   }
@@ -1139,26 +1139,31 @@ async function loadAutoAnalyse(name,range,silent){
     var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset:name,symbol:currentSymbol||'',price:fmtP(cd.price,cd.currency),changePct:cd.changePct||0,isPos:cd.isPos!==undefined?cd.isPos:true,news:currentNews.slice(0,6),range:range,level:userLevel,fundamentals:cd.fundamentals||{},macro:currentMacro})});
     var data=await r.json();
     if(data.error) throw new Error(data.error);
-    data._ts=Date.now();
-    cSet(ck,data,ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
     renderAnalyse(data,false,silent);
-    scheduleAnalyseRefresh(name,range);
   }catch(e){
     if(!silent) document.getElementById('auto-analyse').innerHTML='<div class="loading-box" style="color:var(--muted)">Analyse nicht verfügbar. Stelle eine eigene Frage unten.</div>';
   }
 }
-// ── ANALYSE-CACHE TTL ────────────────────────────────────────────────
-// Längere TTLs schonen das Groq-Rate-Limit. Server-side Cache fängt
-// parallele Requests zusätzlich ab.
-var ANALYSE_TTL={'1T':45*60*1000,'1W':4*60*60*1000,'1M':8*60*60*1000,'6M':14*60*60*1000,'1J':20*60*60*1000,'5J':24*60*60*1000};
-// Auto-Refresh deaktiviert — verhinderte unnötige Groq-Calls bei inaktiven
-// Tabs. Cache läuft bei Bedarf beim nächsten echten Aufruf neu.
-function scheduleAnalyseRefresh(){}
+
+function fmtModelName(m){
+  if(!m) return '';
+  if(m==='compound-beta') return 'Compound Beta ✦';
+  if(m.includes('70b')) return 'LLaMA 3.3 70B';
+  if(m.includes('8b')) return 'LLaMA 3.1 8B';
+  return m;
+}
+function fmtExpiry(sec){
+  if(!sec||sec<=0) return 'bald';
+  if(sec<60) return sec+'s';
+  if(sec<3600) return Math.round(sec/60)+' Min';
+  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60);
+  return h+' Std'+(m?' '+m+' Min':'');
+}
 
 function renderAnalyse(data,cached,silent){
-  var ts=data._ts?new Date(data._ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):null;
-  var timeTag=ts?'<span class="analyse-time">Stand: '+ts+'</span>':'';
   var updateTag=silent?'<span class="analyse-updated">aktualisiert</span>':'';
+  var ts=data.cachedAt?new Date(data.cachedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':(data._ts?new Date(data._ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':null);
+  var timeTag=ts?'<span class="analyse-time">Stand: '+ts+'</span>':'';
   var body='';
   if(data.sections && data.sectionConfig){
     var cards=data.sectionConfig.map(function(s){
@@ -1179,7 +1184,12 @@ function renderAnalyse(data,cached,silent){
       '<div class="exp-box exp-box--secondary"><div class="exp-label"><span class="exp-label-icon">🔭</span><span>Ausblick & Katalysatoren</span></div><div class="exp-text">'+(data.ausblick||'—')+'</div></div>'+
     '</div>';
   }
-  document.getElementById('auto-analyse').innerHTML='<div class="analyse-header">'+timeTag+updateTag+'</div>'+body;
+  var metaParts=[];
+  if(data.cachedAt) metaParts.push('Erstellt: '+new Date(data.cachedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr');
+  if(data.cacheExpiresIn) metaParts.push('Neu in: '+fmtExpiry(data.cacheExpiresIn));
+  if(data.model_used) metaParts.push(fmtModelName(data.model_used));
+  var metaRow=metaParts.length?'<div style="font-size:11px;color:var(--muted);text-align:right;margin-top:8px">'+metaParts.join(' · ')+'</div>':'';
+  document.getElementById('auto-analyse').innerHTML='<div class="analyse-header">'+timeTag+updateTag+'</div>'+body+metaRow;
 }
 
 // ── NEWS ──────────────────────────────────────────────────────────────────
