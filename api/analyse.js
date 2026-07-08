@@ -99,10 +99,10 @@ STRIKTE REGELN — niemals verletzen:
 `;
 
 // ── GROQ API ──────────────────────────────────────────────────────────────
-function callGroq(model, system, user, apiKey, timeoutMs) {
+function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
   const body = JSON.stringify({
     model,
-    max_tokens: 1000,
+    max_tokens: maxTokens || 1000,
     temperature: 0.15,
     messages: [
       { role: 'system', content: system },
@@ -149,11 +149,11 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
   // 1. groq/compound (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
   const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
   try {
-    const raw = await callGroq('groq/compound', system, userCompound, apiKey, 15000);
+    const raw = await callGroq('groq/compound', system, userCompound, apiKey, 15000, 400);
     return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
-    var compoundError = e.message + ' [sysBytes=' + Buffer.byteLength(system) + ' userBytes=' + Buffer.byteLength(userCompound) + ']';
+    var compoundError = e.message;
   }
 
   // 2. LLaMA 3.3 70B
