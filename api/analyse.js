@@ -263,8 +263,8 @@ Frage: "${frage}"
 
 Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten Faktoren und ${asset}. Max. 3 Absätze.`;
 
-    compoundSystem = `Finanzblick: präziser, sachlicher Finanzerklärer für Privatanleger in Deutschland/Österreich. ${levelPrompt} Keine Kursziele, kein "kaufen/verkaufen", keine Anlageberatung, kein Markdown. Max. 3 Absätze.`;
-    compoundUser = `${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}\n\nFrage: "${frage}"`;
+    compoundSystem = `Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. Max. 3 Absätze.`;
+    compoundUser = `${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}\nFrage: "${(frage || '').slice(0, 300)}"`;
 
   } else {
     const assetLower = (asset || '').toLowerCase();
@@ -550,11 +550,8 @@ Fokus: ${ctx.focus}`;
     // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
     const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
-    compoundSystem = `Finanzblick: präziser Finanzanalyst für Privatanleger DACH. ${levelPrompt} Keine Kursziele, kein "kaufen/verkaufen", kein Markdown, keine Füllsätze, keine Anlageberatung. Krypto ist kein sicherer Hafen. Jeder Abschnitt 2-4 knappe, vollständige Sätze. Abschnitte exakt in dieser Reihenfolge, als GROSSBUCHSTABEN gefolgt von Doppelpunkt: ${sections}`;
-    compoundUser = `Suche zuerst nach aktuellen News und Ereignissen zu "${asset}" der letzten ${searchWindow} und beziehe sie ein.
-
-Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}
-Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}). Fokus: ${ctx.focus}`;
+    compoundSystem = `Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. Abschnitte (GROSSBUCHSTABEN+Doppelpunkt): ${sections}`;
+    compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}`;
   }
 
   try {
