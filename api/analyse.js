@@ -104,10 +104,9 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
     model,
     max_tokens: maxTokens || 1000,
     temperature: 0.15,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user }
-    ]
+    messages: system
+      ? [{ role: 'system', content: system }, { role: 'user', content: user }]
+      : [{ role: 'user', content: user }]
   });
 
   return new Promise((resolve, reject) => {
@@ -149,7 +148,7 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
   // 1. groq/compound (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
   const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
   try {
-    const raw = await callGroq('groq/compound', system, userCompound, apiKey, 15000, 400);
+    const raw = await callGroq('groq/compound', null, system + '\n\n' + userCompound, apiKey, 15000, 400);
     return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
