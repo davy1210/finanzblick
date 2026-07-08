@@ -144,27 +144,26 @@ function callGroq(model, system, user, apiKey, timeoutMs) {
   });
 }
 
-// Modell-Hierarchie: compound-beta → llama-3.3-70b → llama-3.1-8b
+// Modell-Hierarchie: groq/compound → llama-3.3-70b → llama-3.1-8b
 async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
-  // 1. Compound Beta (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
+  // 1. groq/compound (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
   const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
   try {
-    const raw = await callGroq('compound-beta', system, userCompound, apiKey, 15000);
-    return { raw, model: 'compound-beta' };
+    const raw = await callGroq('groq/compound', system, userCompound, apiKey, 15000);
+    return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
-    var compoundError = e.message;
   }
 
   // 2. LLaMA 3.3 70B
   try {
     const raw = await callGroq('llama-3.3-70b-versatile', system, userBase, apiKey, 10000);
-    return { raw, model: 'llama-3.3-70b-versatile', compoundError };
+    return { raw, model: 'llama-3.3-70b-versatile' };
   } catch(e) {
     if (e.message === 'rate_limit') {
       // 3. LLaMA 3.1 8B (Rate-Limit Fallback)
       const raw = await callGroq('llama-3.1-8b-instant', system, userBase, apiKey, 10000);
-      return { raw, model: 'llama-3.1-8b-instant', compoundError };
+      return { raw, model: 'llama-3.1-8b-instant' };
     }
     throw e;
   }
@@ -543,14 +542,14 @@ Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}).
 Fokus: ${ctx.focus}`;
   }
 
-  // ── Compound Beta Suchprefix für Auto-Analysen ────────────────────────
+  // ── groq/compound Suchprefix für Auto-Analysen ────────────────────────
   const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
   const compoundPrefix = !frage
     ? `Suche zuerst nach aktuellen News und Ereignissen zu "${asset}" der letzten ${searchWindow}.\nBeziehe konkrete Ereignisse (Earnings, regulatorische Entscheidungen, makroökonomische Daten, geopolitische Entwicklungen) in deine Analyse ein.`
     : null;
 
   try {
-    const { raw, model, compoundError } = await callWithFallback(system, user, apiKey, compoundPrefix);
+    const { raw, model } = await callWithFallback(system, user, apiKey, compoundPrefix);
 
     const clean = raw
       .replace(/\*\*/g, '')
@@ -605,7 +604,6 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
-        _debugCompoundError: compoundError,
       };
     } else {
       const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
@@ -620,7 +618,6 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
-        _debugCompoundError: compoundError,
       };
     }
 

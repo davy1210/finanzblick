@@ -1147,7 +1147,7 @@ async function loadAutoAnalyse(name,range,silent){
 
 function fmtModelName(m){
   if(!m) return '';
-  if(m==='compound-beta') return 'Compound Beta ✦';
+  if(m==='groq/compound') return 'Compound ✦';
   if(m.includes('70b')) return 'LLaMA 3.3 70B';
   if(m.includes('8b')) return 'LLaMA 3.1 8B';
   return m;
