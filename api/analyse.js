@@ -130,7 +130,9 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
             if (msg.includes('rate_limit') || msg.includes('429') || resp.statusCode === 429) {
               return reject(new Error('rate_limit'));
             }
-            return reject(new Error(msg));
+            const err = new Error(msg);
+            err.full = JSON.stringify(p.error) + ' status=' + resp.statusCode;
+            return reject(err);
           }
           resolve((p.choices?.[0]?.message?.content) || '');
         } catch(e) { reject(e); }
@@ -152,7 +154,7 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
     return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
-    var compoundError = e.message;
+    var compoundError = e.full || e.message;
   }
 
   // 2. LLaMA 3.3 70B
