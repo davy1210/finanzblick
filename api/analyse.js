@@ -150,7 +150,7 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
   // 1. groq/compound (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
   const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
   try {
-    const raw = await callGroq('groq/compound', null, system + '\n\n' + userCompound, apiKey, 15000, 400);
+    const raw = await callGroq('groq/compound', null, 'Hallo, wer bist du?', apiKey, 15000, 100);
     return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
