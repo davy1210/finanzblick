@@ -153,17 +153,18 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
     return { raw, model: 'compound-beta' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
+    var compoundError = e.message;
   }
 
   // 2. LLaMA 3.3 70B
   try {
     const raw = await callGroq('llama-3.3-70b-versatile', system, userBase, apiKey, 15000);
-    return { raw, model: 'llama-3.3-70b-versatile' };
+    return { raw, model: 'llama-3.3-70b-versatile', compoundError };
   } catch(e) {
     if (e.message === 'rate_limit') {
       // 3. LLaMA 3.1 8B (Rate-Limit Fallback)
       const raw = await callGroq('llama-3.1-8b-instant', system, userBase, apiKey, 15000);
-      return { raw, model: 'llama-3.1-8b-instant' };
+      return { raw, model: 'llama-3.1-8b-instant', compoundError };
     }
     throw e;
   }
@@ -549,7 +550,7 @@ Fokus: ${ctx.focus}`;
     : null;
 
   try {
-    const { raw, model } = await callWithFallback(system, user, apiKey, compoundPrefix);
+    const { raw, model, compoundError } = await callWithFallback(system, user, apiKey, compoundPrefix);
 
     const clean = raw
       .replace(/\*\*/g, '')
@@ -567,6 +568,7 @@ Fokus: ${ctx.focus}`;
         fromCache: false,
         model_used: model,
         cachedAt: nowIso,
+        _debugCompoundError: compoundError,
       });
     }
 
@@ -604,6 +606,7 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
+        _debugCompoundError: compoundError,
       };
     } else {
       const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
@@ -618,6 +621,7 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
+        _debugCompoundError: compoundError,
       };
     }
 
