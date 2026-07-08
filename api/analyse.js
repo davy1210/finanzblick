@@ -153,7 +153,7 @@ async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
     return { raw, model: 'groq/compound' };
   } catch(e) {
     // Timeout oder anderer Fehler → weiter zu 70b
-    var compoundError = e.message;
+    var compoundError = e.message + ' [sysBytes=' + Buffer.byteLength(system) + ' userBytes=' + Buffer.byteLength(userCompound) + ']';
   }
 
   // 2. LLaMA 3.3 70B
