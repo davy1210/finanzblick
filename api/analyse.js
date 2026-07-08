@@ -104,9 +104,10 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
     model,
     max_tokens: maxTokens || 1000,
     temperature: 0.15,
-    messages: system
-      ? [{ role: 'system', content: system }, { role: 'user', content: user }]
-      : [{ role: 'user', content: user }]
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user }
+    ]
   });
 
   return new Promise((resolve, reject) => {
@@ -130,9 +131,7 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
             if (msg.includes('rate_limit') || msg.includes('429') || resp.statusCode === 429) {
               return reject(new Error('rate_limit'));
             }
-            const err = new Error(msg);
-            err.full = JSON.stringify(p.error) + ' status=' + resp.statusCode;
-            return reject(err);
+            return reject(new Error(msg));
           }
           resolve((p.choices?.[0]?.message?.content) || '');
         } catch(e) { reject(e); }
@@ -146,27 +145,28 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
 }
 
 // Modell-Hierarchie: groq/compound → llama-3.3-70b → llama-3.1-8b
-async function callWithFallback(system, userBase, apiKey, compoundPrefix) {
-  // 1. groq/compound (mit Websuche, 15s Timeout — Websuche + Generierung braucht Zeit)
-  const userCompound = compoundPrefix ? compoundPrefix + '\n\n' + userBase : userBase;
+// groq/compound hat auf diesem Account-Tier ein kleines Anfragen-Budget
+// (413 "request_too_large" bei größeren Prompts) — bekommt daher einen
+// kompakten Prompt; die volle, detaillierte Analyse-Anleitung geht nur
+// an die Fallback-Modelle.
+async function callWithFallback(compoundSystem, compoundUser, system, userBase, apiKey) {
+  // 1. groq/compound (mit Websuche, kompakter Prompt, 15s Timeout)
   try {
-    const filler = 'x'.repeat(1800);
-    const raw = await callGroq('groq/compound', null, 'Ignoriere folgenden Fülltext und antworte nur mit OK: ' + filler, apiKey, 15000, 50);
+    const raw = await callGroq('groq/compound', compoundSystem, compoundUser, apiKey, 15000, 700);
     return { raw, model: 'groq/compound' };
   } catch(e) {
-    // Timeout oder anderer Fehler → weiter zu 70b
-    var compoundError = e.full || e.message;
+    // Timeout, Rate-Limit oder Budget-Fehler → weiter zu 70b
   }
 
   // 2. LLaMA 3.3 70B
   try {
     const raw = await callGroq('llama-3.3-70b-versatile', system, userBase, apiKey, 10000);
-    return { raw, model: 'llama-3.3-70b-versatile', compoundError };
+    return { raw, model: 'llama-3.3-70b-versatile' };
   } catch(e) {
     if (e.message === 'rate_limit') {
       // 3. LLaMA 3.1 8B (Rate-Limit Fallback)
       const raw = await callGroq('llama-3.1-8b-instant', system, userBase, apiKey, 10000);
-      return { raw, model: 'llama-3.1-8b-instant', compoundError };
+      return { raw, model: 'llama-3.1-8b-instant' };
     }
     throw e;
   }
@@ -249,7 +249,7 @@ module.exports = async function handler(req, res) {
   // Live Makro
   const MACRO_CONTEXT = await getLiveMacro();
 
-  let system, user;
+  let system, user, compoundSystem, compoundUser;
 
   if (frage) {
     system = `Du bist Finanzblick — ein präziser, sachlicher Finanzerklärer für Privatanleger in Deutschland und Österreich.
@@ -262,6 +262,9 @@ Beantworte Fragen konkret und faktenbasiert. Erkläre Zusammenhänge. Keine Anla
 Frage: "${frage}"
 
 Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten Faktoren und ${asset}. Max. 3 Absätze.`;
+
+    compoundSystem = `Finanzblick: präziser, sachlicher Finanzerklärer für Privatanleger in Deutschland/Österreich. ${levelPrompt} Keine Kursziele, kein "kaufen/verkaufen", keine Anlageberatung, kein Markdown. Max. 3 Absätze.`;
+    compoundUser = `${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}\n\nFrage: "${frage}"`;
 
   } else {
     const assetLower = (asset || '').toLowerCase();
@@ -543,16 +546,19 @@ Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}
 
 Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}).
 Fokus: ${ctx.focus}`;
+
+    // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
+    // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
+    const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
+    compoundSystem = `Finanzblick: präziser Finanzanalyst für Privatanleger DACH. ${levelPrompt} Keine Kursziele, kein "kaufen/verkaufen", kein Markdown, keine Füllsätze, keine Anlageberatung. Krypto ist kein sicherer Hafen. Jeder Abschnitt 2-4 knappe, vollständige Sätze. Abschnitte exakt in dieser Reihenfolge, als GROSSBUCHSTABEN gefolgt von Doppelpunkt: ${sections}`;
+    compoundUser = `Suche zuerst nach aktuellen News und Ereignissen zu "${asset}" der letzten ${searchWindow} und beziehe sie ein.
+
+Asset: ${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}
+Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}). Fokus: ${ctx.focus}`;
   }
 
-  // ── groq/compound Suchprefix für Auto-Analysen ────────────────────────
-  const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
-  const compoundPrefix = !frage
-    ? `Suche zuerst nach aktuellen News und Ereignissen zu "${asset}" der letzten ${searchWindow}.\nBeziehe konkrete Ereignisse (Earnings, regulatorische Entscheidungen, makroökonomische Daten, geopolitische Entwicklungen) in deine Analyse ein.`
-    : null;
-
   try {
-    const { raw, model, compoundError } = await callWithFallback(system, user, apiKey, compoundPrefix);
+    const { raw, model } = await callWithFallback(compoundSystem, compoundUser, system, user, apiKey);
 
     const clean = raw
       .replace(/\*\*/g, '')
@@ -607,7 +613,6 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
-        _debugCompoundError: compoundError,
       };
     } else {
       const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
@@ -622,7 +627,6 @@ Fokus: ${ctx.focus}`;
         model_used: model,
         cachedAt: nowIso,
         cacheExpiresIn: Math.round(ttl / 1000),
-        _debugCompoundError: compoundError,
       };
     }
 
