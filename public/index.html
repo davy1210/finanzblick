@@ -758,7 +758,7 @@ function nbadge(s,impact){
 var sInp=document.getElementById('search-input'), sRes=document.getElementById('search-results');
 sInp.addEventListener('input',function(e){
   clearTimeout(searchTimer);
-  var q=e.target.value.trim();
+  var q=e.target.value.trim().replace(/\s+/g,' ');
   if(!q){ sRes.classList.remove('open'); return; }
   searchTimer=setTimeout(function(){ doSearch(q); },350);
 });

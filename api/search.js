@@ -4,7 +4,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'GET') return res.status(405).end();
 
-  const q = req.query.q || '';
+  const q = (req.query.q || '').trim().replace(/\s+/g, ' ');
   if (!q) return res.status(400).json({ error: 'Kein Suchbegriff' });
 
   const url = 'https://query1.finance.yahoo.com/v1/finance/search?q=' +
