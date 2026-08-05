@@ -22,13 +22,13 @@ module.exports = async function handler(req, res) {
 
     const data = JSON.parse(body);
     const results = (data.quotes || [])
-      .filter(function(q) { return ['EQUITY','ETF','CRYPTOCURRENCY','INDEX'].includes(q.quoteType); })
+      .filter(function(q) { return ['EQUITY','ETF','CRYPTOCURRENCY','INDEX','FUTURE'].includes(q.quoteType); })
       .slice(0, 7)
       .map(function(q) {
         return {
           symbol: q.symbol,
           name: q.shortname || q.longname || q.symbol,
-          type: { EQUITY:'Aktie', ETF:'ETF', CRYPTOCURRENCY:'Krypto', INDEX:'Index' }[q.quoteType] || q.quoteType,
+          type: { EQUITY:'Aktie', ETF:'ETF', CRYPTOCURRENCY:'Krypto', INDEX:'Index', FUTURE:'Rohstoff' }[q.quoteType] || q.quoteType,
           exchange: q.exchange || '',
         };
       });

@@ -104,7 +104,8 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted)}
 .search-results{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:50;max-height:320px;overflow-y:auto}
 .search-results.open{display:block}
-.sr-item{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);transition:background .1s}
+.sr-item{padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
+.sr-emoji{font-size:18px;width:26px;text-align:center;flex-shrink:0;line-height:1}
 .sr-item:last-child{border-bottom:none}
 .sr-item:hover{background:var(--blue-bg)}
 .sr-name{font-size:14px;font-weight:700}
@@ -761,6 +762,13 @@ sInp.addEventListener('input',function(e){
   if(!q){ sRes.classList.remove('open'); return; }
   searchTimer=setTimeout(function(){ doSearch(q); },350);
 });
+function assetEmoji(type){
+  if(type==='Krypto')   return '🪙';
+  if(type==='ETF')      return '📊';
+  if(type==='Index')    return '📈';
+  if(type==='Rohstoff') return '🥇';
+  return '🏢';
+}
 async function doSearch(q){
   sRes.innerHTML='<div class="sr-empty">Suche...</div>'; sRes.classList.add('open');
   try{
@@ -769,7 +777,8 @@ async function doSearch(q){
     var res=data.results||[];
     if(!res.length){ sRes.innerHTML='<div class="sr-empty">Keine Ergebnisse</div>'; return; }
     sRes.innerHTML=res.map(function(r){
-      return '<div class="sr-item" onclick="pick(\''+r.symbol+'\',\''+r.name.replace(/'/g,"\\'")+'\')"><div><div class="sr-name">'+r.name+'</div><div class="sr-type">'+r.symbol+' · '+r.type+'</div></div><div class="sr-right">'+(r.exchange||'')+'</div></div>';
+      var em=assetEmoji(r.type);
+      return '<div class="sr-item" onclick="pick(\''+r.symbol+'\',\''+r.name.replace(/'/g,"\\'")+'\')"><div class="sr-emoji">'+em+'</div><div style="flex:1"><div class="sr-name">'+r.name+'</div><div class="sr-type">'+r.symbol+' · '+r.type+'</div></div><div class="sr-right">'+(r.exchange||'')+'</div></div>';
     }).join('');
   }catch(e){ sRes.innerHTML='<div class="sr-empty">Nicht verfügbar</div>'; }
 }
