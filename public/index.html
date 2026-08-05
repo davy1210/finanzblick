@@ -16,6 +16,7 @@
   --font:'Plus Jakarta Sans',sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+html,body{overflow-x:hidden;max-width:100%}
 body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9CA3AF;
   --green-bg:rgba(5,150,105,0.2);--red-bg:rgba(220,38,38,0.2);
   --blue-bg:rgba(37,99,235,0.2);--purple-bg:rgba(124,58,237,0.2);--amber-bg:rgba(217,119,6,0.2)}
@@ -368,19 +369,37 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .acard-body{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-line}
 
 @media(max-width:640px){
-  /* NAV: Logo-Text und Level-Pill verstecken, damit die Leiste passt */
-  .nav{padding:0 12px}
+  /* NAV: Logo-Text und Pill verstecken, Links scrollbar halten */
+  .nav{padding:0 12px;overflow:hidden}
+  .logo{flex-shrink:0}
   .logo-text{display:none}
   .level-pill{display:none}
-  .nl{font-size:11px;padding:5px 8px}
-  .nav-links{gap:1px}
+  .nav-links{flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nl{font-size:12px;padding:5px 10px;white-space:nowrap;flex-shrink:0}
+  .nav-right{flex-shrink:0}
 
   /* SEITEN: weniger Rand auf kleinen Screens */
   .page{padding:14px}
   .page-title{font-size:20px}
 
-  /* ASSET CARDS: explizit 2 Spalten */
-  .asset-grid{grid-template-columns:repeat(2,1fr)}
+  /* ASSET CARDS: horizontales Swipe-Carousel */
+  .asset-grid{
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    gap:8px;
+    padding-bottom:8px;
+    margin-left:-14px;margin-right:-14px;
+    padding-left:14px;padding-right:14px;
+    grid-template-columns:unset;
+    margin-bottom:16px;
+  }
+  .asset-grid::-webkit-scrollbar{display:none}
+  .asset-card{flex:0 0 148px;min-width:148px;scroll-snap-align:start}
+  .mini-spark{height:28px;margin-top:6px}
   .ac-price{font-size:16px}
 
   /* DETAIL PANEL: Preis etwas kleiner */
