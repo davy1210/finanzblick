@@ -796,12 +796,8 @@ async function selectAsset(sym,name){
   if(card) card.classList.add('active');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 
-  // Cache zuerst prüfen — Spinner nur zeigen wenn wirklich nötig
   var assetName=name||sym;
-  var analyseKey='a2_'+assetName+'_1T_'+userLevel;
-  var analyseCached=cGet(analyseKey, ANALYSE_TTL['1T']);
-  if(analyseCached){ renderAnalyse(analyseCached,true,false); }
-  else { document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>'; }
+  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
 
   var newsKey='n_'+assetName+'_1T';
   var newsCached=cGet(newsKey, cacheMs('1T'));
@@ -811,8 +807,7 @@ async function selectAsset(sym,name){
   await loadQuote(sym,'1T');
   loadEnrich(sym, currentData?.price);
   if(!newsCached) await loadNews(assetName,'1T');
-  if(!analyseCached) await loadAutoAnalyse(assetName,'1T');
-  else scheduleAnalyseRefresh(assetName,'1T');
+  await loadAutoAnalyse(assetName,'1T');
 }
 
 function setRangeTag(range){
@@ -841,12 +836,7 @@ async function changeRange(range,btn){
   document.getElementById('hover-price').textContent='—';
   var name=currentData?currentData.name:currentSymbol;
 
-  // Zeige Lade-Spinner NUR wenn analyse nicht im Cache
-  var analyseKey='a2_'+name+'_'+range+'_'+userLevel;
-  var analyseCached=cGet(analyseKey, ANALYSE_TTL[range]||ANALYSE_TTL['1T']);
-  if(!analyseCached){
-    document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
-  }
+  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
 
   // News: zeige gecachte sofort, verstecke nur wenn kein Cache
   var newsKey='n_'+name+'_'+range;
