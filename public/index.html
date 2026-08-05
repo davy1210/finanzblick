@@ -366,6 +366,69 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .acard-icon{font-size:15px;line-height:1}
 .acard-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
 .acard-body{font-size:13px;line-height:1.7;color:var(--text);white-space:pre-line}
+
+@media(max-width:640px){
+  /* NAV: Logo-Text und Level-Pill verstecken, damit die Leiste passt */
+  .nav{padding:0 12px}
+  .logo-text{display:none}
+  .level-pill{display:none}
+  .nl{font-size:11px;padding:5px 8px}
+  .nav-links{gap:1px}
+
+  /* SEITEN: weniger Rand auf kleinen Screens */
+  .page{padding:14px}
+  .page-title{font-size:20px}
+
+  /* ASSET CARDS: explizit 2 Spalten */
+  .asset-grid{grid-template-columns:repeat(2,1fr)}
+  .ac-price{font-size:16px}
+
+  /* DETAIL PANEL: Preis etwas kleiner */
+  .detail-header{padding:14px 14px 0}
+  .chart-area{padding:0 14px 14px}
+  .d-price{font-size:28px;letter-spacing:-1px}
+  .hover-price{font-size:20px;letter-spacing:-.5px}
+
+  /* STATS: 4 → 2×2 Raster */
+  .stats-row{grid-template-columns:repeat(2,1fr);padding:10px 14px}
+
+  /* FUNDAMENTALS: 2 Spalten */
+  .fund-section{padding:0 14px 16px}
+  .fund-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* ANALYSE: eine Spalte */
+  .analyse-section{padding:14px}
+  .analyse-grid{grid-template-columns:1fr}
+
+  /* ASK AI: kein Links-Einzug auf mobile */
+  .ask-ai{padding:14px}
+  .ask-ai-sub{margin-left:0}
+  .ask-btn{padding:11px 14px}
+
+  /* ANALYST PANEL */
+  #analyst-wrap{padding:12px 14px 14px}
+  .cons-bar-outer{min-width:80px}
+
+  /* 52W & GAUGE */
+  .w52-wrap{padding:12px 14px 12px}
+  .gauge-wrap{margin:0 14px 16px}
+  .rec-wrap{margin:0 14px 16px}
+
+  /* QUICK FACTS */
+  .quick-facts{padding:8px 12px}
+  .qf-tile{padding:7px 10px}
+
+  /* EVENTS */
+  .ev-card{padding:12px;gap:10px}
+  .ev-day{font-size:18px}
+
+  /* ONBOARDING MODAL */
+  .ob-modal{padding:24px 18px;border-radius:16px}
+  .ob-title{font-size:18px}
+
+  /* SETTINGS PANEL: volle Breite auf sehr engen Screens */
+  .settings-panel{width:min(280px,100%)}
+}
 </style>
 </head>
 <body>
@@ -441,7 +504,7 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="logo"><div class="logo-icon">FB</div>Finanzblick</div>
+  <div class="logo"><div class="logo-icon">FB</div><span class="logo-text">Finanzblick</span></div>
   <div class="nav-links">
     <button class="nl active" onclick="gotoPage('dash',this)">Märkte</button>
     <button class="nl" onclick="gotoPage('marktpuls',this)">Marktpuls</button>
