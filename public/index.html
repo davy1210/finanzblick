@@ -161,6 +161,9 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .range-btn{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);color:var(--muted);background:none;transition:all .15s}
 .range-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .chart-box{height:190px}
+/* pan-y: vertikales Scrollen der Seite bleibt moeglich, aber horizontales
+   Wischen/Zoomen auf dem Chart verschiebt die Ansicht nicht mehr. */
+.chart-box,.chart-box canvas,.mini-spark canvas{touch-action:pan-y}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 20px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -456,6 +459,11 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
   /* SETTINGS PANEL: volle Breite auf sehr engen Screens */
   .settings-panel{width:min(280px,100%)}
+
+  /* EINGABEFELDER: iOS Safari zoomt beim Fokussieren automatisch hinein,
+     wenn die Schrift kleiner als 16px ist — genau das verschob die Ansicht
+     beim Tippen auf Such- und Frageleiste. 16px verhindert den Zoom. */
+  .search-input,.ask-input,.wiss-search{font-size:16px}
 }
 </style>
 </head>
