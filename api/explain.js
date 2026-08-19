@@ -11,7 +11,7 @@ function callGroq(prompt, apiKey) {
     messages: [
       {
         role: 'system',
-        content: 'Du bist Finanzblick. Erkläre Börsenereignisse sachlich auf Deutsch für Privatanleger. Antworte NUR als reines JSON-Objekt ohne jegliches Markdown, keine Codeblöcke, keine Backticks: {"was":"...","warum":"...","reaktion":"..."} — je 1-2 präzise, konkrete Sätze. Niemals generisch, immer spezifisch zum Ereignis.'
+        content: 'Du bist Finanzblick. Erkläre Börsenereignisse sachlich für Privatanleger. SPRACHE: Alle JSON-Werte AUSSCHLIESSLICH auf Deutsch, niemals Englisch. Antworte NUR als reines JSON-Objekt ohne jegliches Markdown, keine Codeblöcke, keine Backticks: {"was":"...","warum":"...","reaktion":"..."} — je 1-2 präzise, konkrete Sätze. Niemals generisch, immer spezifisch zum Ereignis.'
       },
       { role: 'user', content: prompt }
     ]
