@@ -276,6 +276,9 @@ module.exports = async function handler(req, res) {
   const MACRO_CONTEXT = await getLiveMacro();
 
   let system, user, compoundSystem, compoundUser;
+  // Sollabschnitte der Auto-Analyse — der Parser akzeptiert nur diese als
+  // Überschrift, damit die Kartenstruktur nicht vom Modell abhängt.
+  let expectedSections = null;
 
   if (frage) {
     system = `Du bist Finanzblick — ein präziser, sachlicher Finanzerklärer für Privatanleger in Deutschland und Österreich.
@@ -541,6 +544,8 @@ MARKT-KONTEXT: Makroumfeld, geopolitische Einflüsse auf diesen Sektor, Sektorst
 AUSBLICK: Anstehende Ereignisse, 52W-Position, wichtigste Risikofaktoren.`;
     }
 
+    expectedSections = sections.split(',').map(s => s.trim()).filter(Boolean);
+
     system = `Du bist Finanzblick — ein präziser Finanzanalyst für Privatanleger in Deutschland und Österreich.
 
 ${levelPrompt}
@@ -556,8 +561,12 @@ AUSGABE-REGELN — strikt einhalten:
 - Kein "Es ist wichtig zu beachten dass..." oder ähnliche Füllsätze
 - Der Nutzer soll jeden Abschnitt in 15 Sekunden lesen können
 
-STRUKTUR — genau diese Abschnitte, keine anderen:
-${sections}
+STRUKTUR — zwingend, keine Abweichung:
+- Genau diese ${expectedSections.length} Abschnitte, in genau dieser Reihenfolge:
+${expectedSections.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}
+- Jede Überschrift exakt so schreiben, in GROSSBUCHSTABEN gefolgt von einem Doppelpunkt
+- Keine weiteren Überschriften erfinden — kein FAZIT, keine ZUSAMMENFASSUNG, kein HINWEIS
+- Jeder Inhalt gehört unter die passende Überschrift, niemals mehrere Themen unter eine
 
 WAS IN JEDEM ABSCHNITT STEHEN SOLL (Orientierung, nicht wörtlich kopieren):
 ${instructions}
@@ -576,7 +585,7 @@ Fokus: ${ctx.focus}`;
     // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
     const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
-    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. Abschnittstitel exakt so übernehmen (GROSSBUCHSTABEN+Doppelpunkt): ${sections}`;
+    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. STRUKTUR zwingend: genau ${expectedSections.length} Abschnitte in dieser Reihenfolge, Titel exakt so, GROSSBUCHSTABEN+Doppelpunkt, keine weiteren Überschriften (kein FAZIT), pro Überschrift nur ihr eigenes Thema: ${sections}`;
     compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}`;
   }
 
@@ -602,26 +611,47 @@ Fokus: ${ctx.focus}`;
       });
     }
 
-    // Abschnitte dynamisch parsen
+    // ── Abschnitte parsen ─────────────────────────────────────────────────
+    // Nur die vorgegebenen Titel gelten als Überschrift. Erfindet das Modell
+    // einen Abschnitt (z.B. FAZIT), bleibt er Fließtext statt eine Karte zu
+    // werden — so hängt die Kartenzahl nicht mehr vom Modell ab.
+    // Der Bindestrich in der Zeichenklasse ist nötig: Titel wie INDEX-TREIBER
+    // wurden sonst gar nicht als Überschrift erkannt.
+    const norm = s => s.toUpperCase().replace(/\s+/g, ' ').trim();
+    const expectedNorm = new Map((expectedSections || []).map(s => [norm(s), s]));
+
     const lines = clean.split('\n');
     const parsedSections = [];
     let currentTitle = null;
     let currentContent = [];
 
+    const flush = () => {
+      if (currentTitle && currentContent.join(' ').trim().length > 10) {
+        parsedSections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+      }
+    };
+
     for (const line of lines) {
-      const headerMatch = line.match(/^([A-ZÄÖÜ][A-ZÄÖÜ\s&]{2,40}):\s*(.*)/);
-      if (headerMatch) {
-        if (currentTitle && currentContent.join(' ').trim().length > 10) {
-          parsedSections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
-        }
-        currentTitle = headerMatch[1].trim();
+      const headerMatch = line.match(/^([A-ZÄÖÜ][A-ZÄÖÜ0-9\s&\-.\/]{2,45}):\s*(.*)/);
+      // Ohne Sollliste (sollte nicht vorkommen) jede Überschrift akzeptieren.
+      const canonical = headerMatch
+        ? (expectedNorm.size ? expectedNorm.get(norm(headerMatch[1])) : headerMatch[1].trim())
+        : null;
+
+      if (canonical) {
+        flush();
+        currentTitle = canonical;
         currentContent = headerMatch[2] ? [headerMatch[2]] : [];
       } else if (currentTitle) {
         currentContent.push(line);
       }
     }
-    if (currentTitle && currentContent.join(' ').trim().length > 10) {
-      parsedSections.push({ title: currentTitle, content: currentContent.join('\n').trim() });
+    flush();
+
+    // In die vorgegebene Reihenfolge bringen — das Modell kann sie vertauschen.
+    if (expectedSections && parsedSections.length) {
+      parsedSections.sort((a, b) =>
+        expectedSections.indexOf(a.title) - expectedSections.indexOf(b.title));
     }
 
     let result;
