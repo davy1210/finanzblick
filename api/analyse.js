@@ -165,7 +165,9 @@ const MODEL_CHAIN = [
 // Fällt bei JEDEM Fehler weiter (nicht nur rate_limit) — ein nicht
 // verfügbares Modell darf die gesamte Analyse nicht abbrechen.
 // `deadline` schützt das Vercel-Limit von 30s.
-async function callWithFallback(compoundSystem, compoundUser, system, userBase, apiKey, deadline) {
+// maxTokensOverride begrenzt kurze Antworten (Nutzerfragen) zusätzlich zur
+// Satzvorgabe im Prompt — sonst schöpft das Modell das Budget der Analyse aus.
+async function callWithFallback(compoundSystem, compoundUser, system, userBase, apiKey, deadline, maxTokensOverride) {
   const errors = [];
 
   for (const cand of MODEL_CHAIN) {
@@ -181,7 +183,7 @@ async function callWithFallback(compoundSystem, compoundUser, system, userBase, 
         cand.compact ? compoundUser : userBase,
         apiKey,
         Math.min(cand.timeout, remaining),
-        cand.maxTokens
+        maxTokensOverride || cand.maxTokens
       );
       if (raw && raw.trim()) return { raw, model: cand.model };
       errors.push(`${cand.model}: leere Antwort`);
@@ -284,15 +286,21 @@ module.exports = async function handler(req, res) {
     system = `Du bist Finanzblick — ein präziser, sachlicher Finanzerklärer für Privatanleger in Deutschland und Österreich.
 ${levelPrompt}
 ${RULES}
-Beantworte Fragen konkret und faktenbasiert. Erkläre Zusammenhänge. Keine Anlageberatung.`;
+
+LÄNGE — strikt einhalten:
+- Maximal 4 Sätze, ein einziger Absatz
+- Satz 1 ist die direkte Antwort auf die Frage
+- Danach höchstens drei Sätze Begründung mit konkreten Zahlen
+- Keine Einleitung, kein Fazit, keine Wiederholung der Frage
+- Lieber ein Faktor gut erklärt als drei aufgezählt`;
 
     user = `${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}${newsBlock}
 
 Frage: "${frage}"
 
-Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten Faktoren und ${asset}. Max. 3 Absätze.`;
+Antworte in maximal 4 Sätzen — direkt, ohne Einleitung.`;
 
-    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch. Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. Max. 3 Absätze.`;
+    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch. Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. MAXIMAL 4 SÄTZE, ein Absatz: erst die direkte Antwort, dann kurze Begründung. Keine Einleitung, kein Fazit.`;
     compoundUser = `${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}\nFrage: "${(frage || '').slice(0, 300)}"`;
 
   } else {
@@ -590,7 +598,7 @@ Fokus: ${ctx.focus}`;
   }
 
   try {
-    const { raw, model } = await callWithFallback(compoundSystem, compoundUser, system, user, apiKey, deadline);
+    const { raw, model } = await callWithFallback(compoundSystem, compoundUser, system, user, apiKey, deadline, frage ? 320 : null);
 
     const clean = raw
       .replace(/\*\*/g, '')
