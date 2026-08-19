@@ -163,7 +163,12 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 .chart-box{height:190px}
 /* pan-y: vertikales Scrollen der Seite bleibt moeglich, aber horizontales
    Wischen/Zoomen auf dem Chart verschiebt die Ansicht nicht mehr. */
-.chart-box,.chart-box canvas,.mini-spark canvas{touch-action:pan-y}
+/* touch-action:none — der Finger auf der Chartlinie steuert nur das Fadenkreuz,
+   die Seite scrollt dabei nicht mit. Bewusst nicht pan-y: damit wuerde jede
+   vertikale Bewegung die Ansicht verschieben.
+   Die Sparklines sind absichtlich ausgenommen — sie liegen im horizontal
+   wischbaren Karten-Karussell, eine touch-action-Regel wuerde das blockieren. */
+.chart-box,.chart-box canvas{touch-action:none}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 20px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -463,10 +468,17 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
   /* SETTINGS PANEL: volle Breite auf sehr engen Screens */
   .settings-panel{width:min(280px,100%)}
 
-  /* EINGABEFELDER: iOS Safari zoomt beim Fokussieren automatisch hinein,
-     wenn die Schrift kleiner als 16px ist — genau das verschob die Ansicht
-     beim Tippen auf Such- und Frageleiste. 16px verhindert den Zoom. */
-  .search-input,.ask-input,.wiss-search{font-size:16px}
+}
+
+/* EINGABEFELDER: iOS Safari zoomt beim Fokussieren automatisch hinein, wenn
+   die Schrift kleiner als 16px ist — genau das verschiebt die Ansicht beim
+   Tippen auf Such- und Frageleiste. 16px ist die Schwelle, ab der nicht mehr
+   gezoomt wird.
+   Bewusst an pointer:coarse gebunden statt an eine Breite: im Querformat ist
+   ein Handy breiter als 640px, dort hatte die Breiten-Regel nicht gegriffen.
+   !important, weil die Basisregeln dieselbe Spezifitaet haben. */
+@media(pointer:coarse){
+  .search-input,.ask-input,.wiss-search,.ask-input:focus,.search-input:focus{font-size:16px!important}
 }
 </style>
 </head>
