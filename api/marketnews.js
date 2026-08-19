@@ -151,6 +151,7 @@ function callGroqBatch(articles, apiKey) {
       {
         role: 'system',
         content: `Du bist Finanzblick-Marktexperte. Erkläre für jeden News-Artikel in maximal 1 Satz (45 Wörter), WARUM diese Nachricht für Anleger wichtig ist — konkret und kausal, keine Wiederholung des Titels.
+SPRACHE: Jeder "context"-Wert AUSSCHLIESSLICH auf Deutsch, niemals Englisch — die Artikel sind meist englisch, deine Erklärung ist es nie.
 Antworte als reines JSON-Array: [{"idx":1,"context":"..."},{"idx":2,"context":"..."},...]
 Kein Markdown, keine Erklärungen außerhalb des JSON.`
       },

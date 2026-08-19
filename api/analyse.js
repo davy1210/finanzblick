@@ -87,6 +87,11 @@ Aktueller Makro-Kontext (Live FRED-Daten):
 }
 
 const RULES = `
+SPRACHE: Antworte AUSSCHLIESSLICH auf Deutsch — jeder Abschnittstitel und
+jeder Satz. Niemals Englisch, auch nicht teilweise, auch nicht wenn Quellen
+oder Nachrichten englisch sind. Fachbegriffe wie "Cashflow" bleiben, der
+umgebende Satz ist Deutsch.
+
 STRIKTE REGELN — niemals verletzen:
 1. Krypto ist KEIN sicherer Hafen — hochspekulative, volatile Assets
 2. Sichere Häfen: Gold, CHF, US-Staatsanleihen, JPY
@@ -284,7 +289,7 @@ Frage: "${frage}"
 
 Beantworte konkret und direkt. Erkläre den Zusammenhang zwischen den genannten Faktoren und ${asset}. Max. 3 Absätze.`;
 
-    compoundSystem = `Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. Max. 3 Absätze.`;
+    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch. Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. Max. 3 Absätze.`;
     compoundUser = `${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}\nFrage: "${(frage || '').slice(0, 300)}"`;
 
   } else {
@@ -571,7 +576,7 @@ Fokus: ${ctx.focus}`;
     // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
     const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
-    compoundSystem = `Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. Abschnitte (GROSSBUCHSTABEN+Doppelpunkt): ${sections}`;
+    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. Abschnittstitel exakt so übernehmen (GROSSBUCHSTABEN+Doppelpunkt): ${sections}`;
     compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}`;
   }
 
