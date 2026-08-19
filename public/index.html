@@ -918,17 +918,45 @@ function setRangeTag(range){
 }
 
 // ── QUOTE ─────────────────────────────────────────────────────────────────
-async function loadQuote(sym,range){
+// Kursdaten des angezeigten Charts periodisch nachladen.
+var QUOTE_REFRESH_MS=10*60*1000;
+var quoteTimer=null, quoteRefreshPending=false;
+
+// force=true umgeht den Cache — ohne das wuerde der Timer nur denselben
+// gecachten Datensatz erneut lesen und nichts aktualisieren.
+async function loadQuote(sym,range,force){
   var ck='q2_'+sym+'_'+range;
-  var cached=cGet(ck);
-  if(cached){ currentData=cached; renderQuote(cached,sym); return; }
+  if(force){ delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){} }
+  var cached=force?null:cGet(ck,cacheMs(range));
+  if(cached){ currentData=cached; renderQuote(cached,sym); scheduleQuoteRefresh(sym,range); return; }
   try{
     var r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range='+range);
     var data=await r.json();
-    if(data.error) return;
-    currentData=data; cSet(ck,data); renderQuote(data,sym);
-  }catch(e){}
+    if(data.error){ console.error('[Finanzblick] Kursdaten:',data.error); }
+    else { currentData=data; cSet(ck,data); renderQuote(data,sym); }
+  }catch(e){
+    console.error('[Finanzblick] Kursdaten fehlgeschlagen:',e&&e.message?e.message:e);
+  }
+  // Auch nach einem Fehler weiterlaufen — der naechste Versuch kann klappen.
+  scheduleQuoteRefresh(sym,range);
 }
+
+function scheduleQuoteRefresh(sym,range){
+  if(quoteTimer) clearTimeout(quoteTimer);
+  quoteTimer=setTimeout(function(){
+    if(currentSymbol!==sym||currentRange!==range) return; // Nutzer hat gewechselt
+    if(document.hidden){ quoteRefreshPending=true; return; } // Hintergrund-Tab schont die API
+    loadQuote(sym,range,true);
+  },QUOTE_REFRESH_MS);
+}
+
+// Beim Zurueckkehren in den Tab sofort nachladen statt bis zum naechsten Tick zu warten.
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden||!quoteRefreshPending) return;
+  quoteRefreshPending=false;
+  if(currentSymbol) loadQuote(currentSymbol,currentRange,true);
+});
+
 async function changeRange(range,btn){
   document.querySelectorAll('.range-btn').forEach(function(b){ b.classList.remove('active'); }); btn.classList.add('active');
   currentRange=range; setRangeTag(range);
@@ -944,9 +972,8 @@ async function changeRange(range,btn){
   if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
   else { document.getElementById('news-wrap').style.display='none'; }
 
-  // Quote immer neu laden (Chart aktualisieren)
-  var qck='q2_'+currentSymbol+'_'+range; delete MEM[qck]; try{localStorage.removeItem('fb_'+qck);}catch(e){}
-  await Promise.all([loadQuote(currentSymbol,range), newsCached?Promise.resolve():loadNews(name,range)]);
+  // Quote immer frisch laden (Chart aktualisieren)
+  await Promise.all([loadQuote(currentSymbol,range,true), newsCached?Promise.resolve():loadNews(name,range)]);
   await loadAutoAnalyse(name,range);
 }
 function fmtBig(n){
@@ -1548,7 +1575,7 @@ async function buildGrid(){
   PINNED.forEach(async function(p){
     try{
       var id=p.symbol.replace(/[^a-zA-Z0-9]/g,'_'), ck='q2_'+p.symbol+'_1T';
-      var data=cGet(ck);
+      var data=cGet(ck,cacheMs('1T'));
       if(!data){ var r=await fetch('/api/quote?symbol='+encodeURIComponent(p.symbol)+'&range=1T'); data=await r.json(); if(!data.error) cSet(ck,data); }
       if(!data||data.error) return;
       document.getElementById('p-'+id).textContent=fmtP(data.price,data.currency);
