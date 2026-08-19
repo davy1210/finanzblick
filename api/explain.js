@@ -5,7 +5,7 @@ const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
 function callGroq(prompt, apiKey) {
   const body = JSON.stringify({
-    model: 'llama-3.1-8b-instant',
+    model: 'openai/gpt-oss-20b',
     max_tokens: 350,
     temperature: 0.1,
     messages: [

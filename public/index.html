@@ -1231,6 +1231,7 @@ async function loadAutoAnalyse(name,range,silent){
     if(data.error) throw new Error(data.error);
     renderAnalyse(data,false,silent);
   }catch(e){
+    console.error('[Finanzblick] Analyse fehlgeschlagen:',e&&e.message?e.message:e);
     if(!silent) document.getElementById('auto-analyse').innerHTML='<div class="loading-box" style="color:var(--muted)">Analyse nicht verfügbar. Stelle eine eigene Frage unten.</div>';
   }
 }
@@ -1238,9 +1239,22 @@ async function loadAutoAnalyse(name,range,silent){
 function fmtModelName(m){
   if(!m) return '';
   if(m==='groq/compound') return 'Compound ✦';
-  if(m.includes('70b')) return 'LLaMA 3.3 70B';
-  if(m.includes('8b')) return 'LLaMA 3.1 8B';
+  if(m.indexOf('120b')>-1) return 'GPT-OSS 120B';
+  if(m.indexOf('20b')>-1) return 'GPT-OSS 20B';
   return m;
+}
+// Passendes Icon je Abschnittsüberschrift der Analyse
+function sectionIcon(title){
+  var t=(title||'').toUpperCase();
+  if(t.indexOf('MARKTLAGE')>-1) return '📊';
+  if(t.indexOf('TREIBER')>-1||t.indexOf('KURSTREIBER')>-1) return '⚙️';
+  if(t.indexOf('MAKRO')>-1||t.indexOf('LIQUIDIT')>-1) return '🌍';
+  if(t.indexOf('AUSBLICK')>-1) return '🔭';
+  if(t.indexOf('RISIK')>-1) return '⚡';
+  if(t.indexOf('BEWERTUNG')>-1) return '💰';
+  if(t.indexOf('WACHSTUM')>-1) return '📈';
+  if(t.indexOf('GESCHÄFT')>-1||t.indexOf('MODELL')>-1) return '🏢';
+  return '📌';
 }
 function fmtExpiry(sec){
   if(!sec||sec<=0) return 'bald';
@@ -1255,10 +1269,11 @@ function renderAnalyse(data,cached,silent){
   var ts=data.cachedAt?new Date(data.cachedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':(data._ts?new Date(data._ts).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr':null);
   var timeTag=ts?'<span class="analyse-time">Stand: '+ts+'</span>':'';
   var body='';
-  if(data.sections && data.sectionConfig){
-    var cards=data.sectionConfig.map(function(s){
-      var content=data.sections[s.key]||'';
-      return '<div class="acard"><div class="acard-hdr"><span class="acard-icon">'+s.icon+'</span><span class="acard-title">'+escHtml(s.label)+'</span></div><div class="acard-body">'+escHtml(content)+'</div></div>';
+  if(data.sections && data.sections.length>=2){
+    // Backend liefert sections als Array [{title, content}] — jeder Abschnitt
+    // bekommt eine eigene Karte, damit auch die mittleren sichtbar sind.
+    var cards=data.sections.map(function(s){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-icon">'+sectionIcon(s.title)+'</span><span class="acard-title">'+escHtml(s.title)+'</span></div><div class="acard-body">'+escHtml(s.content)+'</div></div>';
     }).join('');
     body='<div class="analyse-4grid">'+cards+'</div>';
   } else if(data.modell){

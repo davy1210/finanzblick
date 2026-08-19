@@ -144,7 +144,7 @@ function callGroqBatch(articles, apiKey) {
   const headlines = articles.map((a, i) => `${i+1}. "${a.headline}" — ${a.summary || ''}`).join('\n');
 
   const body = JSON.stringify({
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     max_tokens: 800,
     temperature: 0.1,
     messages: [

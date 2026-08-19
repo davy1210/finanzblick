@@ -144,40 +144,61 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
   });
 }
 
-// Modell-Hierarchie: groq/compound → llama-3.3-70b → llama-3.1-8b
+// Modell-Hierarchie: groq/compound → gpt-oss-120b → gpt-oss-20b
 // groq/compound hat auf diesem Account-Tier ein kleines Anfragen-Budget
 // (413 "request_too_large" bei größeren Prompts) — bekommt daher einen
 // kompakten Prompt; die volle, detaillierte Analyse-Anleitung geht nur
 // an die Fallback-Modelle.
-async function callWithFallback(compoundSystem, compoundUser, system, userBase, apiKey) {
-  // 1. groq/compound (mit Websuche, kompakter Prompt, 15s Timeout)
-  try {
-    const raw = await callGroq('groq/compound', compoundSystem, compoundUser, apiKey, 15000, 700);
-    return { raw, model: 'groq/compound' };
-  } catch(e) {
-    // Timeout, Rate-Limit oder Budget-Fehler → weiter zu 70b
+// Die früheren llama-3.x-Modelle wurden von Groq abgekündigt und liefern
+// "model does not exist" — daher die aktuellen Produktionsmodelle.
+const MODEL_CHAIN = [
+  { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 700  },
+  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 1000 },
+  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 1000 },
+];
+
+// Fällt bei JEDEM Fehler weiter (nicht nur rate_limit) — ein nicht
+// verfügbares Modell darf die gesamte Analyse nicht abbrechen.
+// `deadline` schützt das Vercel-Limit von 30s.
+async function callWithFallback(compoundSystem, compoundUser, system, userBase, apiKey, deadline) {
+  const errors = [];
+
+  for (const cand of MODEL_CHAIN) {
+    const remaining = deadline - Date.now();
+    if (remaining < 3000) {
+      errors.push(`${cand.model}: übersprungen (Zeitbudget)`);
+      continue;
+    }
+    try {
+      const raw = await callGroq(
+        cand.model,
+        cand.compact ? compoundSystem : system,
+        cand.compact ? compoundUser : userBase,
+        apiKey,
+        Math.min(cand.timeout, remaining),
+        cand.maxTokens
+      );
+      if (raw && raw.trim()) return { raw, model: cand.model };
+      errors.push(`${cand.model}: leere Antwort`);
+    } catch(e) {
+      errors.push(`${cand.model}: ${e.message}`);
+    }
   }
 
-  // 2. LLaMA 3.3 70B
-  try {
-    const raw = await callGroq('llama-3.3-70b-versatile', system, userBase, apiKey, 10000);
-    return { raw, model: 'llama-3.3-70b-versatile' };
-  } catch(e) {
-    if (e.message === 'rate_limit') {
-      // 3. LLaMA 3.1 8B (Rate-Limit Fallback)
-      const raw = await callGroq('llama-3.1-8b-instant', system, userBase, apiKey, 10000);
-      return { raw, model: 'llama-3.1-8b-instant' };
-    }
-    throw e;
-  }
+  throw new Error('Kein Modell verfügbar — ' + errors.join(' | '));
 }
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { asset, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = req.body || {};
-  const symbol = (req.body.symbol || '').toUpperCase();
+  // Zeitbudget: Vercel bricht die Funktion nach 30s ab — die Modellkette
+  // muss vorher fertig sein, damit der Client eine echte Fehlermeldung bekommt.
+  const deadline = Date.now() + 25000;
+
+  const body = req.body || {};
+  const { asset, price, changePct, isPos, frage, news, range, level, fundamentals, macro } = body;
+  const symbol = (body.symbol || '').toUpperCase();
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
@@ -555,7 +576,7 @@ Fokus: ${ctx.focus}`;
   }
 
   try {
-    const { raw, model } = await callWithFallback(compoundSystem, compoundUser, system, user, apiKey);
+    const { raw, model } = await callWithFallback(compoundSystem, compoundUser, system, user, apiKey, deadline);
 
     const clean = raw
       .replace(/\*\*/g, '')
