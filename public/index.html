@@ -370,6 +370,9 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
 /* 4-CARD ANALYSE GRID */
 .analyse-4grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+/* Ungerade Kartenzahl (z.B. 3 Abschnitte bei Anleihen): die letzte Karte
+   fuellt die Zeile, statt halb breit allein stehen zu bleiben. */
+.analyse-4grid>.acard:last-child:nth-child(odd){grid-column:1/-1}
 @media(max-width:600px){.analyse-4grid{grid-template-columns:1fr}}
 .acard{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
 .acard-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
