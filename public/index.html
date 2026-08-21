@@ -12,7 +12,29 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Finanzblick - Dein Finanzpartner</title>
+
+<!-- SEO: Titel und Beschreibung werden beim Seitenwechsel per JS aktualisiert
+     (siehe PAGE_SEO). Die Werte hier gelten fuer die Startseite. -->
+<title>Finanzblick — Aktien, ETFs und Krypto verständlich analysiert</title>
+<meta name="description" content="Kurse, Charts und KI-gestützte Analysen für Aktien, ETFs, Krypto und Rohstoffe — auf Deutsch und für Privatanleger erklärt. Kostenlos und ohne Anmeldung.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta name="author" content="Finanzblick">
+<meta name="theme-color" content="#2563EB">
+<link rel="canonical" href="https://finanzblick.vercel.app/">
+
+<!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Finanzblick">
+<meta property="og:locale" content="de_DE">
+<meta property="og:url" content="https://finanzblick.vercel.app/">
+<meta property="og:title" content="Finanzblick — Aktien, ETFs und Krypto verständlich analysiert">
+<meta property="og:description" content="Kurse, Charts und KI-gestützte Analysen für Aktien, ETFs, Krypto und Rohstoffe — auf Deutsch und für Privatanleger erklärt.">
+
+<!-- Twitter/X -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Finanzblick — Aktien, ETFs und Krypto verständlich analysiert">
+<meta name="twitter:description" content="Kurse, Charts und KI-gestützte Analysen für Aktien, ETFs, Krypto und Rohstoffe — auf Deutsch erklärt.">
+
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -557,10 +579,10 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 <nav class="nav">
   <div class="logo"><div class="logo-icon">FB</div><span class="logo-text">Finanzblick</span></div>
   <div class="nav-links">
-    <button class="nl active" onclick="gotoPage('dash',this)">Märkte</button>
-    <button class="nl" onclick="gotoPage('marktpuls',this)">Marktpuls</button>
-    <button class="nl" onclick="gotoPage('events',this)">Ereignisse</button>
-    <button class="nl" onclick="gotoPage('wissen',this)">Wissen</button>
+    <button class="nl active" data-page="dash" onclick="gotoPage('dash',this)">Märkte</button>
+    <button class="nl" data-page="marktpuls" onclick="gotoPage('marktpuls',this)">Marktpuls</button>
+    <button class="nl" data-page="events" onclick="gotoPage('events',this)">Ereignisse</button>
+    <button class="nl" data-page="wissen" onclick="gotoPage('wissen',this)">Wissen</button>
   </div>
   <div class="nav-right">
     <span class="level-pill" id="level-pill">Einsteiger</span>
@@ -783,13 +805,79 @@ function showLegal(type){ document.getElementById('legal-content').innerHTML = L
 function closeLegal(){ document.getElementById('legal-overlay').classList.remove('open'); }
 
 // ── NAV ───────────────────────────────────────────────────────────────────
-function gotoPage(id,el){
+// ── SEO / ROUTING ─────────────────────────────────────────────────────────
+// Die App ist eine Single-Page-App: ohne echte Pfade gaebe es nur eine
+// indexierbare URL. pushState gibt jeder Ansicht eine eigene Adresse, die
+// Rewrites in vercel.json liefern dafuer dieselbe index.html aus.
+var SITE_URL='https://finanzblick.vercel.app';
+var PAGE_SEO={
+  dash:{
+    path:'/',
+    title:'Finanzblick — Aktien, ETFs und Krypto verständlich analysiert',
+    desc:'Kurse, Charts und KI-gestützte Analysen für Aktien, ETFs, Krypto und Rohstoffe — auf Deutsch und für Privatanleger erklärt. Kostenlos und ohne Anmeldung.'
+  },
+  marktpuls:{
+    path:'/marktpuls',
+    title:'Marktpuls — aktuelle Marktnachrichten eingeordnet | Finanzblick',
+    desc:'Die wichtigsten Finanznachrichten des Tages, jeweils mit einer Einordnung warum sie für Anleger relevant sind und welche Assets betroffen sind.'
+  },
+  events:{
+    path:'/ereignisse',
+    title:'Ereignisse — Quartalszahlen und Wirtschaftstermine | Finanzblick',
+    desc:'Kalender mit Quartalszahlen und Wirtschaftsterminen wie Zinsentscheiden und Inflationsdaten — jeder Termin verständlich erklärt.'
+  },
+  wissen:{
+    path:'/wissen',
+    title:'Finanz-Wörterbuch — Börsenbegriffe einfach erklärt | Finanzblick',
+    desc:'Rund 80 Finanzbegriffe von KGV über Volatilität bis Dividendenrendite — verständlich erklärt, in drei Stufen vom Einsteiger bis zum erfahrenen Investor.'
+  }
+};
+
+function pageIdFromPath(p){
+  p=(p||'/').replace(/\/+$/,'')||'/';
+  for(var id in PAGE_SEO){ if(PAGE_SEO[id].path===p) return id; }
+  return 'dash';
+}
+
+function setMeta(sel,attr,val){
+  var el=document.head.querySelector(sel);
+  if(el) el.setAttribute(attr,val);
+}
+
+function applySeo(id){
+  var s=PAGE_SEO[id]; if(!s) return;
+  var url=SITE_URL+s.path;
+  document.title=s.title;
+  setMeta('meta[name="description"]','content',s.desc);
+  setMeta('link[rel="canonical"]','href',url);
+  setMeta('meta[property="og:title"]','content',s.title);
+  setMeta('meta[property="og:description"]','content',s.desc);
+  setMeta('meta[property="og:url"]','content',url);
+  setMeta('meta[name="twitter:title"]','content',s.title);
+  setMeta('meta[name="twitter:description"]','content',s.desc);
+}
+
+// skipHistory: true beim Zurueck-Button und beim ersten Laden — dort darf
+// kein neuer Eintrag entstehen.
+function gotoPage(id,el,skipHistory){
+  if(!PAGE_SEO[id]||!document.getElementById('page-'+id)) id='dash';
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.nl').forEach(function(b){ b.classList.remove('active'); });
   document.getElementById('page-'+id).classList.add('active');
-  el.classList.add('active');
+  // Button ueber data-page statt ueber die Position: der Aufruf aus dem
+  // Glossar-Link markierte vorher per Index den falschen Reiter.
+  var btn=el||document.querySelector('.nl[data-page="'+id+'"]');
+  if(btn) btn.classList.add('active');
+  applySeo(id);
+  if(!skipHistory&&location.pathname!==PAGE_SEO[id].path){
+    try{ history.pushState({page:id},'',PAGE_SEO[id].path); }catch(e){}
+  }
   if(id==='marktpuls') loadMarketNews();
 }
+
+window.addEventListener('popstate',function(){
+  gotoPage(pageIdFromPath(location.pathname),null,true);
+});
 
 // ── MARKTPULS ─────────────────────────────────────────────────────────────
 var allMpArticles = [];
@@ -847,7 +935,7 @@ function renderMarketNews(){
 function mpOpen(el){ var u=el.dataset.url; if(u) window.open(u,'_blank','noopener'); }
 function mpAssetClick(sym,name){
   selectAsset(sym,name);
-  gotoPage('dash', document.querySelector('.nl'));
+  gotoPage('dash');
 }
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -1141,7 +1229,7 @@ function renderQuickFacts(data){
 }
 
 function scrollToGloss(term){
-  gotoPage('wissen',document.querySelectorAll('.nl')[2]);
+  gotoPage('wissen');
   setTimeout(function(){
     document.getElementById('wiss-search').value=term;
     filterGloss(term);
@@ -1761,6 +1849,9 @@ buildGrid();
 buildEvents();
 renderGloss(GLOSSARY,false);
 loadMacro();
+// Direkteinstieg ueber /marktpuls, /ereignisse oder /wissen oeffnet die
+// passende Ansicht. skipHistory, damit kein doppelter Verlaufseintrag entsteht.
+gotoPage(pageIdFromPath(location.pathname),null,true);
 </script>
 </body>
 </html>
