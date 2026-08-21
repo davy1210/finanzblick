@@ -704,7 +704,14 @@ Fokus: ${ctx.focus}`;
     // werden — so hängt die Kartenzahl nicht mehr vom Modell ab.
     // Der Bindestrich in der Zeichenklasse ist nötig: Titel wie INDEX-TREIBER
     // wurden sonst gar nicht als Überschrift erkannt.
-    const norm = s => s.toUpperCase().replace(/\s+/g, ' ').trim();
+    // Modelle setzen typografische Striche (U+2010 bis U+2015, U+2212) und
+    // geschuetzte Leerzeichen. "MARKT‑KONTEXT" mit U+2011 sah aus wie unser
+    // "MARKT-KONTEXT", war aber ein anderer String — der Abschnitt wurde nicht
+    // erkannt und landete als Fliesstext in der vorigen Karte.
+    const norm = s => s
+      .replace(/[‐-―−]/g, '-')
+      .replace(/[   ]/g, ' ')
+      .toUpperCase().replace(/\s+/g, ' ').trim();
     const expectedNorm = new Map((expectedSections || []).map(s => [norm(s), s]));
 
     const lines = clean.split('\n');
@@ -719,7 +726,9 @@ Fokus: ${ctx.focus}`;
     };
 
     for (const line of lines) {
-      const headerMatch = line.match(/^([A-ZÄÖÜ][A-ZÄÖÜ0-9\s&\-.\/]{2,45}):\s*(.*)/);
+      // Zeichenklasse deckt auch typografische Striche und geschuetzte
+      // Leerzeichen ab — sonst greift die Ueberschriftenerkennung nicht.
+      const headerMatch = line.match(/^([A-ZÄÖÜ][A-ZÄÖÜ0-9\s&\-.\/‐-―−   ]{2,45}):\s*(.*)/);
       // Ohne Sollliste (sollte nicht vorkommen) jede Überschrift akzeptieren.
       const canonical = headerMatch
         ? (expectedNorm.size ? expectedNorm.get(norm(headerMatch[1])) : headerMatch[1].trim())
