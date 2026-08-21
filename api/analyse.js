@@ -101,7 +101,50 @@ STRIKTE REGELN — niemals verletzen:
 6. Keine schwammigen "könnte eventuell möglicherweise" Aussagen
 7. Konkrete Faktoren nennen und deren Wirkung erklären
 8. News sind NUR ein Faktor — nicht übergewichten
+
+ZAHLEN — Genauigkeit geht vor Vollständigkeit:
+9. Verwende AUSSCHLIESSLICH Zahlen aus dem Datenblock. Erfinde niemals Kurse,
+   Prozentwerte, Marktkapitalisierungen oder Termine.
+10. Übernimm Prozentwerte exakt wie geliefert — nicht runden, nicht umrechnen,
+    nicht schätzen. Die Zeitraum-Veränderung gilt für den Zeitraum, die
+    Tages-Veränderung nur für heute. Niemals die eine als die andere ausgeben.
+11. Fehlt eine Zahl, benenne die Lücke ("dazu liegen keine Daten vor"), statt
+    sie durch eine geschätzte zu ersetzen.
+12. Widersprechen Zahlen aus Nachrichten oder Websuche dem Datenblock, gilt
+    IMMER der Datenblock — Artikel sind oft Tage alt.
 `;
+
+// Akzeptiert Zahl oder formatierten String. Ältere Clients schicken den Kurs
+// noch deutsch formatiert ("$1.234,56") — der frühere parseFloat-Aufruf hat
+// daraus 1,23456 gemacht. Hier werden Tausender- und Dezimaltrenner korrekt
+// unterschieden.
+function toNum(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  if (typeof v !== 'string') return null;
+  let s = v.replace(/[^\d.,-]/g, '').trim();
+  if (!s) return null;
+  const hasComma = s.includes(','), hasDot = s.includes('.');
+  if (hasComma && hasDot) s = s.replace(/\./g, '').replace(',', '.');           // 1.234,56
+  else if (hasComma) s = s.replace(',', '.');                                    // 45,6789
+  else if (hasDot && /^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');  // 113.457
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+
+// Währungscode statt geratenem Symbol: fmtP im Frontend zeigte für jede
+// Währung ausser EUR/GBP ein Dollarzeichen — ein JPY-Kurs stand als "$" im Prompt.
+function fmtPrice(n, currency) {
+  if (n === null) return 'k.A.';
+  const d = Math.abs(n) >= 1000 ? 0 : Math.abs(n) >= 1 ? 2 : 4;
+  return n.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d })
+    + ' ' + (currency || 'USD');
+}
+
+// Dezimalkomma: toFixed liefert immer einen Punkt — "23.19%" neben deutsch
+// formatierten Kursen ("77.399 USD") ist missverstaendlich.
+function fmtPct(n) {
+  return n === null ? 'k.A.' : (n >= 0 ? '+' : '') + n.toFixed(2).replace('.', ',') + '%';
+}
 
 // ── GROQ API ──────────────────────────────────────────────────────────────
 function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
@@ -211,8 +254,10 @@ module.exports = async function handler(req, res) {
 
   // ── Cache-Check (nur für Auto-Analysen, nicht für Fragen) ─────────────
   const ttl = CACHE_TTL[range || '1T'] || CACHE_TTL['1T'];
+  // v2: Praefix hochgezaehlt, damit Analysen mit den alten falschen Zahlen
+  // sofort aus dem Cache fallen statt bis zu 48h weiterzuleben.
   const cacheKey = !frage
-    ? (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (range || '1T')
+    ? 'v2_' + (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (range || '1T')
     : null;
 
   if (cacheKey) {
@@ -229,9 +274,38 @@ module.exports = async function handler(req, res) {
 
   const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
   const levelPrompt = LEVEL_PROMPTS[level] || LEVEL_PROMPTS['beginner'];
-  const richtung = isPos
-    ? `um +${Math.abs(changePct || 0).toFixed(2)}% gestiegen`
-    : `um -${Math.abs(changePct || 0).toFixed(2)}% gefallen`;
+
+  // ── Zahlen aufbereiten ────────────────────────────────────────────────
+  const priceNum = toNum(price);
+  const dayPct   = toNum(body.changePct);
+  const rangePct = toNum(body.rangeChangePct);
+  const startNum = toNum(body.rangeStartPrice);
+  const startLbl = body.rangeStartLabel || null;
+  const cur      = body.currency || 'USD';
+
+  // Leitwert ist die Veränderung ÜBER DEN ZEITRAUM. Vorher wurde die
+  // Tagesveränderung gesendet und als Zeitraumwert beschriftet — bei Bitcoin
+  // 1W standen so 6% im Prompt statt der tatsächlichen 23%.
+  const leadPct = rangePct !== null ? rangePct : dayPct;
+  // Vorzeichen UND Betrag aus derselben Zahl. Vorher kam das Vorzeichen aus
+  // isPos (zeitraumbasiert) und der Betrag aus changePct (tagesbasiert) —
+  // bei gegenläufigen Werten war beides falsch.
+  const richtung = leadPct === null
+    ? 'Kursentwicklung liegt nicht vor'
+    : `um ${fmtPct(leadPct)} ${leadPct >= 0 ? 'gestiegen' : 'gefallen'}`;
+
+  const factLines = [`Aktueller Kurs: ${fmtPrice(priceNum, cur)}`];
+  factLines.push(`Veränderung im Zeitraum "${ctx.label}": ${fmtPct(rangePct)}`);
+  if (startNum !== null) {
+    factLines.push(`Startkurs des Zeitraums${startLbl ? ` (${startLbl})` : ''}: ${fmtPrice(startNum, cur)}`);
+  }
+  factLines.push(`Veränderung heute: ${fmtPct(dayPct)}`);
+  const factsBlock = `\nGESICHERTE ZAHLEN (nur diese verwenden):\n${factLines.map(l => '- ' + l).join('\n')}`;
+  // Kompaktfassung für groq/compound (Größenbudget). Der Vorrang-Hinweis ist
+  // dort besonders wichtig: Compound durchsucht das Web und findet Kurse,
+  // die mehrere Tage alt sind und unseren widersprechen.
+  const compactFacts = `${asset} | Kurs: ${fmtPrice(priceNum, cur)} | "${ctx.label}": ${fmtPct(rangePct)} | heute: ${fmtPct(dayPct)}`
+    + `\nDiese Zahlen sind verbindlich — gefundene Artikel nennen oft ältere Werte, dann gelten trotzdem diese.`;
 
   // Fundamentaldaten aufbereiten
   let fundBlock = '';
@@ -265,12 +339,14 @@ module.exports = async function handler(req, res) {
 
   // 52W-Position
   let weekPosition = '';
-  if (fundamentals?.weekHigh52 && fundamentals?.weekLow52 && price) {
-    const pNum = parseFloat(price.replace(/[^0-9.]/g,''));
-    if (pNum) {
-      const range52 = fundamentals.weekHigh52 - fundamentals.weekLow52;
-      const pos = range52 > 0 ? Math.round(((pNum - fundamentals.weekLow52) / range52) * 100) : null;
-      if (pos !== null) weekPosition = `\nPosition im 52W-Band: ${pos}% (${pos > 70 ? 'nahe Jahreshoch' : pos < 30 ? 'nahe Jahrestief' : 'im Mittelfeld'})`;
+  if (fundamentals?.weekHigh52 && fundamentals?.weekLow52 && priceNum !== null) {
+    const range52 = fundamentals.weekHigh52 - fundamentals.weekLow52;
+    let pos = range52 > 0 ? Math.round(((priceNum - fundamentals.weekLow52) / range52) * 100) : null;
+    // Ausserhalb 0-100 nur, wenn Kurs oder 52W-Band nicht zusammenpassen —
+    // dann lieber weglassen als einen unmöglichen Wert in den Prompt schreiben.
+    if (pos !== null && pos >= -5 && pos <= 105) {
+      pos = Math.min(100, Math.max(0, pos));
+      weekPosition = `\n52W-Band: ${fmtPrice(fundamentals.weekLow52, cur)} bis ${fmtPrice(fundamentals.weekHigh52, cur)} — aktuelle Position: ${pos}% (${pos > 70 ? 'nahe Jahreshoch' : pos < 30 ? 'nahe Jahrestief' : 'im Mittelfeld'})`;
     }
   }
 
@@ -294,14 +370,14 @@ LÄNGE — strikt einhalten:
 - Keine Einleitung, kein Fazit, keine Wiederholung der Frage
 - Lieber ein Faktor gut erklärt als drei aufgezählt`;
 
-    user = `${asset} | Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}${newsBlock}
+    user = `${asset}${factsBlock}${weekPosition}${fundBlock}${newsBlock}
 
 Frage: "${frage}"
 
 Antworte in maximal 4 Sätzen — direkt, ohne Einleitung.`;
 
     compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch. Finanzblick, Finanzerklärer DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown. MAXIMAL 4 SÄTZE, ein Absatz: erst die direkte Antwort, dann kurze Begründung. Keine Einleitung, kein Fazit.`;
-    compoundUser = `${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}\nFrage: "${(frage || '').slice(0, 300)}"`;
+    compoundUser = `${compactFacts}\nFrage: "${(frage || '').slice(0, 300)}"`;
 
   } else {
     const assetLower = (asset || '').toLowerCase();
@@ -585,7 +661,7 @@ BEISPIEL für guten Stil (konkret, Mechanismus klar, vollständige Sätze):
 Keine Anlageberatung.`;
 
     user = `Asset: ${asset}
-Kurs: ${price} | Zeitraum "${ctx.label}": ${richtung}${weekPosition}${fundBlock}${newsBlock}
+${factsBlock}${weekPosition}${fundBlock}${newsBlock}
 
 Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}).
 Fokus: ${ctx.focus}`;
@@ -594,7 +670,7 @@ Fokus: ${ctx.focus}`;
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
     const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
     compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. STRUKTUR zwingend: genau ${expectedSections.length} Abschnitte in dieser Reihenfolge, Titel exakt so, GROSSBUCHSTABEN+Doppelpunkt, keine weiteren Überschriften (kein FAZIT), pro Überschrift nur ihr eigenes Thema: ${sections}`;
-    compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${asset} | Kurs: ${price} | ${ctx.label}: ${richtung}`;
+    compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${compactFacts}`;
   }
 
   try {
