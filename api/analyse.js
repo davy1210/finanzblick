@@ -200,9 +200,12 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
 // Die früheren llama-3.x-Modelle wurden von Groq abgekündigt und liefern
 // "model does not exist" — daher die aktuellen Produktionsmodelle.
 const MODEL_CHAIN = [
-  { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 700  },
-  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 1000 },
-  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 1000 },
+  // maxTokens grosszuegig: 4 Abschnitte a 2-4 deutsche Saetze sprengten 1000
+  // Tokens, der AUSBLICK brach dann mitten im Satz ab. Nutzerfragen bleiben
+  // ueber maxTokensOverride (320) kurz.
+  { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 1000 },
+  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 1500 },
+  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 1500 },
 ];
 
 // Fällt bei JEDEM Fehler weiter (nicht nur rate_limit) — ein nicht
