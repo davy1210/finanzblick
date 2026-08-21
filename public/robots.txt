@@ -1,0 +1,10 @@
+# Finanzblick — https://finanzblick.vercel.app
+# Alle oeffentlichen Seiten duerfen indexiert werden.
+
+User-agent: *
+Allow: /
+
+# API-Endpunkte liefern nur JSON und gehoeren nicht in den Index.
+Disallow: /api/
+
+Sitemap: https://finanzblick.vercel.app/sitemap.xml
