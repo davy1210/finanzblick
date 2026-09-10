@@ -29,6 +29,64 @@ function fmtDate(dateStr) {
 }
 
 // Alle wichtigen Symbole — breit abdecken
+// ── WIRTSCHAFTSTERMINE AUS FRED ───────────────────────────────────────────
+// Schluessel sind die exakten Release-Namen von FRED. Bewusst eng gehalten:
+// FRED veroeffentlicht rund 96 Reihen in 45 Tagen, davon bewegen nur diese
+// hier tatsaechlich Kurse. Der Rest ist Statistik ("Commercial Paper",
+// "Economic Policy Uncertainty") und wuerde die Seite nur zumuellen.
+const FRED_EVENTS = {
+  'FOMC Press Release': {
+    title: 'Fed-Zinsentscheid', high: true,
+    context: 'Die US-Notenbank verkuendet ihren Leitzins. Hoehere Zinsen verteuern Kredite und druecken meist Aktien und Gold, niedrigere wirken umgekehrt.',
+    assets: ['S&P 500', 'Nasdaq', 'Gold', 'USD'],
+  },
+  'Consumer Price Index': {
+    title: 'US-Verbraucherpreise (CPI)', high: true,
+    context: 'Wichtigste Inflationszahl der USA. Faellt sie hoeher aus als erwartet, sinkt die Hoffnung auf Zinssenkungen — das belastet Aktien und Anleihen.',
+    assets: ['S&P 500', 'Anleihen', 'Gold', 'USD'],
+  },
+  'Employment Situation': {
+    title: 'US-Arbeitsmarktbericht', high: true,
+    context: 'Neue Stellen und Arbeitslosenquote. Ein starker Arbeitsmarkt spricht fuer hoehere Zinsen, ein schwacher fuer Zinssenkungen.',
+    assets: ['S&P 500', 'USD', 'Anleihen'],
+  },
+  'Personal Income and Outlays': {
+    title: 'US-Konsumausgaben & PCE-Inflation', high: true,
+    context: 'Enthaelt die PCE-Rate — das bevorzugte Inflationsmass der Fed. Wichtiger fuer Zinsentscheidungen als der CPI.',
+    assets: ['S&P 500', 'Anleihen', 'USD'],
+  },
+  'Gross Domestic Product': {
+    title: 'US-Bruttoinlandsprodukt', high: true,
+    context: 'Misst das Wirtschaftswachstum. Deutliche Abweichungen von der Erwartung verschieben die Zinserwartungen und damit den gesamten Markt.',
+    assets: ['S&P 500', 'USD', 'Anleihen'],
+  },
+  'Harmonized Indices of Consumer Prices (HICP)': {
+    title: 'Euroraum-Inflation (HVPI)', high: true,
+    context: 'Die Inflationszahl, an der sich die EZB orientiert. Bestimmt massgeblich den Zinspfad im Euroraum.',
+    assets: ['DAX', 'EUR', 'Euro-Anleihen'],
+  },
+  'Producer Price Index': {
+    title: 'US-Erzeugerpreise (PPI)', high: false,
+    context: 'Preise auf Herstellerebene — gilt als Fruehindikator fuer die Verbraucherinflation der kommenden Monate.',
+    assets: ['S&P 500', 'Anleihen'],
+  },
+  'Advance Monthly Sales for Retail and Food Services': {
+    title: 'US-Einzelhandelsumsaetze', high: false,
+    context: 'Der Konsum traegt rund zwei Drittel der US-Wirtschaft. Schwache Zahlen naehren Rezessionssorgen.',
+    assets: ['S&P 500', 'Konsumwerte'],
+  },
+  'Job Openings and Labor Turnover Survey': {
+    title: 'US-Stellenangebote (JOLTS)', high: false,
+    context: 'Zahl der offenen Stellen. Sinkt sie deutlich, kuehlt der Arbeitsmarkt ab — ein Argument fuer Zinssenkungen.',
+    assets: ['S&P 500', 'USD'],
+  },
+  'G.17 Industrial Production and Capacity Utilization': {
+    title: 'US-Industrieproduktion', high: false,
+    context: 'Zeigt die Auslastung der Industrie. Relevant vor allem fuer Rohstoffe und Industriewerte.',
+    assets: ['Industriewerte', 'Kupfer', 'Öl'],
+  },
+};
+
 const HIGH_IMPACT_SYMBOLS = [
   'AAPL','MSFT','NVDA','GOOGL','GOOG','AMZN','META','TSLA','NFLX','AMD',
   'JPM','BAC','GS','MS','WFC','V','MA',
@@ -49,39 +107,6 @@ function getImpact(symbol) {
   if (high.includes(s)) return { label: 'Hoher Einfluss', cls: 'imp-high' };
   return { label: 'Mittlerer Einfluss', cls: 'imp-med' };
 }
-
-function getEconAssets(eventName) {
-  const n = (eventName || '').toLowerCase();
-  if (n.includes('fed') || n.includes('federal funds') || n.includes('fomc')) return ['S&P 500', 'Gold', 'Bitcoin', 'USD'];
-  if (n.includes('cpi') || n.includes('inflation') || n.includes('consumer price')) return ['S&P 500', 'Gold', 'Anleihen', 'USD'];
-  if (n.includes('payroll') || n.includes('employment') || n.includes('jobs')) return ['S&P 500', 'DAX', 'Gold', 'USD'];
-  if (n.includes('ecb') || n.includes('european central')) return ['DAX', 'Euro', 'Europäische Aktien'];
-  if (n.includes('gdp') || n.includes('growth') || n.includes('bip')) return ['S&P 500', 'DAX', 'Gold'];
-  if (n.includes('retail') || n.includes('consumer')) return ['S&P 500', 'Konsumaktien'];
-  if (n.includes('producer') || n.includes('ppi')) return ['S&P 500', 'Anleihen', 'USD'];
-  if (n.includes('housing') || n.includes('home')) return ['S&P 500', 'Immobilien-ETFs'];
-  if (n.includes('pmi') || n.includes('manufacturing')) return ['DAX', 'S&P 500', 'Industrieaktien'];
-  return ['S&P 500', 'DAX'];
-}
-
-const PRIORITY_EVENTS = [
-  { key: 'Federal Funds Rate', title: 'Fed Zinsentscheidung (FOMC)' },
-  { key: 'FOMC', title: 'Fed Zinsentscheidung (FOMC)' },
-  { key: 'CPI', title: 'US Inflationsdaten (CPI)' },
-  { key: 'Non Farm Payroll', title: 'US Arbeitsmarktdaten (NFP)' },
-  { key: 'Nonfarm Payroll', title: 'US Arbeitsmarktdaten (NFP)' },
-  { key: 'ECB Rate', title: 'EZB Zinsentscheidung' },
-  { key: 'European Central Bank', title: 'EZB Zinsentscheidung' },
-  { key: 'GDP', title: 'US Wirtschaftswachstum (BIP)' },
-  { key: 'Unemployment Rate', title: 'US Arbeitslosenquote' },
-  { key: 'Producer Price', title: 'US Erzeugerpreise (PPI)' },
-  { key: 'Retail Sales', title: 'US Einzelhandelsumsätze' },
-  { key: 'Consumer Confidence', title: 'US Verbrauchervertrauen' },
-  { key: 'PMI', title: 'US Einkaufsmanagerindex (PMI)' },
-  { key: 'Durable Goods', title: 'US Auftragseingänge langlebige Güter' },
-  { key: 'Housing Starts', title: 'US Wohnungsbaubeginne' },
-  { key: 'Initial Jobless', title: 'US Erstanträge Arbeitslosenhilfe' },
-];
 
 // Erklärt warum ein Quartalszahlen-Termin wichtig ist
 function getEarningsContext(symbol) {
@@ -116,10 +141,19 @@ module.exports = async function handler(req, res) {
   const to = future.toISOString().split('T')[0];
 
   try {
-    const [earningsData, econData] = await Promise.all([
-      fetchJSON(`https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${finnhubKey}`),
-      fetchJSON(`https://finnhub.io/api/v1/calendar/economic?token=${finnhubKey}`)
+    // Finnhubs Wirtschaftskalender ist im kostenlosen Tarif gesperrt (403) —
+    // ersetzt durch FREDs Release-Kalender, der dieselben Termine kostenfrei
+    // liefert. Beide Abrufe scheitern einzeln, ohne den anderen mitzureissen.
+    const fredKey = (process.env.FRED_API_KEY || '').trim();
+    const fredUrl = fredKey
+      ? `https://api.stlouisfed.org/fred/releases/dates?api_key=${fredKey}&file_type=json&realtime_start=${from}&realtime_end=${to}&include_release_dates_with_no_data=true&sort_order=asc&limit=1000`
+      : null;
+
+    const [earningsData, fredData] = await Promise.all([
+      fetchJSON(`https://finnhub.io/api/v1/calendar/earnings?from=${from}&to=${to}&token=${finnhubKey}`).catch(() => ({})),
+      fredUrl ? fetchJSON(fredUrl).catch(() => ({})) : Promise.resolve({}),
     ]);
+    const fredDates = (fredData && fredData.release_dates) || [];
 
     // Earnings: erst die Schwergewichte, dann mit den naechstgroessten
     // auffuellen. Die reine Whitelist liess die Seite zwischen zwei
@@ -154,33 +188,33 @@ module.exports = async function handler(req, res) {
         };
       });
 
-    // Wirtschafts-Events: priorisiert und dedupliziert
+    // Wirtschaftstermine aus FREDs Release-Kalender. Finnhubs Kalender ist im
+    // kostenlosen Tarif gesperrt (HTTP 403) und lieferte dauerhaft nichts.
+    // FRED veroeffentlicht rund 96 verschiedene Reihen — die allermeisten sind
+    // Statistik ohne Kursrelevanz. Deshalb die enge Auswahl unten.
     const seenTypes = new Set();
-    const topEcon = (econData.economicCalendar || [])
+    const topEcon = fredDates
       .filter(e => {
-        const name = e.event || '';
-        if (e.time < from || e.time > to) return false;
-        const match = PRIORITY_EVENTS.find(p => name.includes(p.key));
-        if (!match) return false;
-        // Deduplizieren: gleicher Typ nur einmal
-        const dedupeKey = match.title;
-        if (seenTypes.has(dedupeKey)) return false;
-        seenTypes.add(dedupeKey);
+        if (!e.date || e.date < from || e.date > to) return false;
+        const cfg = FRED_EVENTS[e.release_name];
+        if (!cfg) return false;
+        if (seenTypes.has(cfg.title)) return false;   // je Termin-Art nur der naechste
+        seenTypes.add(cfg.title);
         return true;
       })
       .slice(0, 6)
       .map(e => {
-        const dt = fmtDate(e.time);
-        const prio = PRIORITY_EVENTS.find(p => (e.event || '').includes(p.key));
-        const title = prio ? prio.title : e.event;
+        const cfg = FRED_EVENTS[e.release_name];
+        const dt = fmtDate(e.date);
         return {
           type: 'economic',
-          day: dt.day, mon: dt.mon, date: e.time,
-          title: title,
-          extra: e.actual !== null && e.actual !== undefined ? `Aktuell: ${e.actual}` : '',
-          context: '',
-          impact: 'Hoher Einfluss', impCls: 'imp-high',
-          assets: getEconAssets(e.event)
+          day: dt.day, mon: dt.mon, date: e.date,
+          title: cfg.title,
+          extra: '',
+          context: cfg.context,
+          impact: cfg.high ? 'Hoher Einfluss' : 'Mittlerer Einfluss',
+          impCls: cfg.high ? 'imp-high' : 'imp-med',
+          assets: cfg.assets,
         };
       });
 
