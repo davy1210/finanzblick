@@ -179,7 +179,9 @@ function fetchYahooRSS(symbol) {
 function parseRSS(xml, sourceName) {
   const items = [];
   const matches = xml.match(/<item[\s\S]*?<\/item>/gi) || [];
-  matches.slice(0, 8).forEach(item => {
+  // 25 statt 8: die Feeds werden anschliessend auf das Asset gefiltert —
+  // aus nur 8 Eintraegen bleibt danach oft nichts uebrig (Ethereum: 0).
+  matches.slice(0, 25).forEach(item => {
     const title = stripHTML(extractTag(item, 'title'));
     const link = extractTag(item, 'link') || extractAttr(item, 'link', 'href');
     const description = stripHTML(extractTag(item, 'description') || '');
@@ -275,12 +277,21 @@ module.exports = async function handler(req, res) {
     // Vercel aus leer.
     const keywords = buildKeywords(symbol, asset);
     if (articles.length < 5) {
-      const feedArticles = await fetchFeeds(feedsForSymbol(symbol, asset));
+      const feedKeys = feedsForSymbol(symbol, asset);
+      const feedArticles = await fetchFeeds(feedKeys);
       const seen = new Set(articles.map(a => a.title.slice(0, 50).toLowerCase()));
-      feedArticles.filter(a => isAboutAsset(a, keywords)).forEach(a => {
+      const add = list => list.forEach(a => {
         const key = a.title.slice(0, 50).toLowerCase();
         if (!seen.has(key)) { seen.add(key); articles.push(a); }
       });
+      add(feedArticles.filter(a => isAboutAsset(a, keywords)));
+
+      // Greift der Stichwortfilter zu scharf, lieber themenverwandte Meldungen
+      // aus dem Fachfeed zeigen als eine leere Liste: der Krypto- bzw.
+      // Rohstoff-Feed ist auch ungefiltert noch nah am Asset.
+      if (articles.length < 2 && (feedKeys[0] === 'crypto' || feedKeys[0] === 'commodity')) {
+        add(feedArticles.filter(a => a.source === FEED_LABEL[feedKeys[0]]));
+      }
     }
 
     // ── FALLBACK: Yahoo Finance RSS (wenn Reuters nicht verfügbar) ──────────
