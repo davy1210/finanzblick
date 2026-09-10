@@ -165,8 +165,8 @@ function fmtPct(n) {
 }
 
 // ── GROQ API ──────────────────────────────────────────────────────────────
-function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
-  const body = JSON.stringify({
+function callGroq(model, system, user, apiKey, timeoutMs, maxTokens, reasoningEffort) {
+  const payload = {
     model,
     max_tokens: maxTokens || 1000,
     temperature: 0.15,
@@ -174,7 +174,12 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
       { role: 'system', content: system },
       { role: 'user', content: user }
     ]
-  });
+  };
+  // Die gpt-oss-Modelle denken vor dem Schreiben und verbrauchen dafuer Tokens
+  // aus demselben Budget. Niedriger Aufwand laesst mehr fuer die eigentliche
+  // Antwort uebrig — sonst kommt bei knappem max_tokens ein leerer Text zurueck.
+  if (reasoningEffort) payload.reasoning_effort = reasoningEffort;
+  const body = JSON.stringify(payload);
 
   return new Promise((resolve, reject) => {
     const r = https.request({
@@ -218,13 +223,15 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
 // Die früheren llama-3.x-Modelle wurden von Groq abgekündigt und liefern
 // "model does not exist" — daher die aktuellen Produktionsmodelle.
 const MODEL_CHAIN = [
-  // 3 Abschnitte a hoechstens 2 deutsche Saetze brauchen rund 250 Tokens.
-  // 700 laesst Luft, damit kein Satz abgeschnitten wird, begrenzt aber die
-  // Laenge spuerbar — vorher waren es 1500 fuer vier lange Abschnitte.
-  // Nutzerfragen bleiben ueber maxTokensOverride (320) kurz.
+  // maxTokens ist bei den gpt-oss-Modellen KEIN Hebel fuer kurze Antworten:
+  // sie verbrauchen das Budget zuerst fuers Reasoning. Mit 700 kam durchgehend
+  // eine leere Antwort zurueck. Die Kuerze steuert der Prompt, das Budget muss
+  // grosszuegig bleiben; reasoning_effort 'low' haelt den Denkanteil klein.
+  // Nutzerfragen bleiben ueber maxTokensOverride (320) kurz — dort ist
+  // compound zuerst dran, das kein Reasoning-Budget abzieht.
   { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 700 },
-  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 700 },
-  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 700 },
+  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 1600, reasoning: 'low' },
+  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 1600, reasoning: 'low' },
 ];
 
 // Fällt bei JEDEM Fehler weiter (nicht nur rate_limit) — ein nicht
@@ -248,7 +255,13 @@ async function callWithFallback(compoundSystem, compoundUser, system, userBase, 
         cand.compact ? compoundUser : userBase,
         apiKey,
         Math.min(cand.timeout, remaining),
-        maxTokensOverride || cand.maxTokens
+        // Bei Reasoning-Modellen darf das Kurz-Budget der Fragen nicht
+        // durchschlagen — sonst geht es komplett fuers Denken drauf und die
+        // Antwort kommt leer. Die Laenge regelt dort die Satzvorgabe im Prompt.
+        cand.reasoning
+          ? Math.max(maxTokensOverride || 0, 900)
+          : (maxTokensOverride || cand.maxTokens),
+        cand.reasoning
       );
       if (raw && raw.trim()) return { raw, model: cand.model };
       errors.push(`${cand.model}: leere Antwort`);
@@ -723,7 +736,9 @@ Fokus: ${ctx.focus}`;
     // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
     const searchWindow = hz.search;
-    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} HÖCHSTENS 2 Sätze pro Abschnitt — die ganze Analyse ist in 30 Sekunden gelesen. STRUKTUR zwingend: genau ${expectedSections.length} Abschnitte in dieser Reihenfolge, Titel exakt so, GROSSBUCHSTABEN+Doppelpunkt, keine weiteren Überschriften (kein FAZIT), pro Überschrift nur ihr eigenes Thema: ${sections}`;
+    // Knapp halten: compound hat auf diesem Tier ein kleines Anfragen-Budget
+    // und antwortete mit 413, als dieser Prompt laenger wurde.
+    compoundSystem = `Nur Deutsch. Finanzblick, Finanzanalyst DACH.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} Kein Markdown, keine Kursziele, keine Füllsätze. Genau 3 Abschnitte, je eigene Zeile, je höchstens 2 Sätze:\nLAGE:\nTREIBER:\nAUSBLICK:`;
     compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\nSicht: ${ctx.horizon} (${ctx.window}).\n${compactFacts}`;
   }
 
