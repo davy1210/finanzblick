@@ -11,6 +11,26 @@ const COINGECKO_IDS = {
   'HBAR':'hedera-hashgraph','VET':'vechain','ALGO':'algorand','XTZ':'tezos',
 };
 
+// ── FUNDAMENTALDATEN FUER EUROPAEISCHE TITEL ──────────────────────────────
+// Finnhubs kostenloser Tarif deckt nur US-Titel ab: VOW3.DE und SIE.DE hatten
+// ausser dem 52-Wochen-Band gar keine Kennzahlen. Die meisten grossen
+// europaeischen Konzerne sind aber zusaetzlich in den USA notiert (ADR), und
+// darueber liefert Finnhub die Unternehmensdaten.
+//
+// WICHTIG: Uebernommen werden nur Kennzahlen, die dem UNTERNEHMEN gehoeren
+// (Marktkapitalisierung, Margen, KGV als Verhaeltniszahl, Branche). Kurs- und
+// notierungsbezogene Werte wie das 52-Wochen-Band bleiben von der echten
+// Boerse — der ADR notiert in USD und haette andere Werte.
+const ADR = {
+  'SIE.DE':'SIEGY', 'VOW3.DE':'VWAGY', 'ALV.DE':'ALIZY', 'BAS.DE':'BASFY',
+  'BAYN.DE':'BAYRY', 'DTE.DE':'DTEGY', 'DBK.DE':'DB',    'MBG.DE':'MBGYY',
+  'ADS.DE':'ADDYY', 'MUV2.DE':'MURGY', 'IFX.DE':'IFNNY', 'DHL.DE':'DHLGY',
+  'HEN3.DE':'HENKY','RWE.DE':'RWEOY',  'EOAN.DE':'EONGY','LHA.DE':'DLAKY',
+  'CBK.DE':'CRZBY', 'AIR.DE':'EADSY',  'SAP.DE':'SAP',   'ENR.DE':'SMNEY',
+  'NESN.SW':'NSRGY','MC.PA':'LVMUY',   'NOVN.SW':'NVS',  'SAN.PA':'SNY',
+  'SHEL.L':'SHEL',
+};
+
 const CONFIGS = {
   '1T': { range: '1d',  interval: '5m'  },
   '1W': { range: '5d',  interval: '60m' },
@@ -91,8 +111,14 @@ module.exports = async function handler(req, res) {
     };
 
     // Parallel: Finnhub metrics + Yahoo quoteSummary (nicht für Krypto/Indizes/Futures)
+    // Fuer europaeische Titel die US-Zweitnotierung abfragen, sonst liefert
+    // Finnhub nichts. Symbol fuer die Kennzahlen kann also vom Kurs-Symbol
+    // abweichen — das wird unten transparent gemacht.
+    const kennzahlSymbol = ADR[symbol.toUpperCase()] || symbol;
+    const nutztADR = kennzahlSymbol !== symbol;
+
     const fhUrl = finnhubKey && !isCryptoMeta
-      ? `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(symbol)}&metric=all&token=${finnhubKey}`
+      ? `https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(kennzahlSymbol)}&metric=all&token=${finnhubKey}`
       : null;
     const yhUrl = !isCryptoMeta && !isIndexOrFuture
       ? `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryProfile%2CdefaultKeyStatistics%2CfinancialData%2CsummaryDetail`
@@ -102,7 +128,7 @@ module.exports = async function handler(req, res) {
     // Vercel aus mit HTTP 401 abgewiesen wird — genau diese Felder fehlten
     // dadurch bei Aktien (bei Krypto liefert sie CoinGecko).
     const profUrl = finnhubKey && !isCryptoMeta && !isIndexOrFuture
-      ? `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${finnhubKey}`
+      ? `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(kennzahlSymbol)}&token=${finnhubKey}`
       : null;
 
     const [fhRaw, yhRaw, profRaw] = await Promise.all([
@@ -131,21 +157,35 @@ module.exports = async function handler(req, res) {
       try {
         const m = JSON.parse(fhRaw)?.metric || {};
         Object.assign(fundamentals, {
-          weekHigh52: m['52WeekHigh'] || fundamentals.weekHigh52,
-          weekLow52:  m['52WeekLow']  || fundamentals.weekLow52,
+          // Bei ADR-Nutzung NICHT uebernehmen: das 52-Wochen-Band der
+          // US-Notierung steht in USD und passt nicht zum EUR-Kurs, den der
+          // Chart zeigt. Die Werte aus den Chartdaten der echten Boerse bleiben.
+          weekHigh52: nutztADR ? fundamentals.weekHigh52 : (m['52WeekHigh'] || fundamentals.weekHigh52),
+          weekLow52:  nutztADR ? fundamentals.weekLow52  : (m['52WeekLow']  || fundamentals.weekLow52),
           pe:            m.peExclExtraTTM || m.peTTM || null,
           forwardPE:     m.peNormalizedAnnual || null,
           pb:            m.pbAnnual || null,
           ps:            m.psAnnual || null,
           beta:          m.beta || null,
           dividendYield: m.dividendYieldIndicatedAnnual ? Math.round(m.dividendYieldIndicatedAnnual * 100) / 100 : null,
-          eps:           m.epsBasicExclExtraItemsTTM || null,
+          // EPS ist ein Betrag je Aktie. Ein ADR verbrieft oft nur einen
+          // Bruchteil der Originalaktie, dann passt der Wert nicht zum
+          // angezeigten Kurs — lieber weglassen als falsch anzeigen.
+          // Das KGV bleibt gueltig, weil sich Kurs und Gewinn je Aktie im
+          // selben Verhaeltnis aendern.
+          eps:           nutztADR ? null : (m.epsBasicExclExtraItemsTTM || null),
           revenueGrowth: m.revenueGrowthTTMYoy ? Math.round(m.revenueGrowthTTMYoy * 10) / 10 : null,
           grossMargin:   m.grossMarginTTM   ? Math.round(m.grossMarginTTM)        : null,
           netMargin:     m.netProfitMarginTTM ? Math.round(m.netProfitMarginTTM)  : null,
           roe:           m.roeTTM           ? Math.round(m.roeTTM)               : null,
         });
       } catch(e) {}
+    }
+
+    // Herkunft offenlegen: die Kennzahlen stammen dann von der
+    // US-Zweitnotierung, nicht von der hier gezeigten Boerse.
+    if (nutztADR && (fundamentals.pe || fundamentals.marketCap)) {
+      fundamentals.kennzahlenQuelle = `US-Zweitnotierung ${kennzahlSymbol}`;
     }
 
     // Yahoo quoteSummary verarbeiten (füllt Lücken + neue Felder)
