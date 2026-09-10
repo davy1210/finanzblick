@@ -137,33 +137,6 @@ module.exports = async function handler(req, res) {
     sources.push({ name: 'Finnhub', critical: false, skip: 'FINNHUB_API_KEY ist nicht gesetzt' });
   }
 
-  // FRED zusaetzlich DIREKT pruefen. Ueber /api/macro allein laesst sich ein
-  // ungueltiger Key nicht von veralteten Cache-Werten unterscheiden.
-  const fredKey = process.env.FRED_API_KEY;
-  if (fredKey) {
-    const fr = await probe(`https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=${fredKey}&file_type=json&sort_order=desc&limit=1`);
-    let ok = false, detail = `HTTP ${fr.status}`;
-    try {
-      const wert = JSON.parse(fr.body)?.observations?.[0]?.value;
-      ok = !!wert && wert !== '.';
-      if (ok) detail = `Key gueltig, Leitzins ${wert}%`;
-      else if (fr.status === 400) detail = 'HTTP 400 — Key wird von FRED abgelehnt';
-    } catch(e) {
-      if (fr.status === 400) detail = 'HTTP 400 — Key wird von FRED abgelehnt';
-    }
-    results.push({
-      name: 'FRED direkt (Key-Pruefung)', ok, httpStatus: fr.status || null, ms: fr.ms,
-      detail, critical: false,
-      note: 'Prueft den Schluessel selbst, unabhaengig vom Cache in /api/macro.',
-    });
-  } else {
-    results.push({
-      name: 'FRED direkt (Key-Pruefung)', ok: false, detail: 'FRED_API_KEY ist in der Umgebung nicht gesetzt',
-      critical: false, note: 'In Vercel unter Settings > Environment Variables eintragen und neu deployen.',
-    });
-  }
-
-  // Zusaetzlich der eigene Endpunkt: liefert er tatsaechlich Zahlen aus?
   const results = await Promise.all(sources.map(async s => {
     if (s.skip) return { name: s.name, ok: false, detail: s.skip, critical: s.critical, note: s.note };
     const r = await probe(s.url);
@@ -183,6 +156,34 @@ module.exports = async function handler(req, res) {
   }));
 
   // Makro separat: eigener Endpunkt, aber inhaltliche Pruefung.
+  // FRED zusaetzlich DIREKT pruefen. Ueber /api/macro allein laesst sich ein
+  // ungueltiger Key nicht von veralteten Cache-Werten unterscheiden.
+  const fredKey = process.env.FRED_API_KEY;
+  if (fredKey) {
+    const fr = await probe(`https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=${fredKey}&file_type=json&sort_order=desc&limit=1`);
+    let fredOk = false, fredDetail = `HTTP ${fr.status}`;
+    try {
+      const wert = JSON.parse(fr.body)?.observations?.[0]?.value;
+      fredOk = !!wert && wert !== '.';
+      if (fredOk) fredDetail = `Key gueltig, Leitzins ${wert}%`;
+      else if (fr.status === 400) fredDetail = 'HTTP 400 — Key wird von FRED abgelehnt';
+    } catch(e) {
+      if (fr.status === 400) fredDetail = 'HTTP 400 — Key wird von FRED abgelehnt';
+    }
+    results.push({
+      name: 'FRED direkt (Key-Pruefung)', ok: fredOk, httpStatus: fr.status || null, ms: fr.ms,
+      detail: fredDetail, critical: false,
+      note: 'Prueft den Schluessel selbst, unabhaengig vom Cache in /api/macro.',
+    });
+  } else {
+    results.push({
+      name: 'FRED direkt (Key-Pruefung)', ok: false,
+      detail: 'FRED_API_KEY ist in der Umgebung nicht gesetzt',
+      critical: false,
+      note: 'In Vercel unter Settings > Environment Variables eintragen und neu deployen.',
+    });
+  }
+
   const macro = await probe('https://finanzblick.vercel.app/api/macro?fresh=1');
   let macroOk = false, macroDetail = 'nicht erreichbar';
   try {
