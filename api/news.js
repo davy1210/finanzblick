@@ -51,7 +51,11 @@ function buildKeywords(symbol, asset) {
   const base = (symbol || '').toUpperCase()
     .replace(/-USD$/, '').replace(/=F$/, '').replace(/^\^/, '')
     .replace(/\.(DE|PA|SW|L|AS|MI|MC|VI|BR|HE|ST|CO|OL)$/, '');
-  if (base.length >= 2) words.add(base.toLowerCase());
+  const hatNamen = !!(asset || '').trim();
+  // Kurze Kuerzel nur verwenden, wenn kein Name vorliegt: "SIE" (Siemens) ist
+  // zugleich das haeufigste deutsche Wort und traf jeden beliebigen Artikel.
+  // Gleiches gilt fuer "BAS", "MAN", "ALL".
+  if (base.length >= 4 || (base.length >= 2 && !hatNamen)) words.add(base.toLowerCase());
   (asset || '').toLowerCase().split(/[^a-zä-ü0-9]+/).forEach(w => { if (w.length >= 3) words.add(w); });
   // Gebraeuchliche Zweitnamen, damit z.B. "BTC" auch "bitcoin" findet
   const alias = {
@@ -63,10 +67,17 @@ function buildKeywords(symbol, asset) {
   return [...words];
 }
 
+// Wortgrenzen statt blossem Enthaltensein: sonst trifft "sap" auch in
+// "Sapporo" und "bas" in "basiert".
+function trefferIn(text, keyword) {
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^a-zäöüß0-9])' + esc + '($|[^a-zäöüß0-9])', 'i').test(text);
+}
+
 function isAboutAsset(article, keywords) {
   if (!keywords.length) return true;
   const text = (article.title + ' ' + (article.description || '')).toLowerCase();
-  return keywords.some(k => text.includes(k));
+  return keywords.some(k => trefferIn(text, k));
 }
 
 // ── CATEGORY DETECTION ────────────────────────────────────────────────────
@@ -167,6 +178,7 @@ const NOISE_PATTERNS = [
   /\bkolumne\b/i, /^kommentar:/i, /^gastbeitrag/i, /\bdepot-?check\b/i,
   /\b\d+ (gruende|dinge|aktien|tipps)\b/i, /lohnt sich (der|die|das)\b/i,
   /\bchartanalyse\b/i, /\bwochenausblick\b/i, /boersen-?ticker/i,
+  /buy or goodbye/i, /kaufen oder verkaufen/i,
 ];
 
 function isNoise(article) {
@@ -424,7 +436,7 @@ module.exports = async function handler(req, res) {
     // Qualitaetshuerde.
     const inTitle = a => {
       const t = (a.title || '').toLowerCase();
-      return keywords.some(k => t.includes(k));
+      return keywords.some(k => trefferIn(t, k));
     };
     // Zaehlt mit, woran Meldungen scheitern — ohne diese Sicht laesst sich der
     // Filter nicht nachjustieren (Nvidia bestand 0 von 30, ohne erkennbaren Grund).
