@@ -282,10 +282,10 @@ module.exports = async function handler(req, res) {
 
   // ── Cache-Check (nur für Auto-Analysen, nicht für Fragen) ─────────────
   const ttl = HORIZON_TTL[horizonKey];
-  // v3: Schluessel haengt jetzt am Horizont statt am Chart-Zeitraum — drei
-  // Eintraege pro Asset statt sechs, und die alten fallen sofort raus.
+  // v4: Schluessel haengt am Horizont statt am Chart-Zeitraum. Hochgezaehlt,
+  // damit die einzeilig geparsten Fehlanalysen sofort rausfallen.
   const cacheKey = !frage
-    ? 'v3_' + (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + horizonKey
+    ? 'v4_' + (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + horizonKey
     : null;
 
   if (cacheKey) {
@@ -697,6 +697,7 @@ STRUKTUR — zwingend, keine Abweichung:
 - Genau diese ${expectedSections.length} Abschnitte, in genau dieser Reihenfolge:
 ${expectedSections.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}
 - Jede Überschrift exakt so schreiben, in GROSSBUCHSTABEN gefolgt von einem Doppelpunkt
+- JEDER Abschnitt beginnt auf einer EIGENEN ZEILE — niemals alle in eine Zeile schreiben
 - Keine weiteren Überschriften erfinden — kein FAZIT, keine ZUSAMMENFASSUNG, kein HINWEIS
 - LAGE: wo das Papier steht und was es zuletzt bewegt hat
 - TREIBER: der wichtigste Grund dahinter, mit Mechanismus
@@ -706,10 +707,10 @@ RELEVANTE FAKTOREN für dieses Instrument — als Auswahlhilfe, nicht abarbeiten
 Nimm die zwei bis drei wichtigsten, der Rest bleibt weg:
 ${factorList}
 
-BEISPIEL für Ton und Länge:
-"LAGE: Nvidia steht nach den Quartalszahlen 15% höher, der Umsatz im KI-Chip-Segment hat sich verdoppelt.
+BEISPIEL für Ton, Länge und Zeilenaufbau — genau so, drei Zeilen:
+LAGE: Nvidia steht nach den Quartalszahlen 15% höher, der Umsatz im KI-Chip-Segment hat sich verdoppelt.
 TREIBER: Die Nachfrage der Rechenzentren übertrifft weiter das Angebot, was die Margen stützt.
-AUSBLICK: Die nächsten Zahlen im Februar zeigen, ob das Tempo hält."
+AUSBLICK: Die nächsten Zahlen im Februar zeigen, ob das Tempo hält.
 
 Keine Anlageberatung.`;
 
@@ -764,7 +765,25 @@ Fokus: ${ctx.focus}`;
       .toUpperCase().replace(/\s+/g, ' ').trim();
     const expectedNorm = new Map((expectedSections || []).map(s => [norm(s), s]));
 
-    const lines = clean.split('\n');
+    // Manche Modelle schreiben alle Abschnitte in EINE Zeile
+    // ("LAGE: ... TREIBER: ... AUSBLICK: ..."). Die Erkennung prueft aber je
+    // Zeile auf einen Zeilenanfang — dann wird nur der erste Abschnitt gefunden
+    // und die Analyse faellt in den Notfallpfad. Deshalb jede erwartete
+    // Ueberschrift vor dem Parsen auf einen eigenen Zeilenanfang ziehen.
+    let normalizedText = clean
+      .replace(/[‐-―−]/g, '-')
+      .replace(/[   ]/g, ' ');
+    for (const title of (expectedSections || [])) {
+      const pat = title
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')   // Sonderzeichen entschaerfen
+        .replace(/\s+/g, '\\s+');                  // Leerzeichen flexibel
+      normalizedText = normalizedText.replace(
+        new RegExp('(^|[^\\n])[ \\t]*(' + pat + ')[ \\t]*:', 'gi'),
+        '$1\n$2:'
+      );
+    }
+
+    const lines = normalizedText.split('\n');
     const parsedSections = [];
     let currentTitle = null;
     let currentContent = [];
