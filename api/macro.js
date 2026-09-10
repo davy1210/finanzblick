@@ -23,7 +23,10 @@ function fetchJSON(url) {
 // FRED-Key kommt aus der Umgebung. Er stand frueher fest im Code — in einem
 // oeffentlichen Repository ist das ein offengelegtes Geheimnis, und ein
 // abgelaufener Key liess sich nur per Deploy austauschen.
-const FRED_KEY = process.env.FRED_API_KEY || '';
+// .trim(): beim Einfuegen ins Vercel-Dashboard rutschen leicht Leerzeichen
+// oder ein Zeilenumbruch mit. https.get wirft dann synchron wegen ungueltiger
+// Zeichen in der URL, statt nur einen Fehlercode zu liefern.
+const FRED_KEY = (process.env.FRED_API_KEY || '').trim();
 
 async function fetchFredSeries(seriesId) {
   if (!FRED_KEY) return null;

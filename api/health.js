@@ -16,7 +16,12 @@ function probe(url, opts = {}) {
   const started = opts._started || Date.now();
   const hop = opts._hop || 0;
   return new Promise(resolve => {
-    const req = https.get(url, {
+    // https.get wirft SYNCHRON bei ungueltigen Zeichen in der URL — etwa wenn
+    // ein Schluessel aus der Umgebung ein Leerzeichen oder einen Zeilenumbruch
+    // enthaelt. Ohne dieses try/catch reisst das den ganzen Endpunkt mit.
+    let req;
+    try {
+      req = https.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', ...(opts.headers || {}) },
       timeout: CHECK_TIMEOUT,
     }, res => {
@@ -37,8 +42,11 @@ function probe(url, opts = {}) {
         body: raw,
       }));
     });
-    req.on('error', e => resolve({ status: 0, ms: Date.now() - started, error: e.message, body: '' }));
-    req.on('timeout', function() { this.destroy(); resolve({ status: 0, ms: CHECK_TIMEOUT, error: 'timeout', body: '' }); });
+      req.on('error', e => resolve({ status: 0, ms: Date.now() - started, error: e.message, body: '' }));
+      req.on('timeout', function() { this.destroy(); resolve({ status: 0, ms: CHECK_TIMEOUT, error: 'timeout', body: '' }); });
+    } catch(e) {
+      resolve({ status: 0, ms: Date.now() - started, error: 'ungueltige URL/Zeichen: ' + e.message, body: '' });
+    }
   });
 }
 
@@ -158,7 +166,13 @@ module.exports = async function handler(req, res) {
   // Makro separat: eigener Endpunkt, aber inhaltliche Pruefung.
   // FRED zusaetzlich DIREKT pruefen. Ueber /api/macro allein laesst sich ein
   // ungueltiger Key nicht von veralteten Cache-Werten unterscheiden.
-  const fredKey = process.env.FRED_API_KEY;
+  const fredRaw = process.env.FRED_API_KEY || '';
+  const fredKey = fredRaw.trim();
+  // Beim Einfuegen ins Dashboard rutschen leicht Leerzeichen oder ein
+  // Zeilenumbruch mit — das meldet der Check ausdruecklich, sonst sucht man
+  // den Fehler beim Schluessel selbst.
+  const unsauber = fredRaw !== fredKey;
+  const formatOk = /^[a-z0-9]{32}$/.test(fredKey);
   if (fredKey) {
     const fr = await probe(`https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=${fredKey}&file_type=json&sort_order=desc&limit=1`);
     let fredOk = false, fredDetail = `HTTP ${fr.status}`;
@@ -170,6 +184,8 @@ module.exports = async function handler(req, res) {
     } catch(e) {
       if (fr.status === 400) fredDetail = 'HTTP 400 — Key wird von FRED abgelehnt';
     }
+    if (unsauber) fredDetail += ' | ACHTUNG: der Wert enthaelt Leerzeichen oder einen Zeilenumbruch';
+    if (!formatOk) fredDetail += ` | Format unerwartet (${fredKey.length} Zeichen, erwartet 32 Kleinbuchstaben/Ziffern)`;
     results.push({
       name: 'FRED direkt (Key-Pruefung)', ok: fredOk, httpStatus: fr.status || null, ms: fr.ms,
       detail: fredDetail, critical: false,
