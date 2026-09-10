@@ -405,9 +405,15 @@ module.exports = async function handler(req, res) {
       const t = (a.title || '').toLowerCase();
       return keywords.some(k => t.includes(k));
     };
-    const relevant = enriched.filter(a =>
-      !isNoise(a) && isAboutAsset(a, keywords) && (a.impactLevel === 'high' || inTitle(a))
-    );
+    // Zaehlt mit, woran Meldungen scheitern — ohne diese Sicht laesst sich der
+    // Filter nicht nachjustieren (Nvidia bestand 0 von 30, ohne erkennbaren Grund).
+    const abgelehnt = { rauschen: 0, nicht_zum_asset: 0, kein_impact: 0 };
+    const relevant = enriched.filter(a => {
+      if (isNoise(a)) { abgelehnt.rauschen++; return false; }
+      if (!isAboutAsset(a, keywords)) { abgelehnt.nicht_zum_asset++; return false; }
+      if (a.impactLevel !== 'high' && !inTitle(a)) { abgelehnt.kein_impact++; return false; }
+      return true;
+    });
 
     // ── SORT: impact first, then date ─────────────────────────────────────
     relevant.sort((a, b) => {
@@ -451,7 +457,10 @@ module.exports = async function handler(req, res) {
     // Bitcoin und Gold dauerhaft leer erscheinen.
     if (final.length > 0) assetCache[cacheKey] = { articles: final, time: now };
 
-    return res.status(200).json({ articles: final, cachedAt: new Date(now).toISOString(), fromCache: false, horizon, total: unique.length });
+    return res.status(200).json({
+      articles: final, cachedAt: new Date(now).toISOString(), fromCache: false,
+      horizon, total: unique.length, abgelehnt, stichworte: keywords,
+    });
 
   } catch(e) {
     if (assetCache[cacheKey]) {
