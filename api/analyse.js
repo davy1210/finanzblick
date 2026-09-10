@@ -327,7 +327,10 @@ module.exports = async function handler(req, res) {
 
   // ── Zahlen aufbereiten ────────────────────────────────────────────────
   const priceNum = toNum(price);
-  const dayPct   = toNum(body.changePct);
+  // Nur der ausdrueckliche 1T-Wert gilt als Tagesveraenderung. body.changePct
+  // aus einem laengeren Fenster ist unzuverlaessig — Yahoo macht daraus dort
+  // die Zeitraum-Veraenderung, die dann faelschlich als "heute" im Prompt stand.
+  const dayPct   = toNum(body.dayChangePct);
   const rangePct = toNum(body.rangeChangePct);
   const startNum = toNum(body.rangeStartPrice);
   const startLbl = body.rangeStartLabel || null;
@@ -349,12 +352,15 @@ module.exports = async function handler(req, res) {
   if (startNum !== null) {
     factLines.push(`Startkurs des Zeitraums${startLbl ? ` (${startLbl})` : ''}: ${fmtPrice(startNum, cur)}`);
   }
-  factLines.push(`Veränderung heute: ${fmtPct(dayPct)}`);
+  // Lieber weglassen als falsch beschriften: fehlt der 1T-Wert, bekommt das
+  // Modell gar keine Tagesveraenderung statt einer aus dem falschen Fenster.
+  if (dayPct !== null) factLines.push(`Veränderung heute: ${fmtPct(dayPct)}`);
   const factsBlock = `\nGESICHERTE ZAHLEN (nur diese verwenden):\n${factLines.map(l => '- ' + l).join('\n')}`;
   // Kompaktfassung für groq/compound (Größenbudget). Der Vorrang-Hinweis ist
   // dort besonders wichtig: Compound durchsucht das Web und findet Kurse,
   // die mehrere Tage alt sind und unseren widersprechen.
-  const compactFacts = `${asset} | Kurs: ${fmtPrice(priceNum, cur)} | "${ctx.label}": ${fmtPct(rangePct)} | heute: ${fmtPct(dayPct)}`
+  const compactFacts = `${asset} | Kurs: ${fmtPrice(priceNum, cur)} | "${ctx.label}": ${fmtPct(rangePct)}`
+    + (dayPct !== null ? ` | heute: ${fmtPct(dayPct)}` : '')
     + `\nDiese Zahlen sind verbindlich — gefundene Artikel nennen oft ältere Werte, dann gelten trotzdem diese.`;
 
   // Fundamentaldaten aufbereiten

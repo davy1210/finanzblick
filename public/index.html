@@ -1380,12 +1380,21 @@ function scheduleAnalyseRefresh(){}
 function analysePayload(name,range,extra,quote){
   var cd=quote||currentData||{};
   var num=function(v){ return typeof v==='number'&&isFinite(v)?v:null; };
+  // Die Tagesveraenderung MUSS aus dem 1T-Datensatz kommen. changePct aus
+  // einem laengeren Fenster ist nicht die Tagesveraenderung: Yahoo liefert
+  // dort teils den Zeitraum-Startwert als previousClose, wodurch changePct zur
+  // Zeitraum-Veraenderung wird. Bei 6M standen so 21% als "heute" im Prompt.
+  var dayPct=null;
+  if(currentSymbol){
+    var d1=cGet('q2_'+currentSymbol+'_1T',cacheMs('1T'));
+    if(d1) dayPct=num(d1.changePct);
+  }
   var p={
     asset:name,
     symbol:currentSymbol||'',
     price:num(cd.price),
     currency:cd.currency||'USD',
-    changePct:num(cd.changePct)||0,
+    dayChangePct:dayPct,
     rangeChangePct:num(cd.rangeChangePct),
     rangeStartPrice:(cd.chartData&&cd.chartData.length)?num(cd.chartData[0]):null,
     rangeStartLabel:(cd.chartTimes&&cd.chartTimes.length)?cd.chartTimes[0]:null,
