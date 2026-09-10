@@ -143,6 +143,12 @@ const NOISE_PATTERNS = [
   // ("Can Apple's Foldable iPhone Fuel the Next Growth Cycle?").
   /^\s*(is|are|can|could|should|will|would|why|what|how|does|do|has|have)\b[^?]*\?/i,
   /does it even matter|is it time to|the next big|worth buying|worth a look|too late to/i,
+  // Ueberschriften, die als Frage enden, sind in Finanzmedien nahezu immer
+  // Spekulation statt Meldung ("... but will AI companies compete in hardware?").
+  /\?\s*$/,
+  // Sammelartikel ueber viele Werte erklaeren keinen einzelnen Kurs
+  /and more stocks/i, /stocks that (explain|moved|are moving)/i,
+  /\bmovers\b/i, /\b(winners|losers) (and|&)\b/i,
 ];
 
 function isNoise(article) {
@@ -386,8 +392,21 @@ module.exports = async function handler(req, res) {
     // 3. Muss dieses Asset betreffen, auch bei Finnhub company-news: dort kam
     //    unter Apple eine Microsoft-Schlagzeile durch, weil die Relevanzpruefung
     //    frueher nur fuer RSS-Feeds galt.
+    // Die Stichwortpflicht allein war zu eng: Nvidia bestand 0 von 30 Meldungen,
+    // weil echte Unternehmensnachrichten ("Nvidia stellt neuen Chip vor") keines
+    // der Makro-/Ereignis-Stichwoerter enthalten. Deshalb zwei gleichwertige
+    // Wege ueber die Impact-Huerde:
+    //   a) ein kursbewegendes Stichwort ODER
+    //   b) das Asset steht in der UEBERSCHRIFT — dann ist die Meldung per se
+    //      ueber dieses Papier und keine allgemeine Marktnotiz.
+    // Die Sperrliste greift in beiden Faellen, sie ist die eigentliche
+    // Qualitaetshuerde.
+    const inTitle = a => {
+      const t = (a.title || '').toLowerCase();
+      return keywords.some(k => t.includes(k));
+    };
     const relevant = enriched.filter(a =>
-      !isNoise(a) && a.impactLevel === 'high' && isAboutAsset(a, keywords)
+      !isNoise(a) && isAboutAsset(a, keywords) && (a.impactLevel === 'high' || inTitle(a))
     );
 
     // ── SORT: impact first, then date ─────────────────────────────────────
