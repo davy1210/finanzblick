@@ -2,28 +2,46 @@ const https = require('https');
 
 // ── SERVER-SEITIGER GETEILTER CACHE ───────────────────────────────────────
 const analyseCache = {};
-const CACHE_TTL = {
-  '1T':  30 * 60 * 1000,
-  '1W':   2 * 60 * 60 * 1000,
-  '1M':   6 * 60 * 60 * 1000,
-  '6M':  12 * 60 * 60 * 1000,
-  '1J':  24 * 60 * 60 * 1000,
-  '5J':  48 * 60 * 60 * 1000,
+
+// ── ANLAGEHORIZONTE ───────────────────────────────────────────────────────
+// Die Analyse haengt nicht mehr am Chart-Zeitraum: statt sechs Analysen pro
+// Asset (eine je Chart-Knopf) gibt es drei Horizonte. `range` bestimmt, welche
+// Kursdaten die Analyse als Grundlage bekommt.
+const HORIZONS = {
+  kurz: {
+    label: 'Kurzfristig', window: 'Tage bis Wochen', range: '1W', search: '7 Tage',
+    dataLabel: 'letzte 7 Tage',
+    focus: 'Was das Papier in den letzten Tagen konkret bewegt hat — Nachrichten, Ereignisse, Marktstimmung.',
+  },
+  mittel: {
+    label: 'Mittelfristig', window: 'Monate', range: '6M', search: '3 Monate',
+    dataLabel: 'letzte 6 Monate',
+    focus: 'Trend der letzten Monate — Quartalszahlen, Sektorentwicklung, Zinsumfeld.',
+  },
+  lang: {
+    label: 'Langfristig', window: 'Jahre', range: '5J', search: '12 Monate',
+    dataLabel: 'letzte 5 Jahre',
+    focus: 'Strukturelle Entwicklung ueber Jahre — Geschaeftsmodell, Marktposition, langfristige Zyklen.',
+  },
 };
 
-const RANGE_CONTEXT = {
-  '1T': { label: 'Heute', timeframe: 'kurzfristig', focus: 'Tageshandel, intraday Bewegungen, heutige Nachrichten und kurzfristige Markttreiber.' },
-  '1W': { label: 'Diese Woche', timeframe: 'kurzfristig', focus: 'Wochenverlauf, wichtige Ereignisse der letzten 7 Tage.' },
-  '1M': { label: 'Letzter Monat', timeframe: 'mittelfristig', focus: 'Monatliche Entwicklung, Quartalszahlen, Zinsentscheidungen.' },
-  '6M': { label: 'Letzte 6 Monate', timeframe: 'mittelfristig', focus: 'Halbjahres-Trend, Makroökonomie, Sektorentwicklung.' },
-  '1J': { label: 'Letztes Jahr', timeframe: 'langfristig', focus: 'Jahresentwicklung, strukturelle Faktoren, regulatorische Änderungen.' },
-  '5J': { label: 'Letzte 5 Jahre', timeframe: 'langfristig', focus: 'Mehrjährige Marktzyklen, technologische Disruption, makroökonomische Zyklen.' },
+// Aeltere Clients senden nur `range` — daraus den passenden Horizont ableiten.
+const RANGE_TO_HORIZON = {
+  '1T': 'kurz', '1W': 'kurz', '1M': 'mittel',
+  '6M': 'mittel', '1J': 'lang', '5J': 'lang',
 };
 
-const RANGE_SEARCH_WINDOW = {
-  '1T': '24 Stunden', '1W': '7 Tage', '1M': '30 Tage',
-  '6M': '6 Monate',  '1J': '12 Monate', '5J': '5 Jahre',
+// Cache je Horizont: kurzfristige Einschaetzungen veralten schneller.
+const HORIZON_TTL = {
+  kurz:   2 * 60 * 60 * 1000,
+  mittel: 12 * 60 * 60 * 1000,
+  lang:   48 * 60 * 60 * 1000,
 };
+
+// Kompaktes Ausgabeformat der freien Version. Die ausfuehrlichen,
+// instrumentspezifischen Abschnitte bleiben als Faktorenliste erhalten und
+// speisen den Inhalt — sie sind die Grundlage der spaeteren Abo-Analyse.
+const COMPACT_SECTIONS = 'LAGE, TREIBER, AUSBLICK';
 
 const LEVEL_PROMPTS = {
   beginner: 'Schreibe für Einsteiger ohne Finanzwissen. Erkläre jeden Fachbegriff sofort in einfachen Worten. Kurze, klare Sätze.',
@@ -200,12 +218,13 @@ function callGroq(model, system, user, apiKey, timeoutMs, maxTokens) {
 // Die früheren llama-3.x-Modelle wurden von Groq abgekündigt und liefern
 // "model does not exist" — daher die aktuellen Produktionsmodelle.
 const MODEL_CHAIN = [
-  // maxTokens grosszuegig: 4 Abschnitte a 2-4 deutsche Saetze sprengten 1000
-  // Tokens, der AUSBLICK brach dann mitten im Satz ab. Nutzerfragen bleiben
-  // ueber maxTokensOverride (320) kurz.
-  { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 1000 },
-  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 1500 },
-  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 1500 },
+  // 3 Abschnitte a hoechstens 2 deutsche Saetze brauchen rund 250 Tokens.
+  // 700 laesst Luft, damit kein Satz abgeschnitten wird, begrenzt aber die
+  // Laenge spuerbar — vorher waren es 1500 fuer vier lange Abschnitte.
+  // Nutzerfragen bleiben ueber maxTokensOverride (320) kurz.
+  { model: 'groq/compound',       compact: true,  timeout: 13000, maxTokens: 700 },
+  { model: 'openai/gpt-oss-120b', compact: false, timeout: 10000, maxTokens: 700 },
+  { model: 'openai/gpt-oss-20b',  compact: false, timeout:  8000, maxTokens: 700 },
 ];
 
 // Fällt bei JEDEM Fehler weiter (nicht nur rate_limit) — ein nicht
@@ -255,12 +274,18 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API Key fehlt' });
 
+  // ── Horizont bestimmen ────────────────────────────────────────────────
+  const horizonKey = HORIZONS[body.horizon]
+    ? body.horizon
+    : (RANGE_TO_HORIZON[range] || 'kurz');
+  const hz = HORIZONS[horizonKey];
+
   // ── Cache-Check (nur für Auto-Analysen, nicht für Fragen) ─────────────
-  const ttl = CACHE_TTL[range || '1T'] || CACHE_TTL['1T'];
-  // v2: Praefix hochgezaehlt, damit Analysen mit den alten falschen Zahlen
-  // sofort aus dem Cache fallen statt bis zu 48h weiterzuleben.
+  const ttl = HORIZON_TTL[horizonKey];
+  // v3: Schluessel haengt jetzt am Horizont statt am Chart-Zeitraum — drei
+  // Eintraege pro Asset statt sechs, und die alten fallen sofort raus.
   const cacheKey = !frage
-    ? 'v2_' + (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (range || '1T')
+    ? 'v3_' + (symbol || asset || '').replace(/[^a-zA-Z0-9]/g, '_') + '_' + horizonKey
     : null;
 
   if (cacheKey) {
@@ -275,7 +300,16 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const ctx = RANGE_CONTEXT[range] || RANGE_CONTEXT['1T'];
+  // ctx beschreibt jetzt den Horizont, nicht mehr den Chart-Zeitraum.
+  // dataLabel benennt das Fenster, aus dem die Kurszahlen stammen — damit
+  // bleibt die Prozentangabe im Datenblock eindeutig zugeordnet.
+  const ctx = {
+    label: hz.dataLabel,
+    horizon: hz.label,
+    window: hz.window,
+    timeframe: hz.label.toLowerCase(),
+    focus: hz.focus,
+  };
   const levelPrompt = LEVEL_PROMPTS[level] || LEVEL_PROMPTS['beginner'];
 
   // ── Zahlen aufbereiten ────────────────────────────────────────────────
@@ -396,7 +430,8 @@ Antworte in maximal 4 Sätzen — direkt, ohne Einleitung.`;
     const isCopper = assetLower.includes('copper') || assetLower.includes('kupfer') || sym.includes('HG=F');
     const isCommodity = (isOil || isSilver || isCopper || assetLower.includes('rohstoff') || assetLower.includes('commodity') || sym.includes('=F')) && !isGold;
     const hasFunds = fundamentals && (fundamentals.pe || fundamentals.beta || fundamentals.grossMargin);
-    const isShort = ['1T','1W'].includes(range);
+    // Steuert weiter unten, welche Faktorenliste je Instrument gewaehlt wird.
+    const isShort = horizonKey === 'kurz';
 
     let sections, instructions;
 
@@ -631,6 +666,15 @@ MARKT-KONTEXT: Makroumfeld, geopolitische Einflüsse auf diesen Sektor, Sektorst
 AUSBLICK: Anstehende Ereignisse, 52W-Position, wichtigste Risikofaktoren.`;
     }
 
+    // Die instrumentspezifischen Abschnitte oben liefern weiterhin den
+    // fachlichen Inhalt — aber nicht mehr die Ausgabestruktur. Die
+    // Ueberschriften werden zu Aufzaehlungspunkten, sonst wuerde das Modell
+    // sie als Abschnitte uebernehmen und wieder lange Analysen schreiben.
+    const factorList = instructions
+      .replace(/^[A-ZÄÖÜ][A-ZÄÖÜ0-9\s&\-.\/]{2,45}:\s*/gm, '- ')
+      .replace(/\n{2,}/g, '\n');
+
+    sections = COMPACT_SECTIONS;
     expectedSections = sections.split(',').map(s => s.trim()).filter(Boolean);
 
     system = `Du bist Finanzblick — ein präziser Finanzanalyst für Privatanleger in Deutschland und Österreich.
@@ -641,39 +685,45 @@ ${MACRO_CONTEXT}
 
 ${RULES}
 
-AUSGABE-REGELN — strikt einhalten:
-- Jeder Abschnitt: 2-4 prägnante Sätze — vollständige Gedanken, nie mitten im Satz abbrechen
+LÄNGE — das Wichtigste an dieser Analyse:
+- Pro Abschnitt HÖCHSTENS 2 Sätze. Lieber einer, wenn er reicht.
+- Die gesamte Analyse ist in unter 30 Sekunden gelesen
 - Kein Einleitungssatz, kein Fazit, keine Wiederholungen
-- Direkt zum Punkt: Faktor nennen → Mechanismus in 1-2 Sätzen erklären → fertig
-- Kein "Es ist wichtig zu beachten dass..." oder ähnliche Füllsätze
-- Der Nutzer soll jeden Abschnitt in 15 Sekunden lesen können
+- Ein starker Faktor gut erklärt schlägt drei aufgezählte
+- Keine Füllsätze wie "Es ist wichtig zu beachten, dass..."
+- Vollständige Sätze — niemals mitten im Satz abbrechen
 
 STRUKTUR — zwingend, keine Abweichung:
 - Genau diese ${expectedSections.length} Abschnitte, in genau dieser Reihenfolge:
 ${expectedSections.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}
 - Jede Überschrift exakt so schreiben, in GROSSBUCHSTABEN gefolgt von einem Doppelpunkt
 - Keine weiteren Überschriften erfinden — kein FAZIT, keine ZUSAMMENFASSUNG, kein HINWEIS
-- Jeder Inhalt gehört unter die passende Überschrift, niemals mehrere Themen unter eine
+- LAGE: wo das Papier steht und was es zuletzt bewegt hat
+- TREIBER: der wichtigste Grund dahinter, mit Mechanismus
+- AUSBLICK: worauf Anleger als Nächstes achten sollten
 
-WAS IN JEDEM ABSCHNITT STEHEN SOLL (Orientierung, nicht wörtlich kopieren):
-${instructions}
+RELEVANTE FAKTOREN für dieses Instrument — als Auswahlhilfe, nicht abarbeiten.
+Nimm die zwei bis drei wichtigsten, der Rest bleibt weg:
+${factorList}
 
-BEISPIEL für guten Stil (konkret, Mechanismus klar, vollständige Sätze):
-"MARKTLAGE: Nvidia stieg nach Quartalszahlen die Erwartungen um 15% übertrafen — Umsatz im KI-Chip-Segment verdoppelte sich. Der gesamte Halbleitersektor profitierte vom positiven Sentiment und zog nach."
+BEISPIEL für Ton und Länge:
+"LAGE: Nvidia steht nach den Quartalszahlen 15% höher, der Umsatz im KI-Chip-Segment hat sich verdoppelt.
+TREIBER: Die Nachfrage der Rechenzentren übertrifft weiter das Angebot, was die Margen stützt.
+AUSBLICK: Die nächsten Zahlen im Februar zeigen, ob das Tempo hält."
 
 Keine Anlageberatung.`;
 
     user = `Asset: ${asset}
 ${factsBlock}${weekPosition}${fundBlock}${newsBlock}
 
-Analysiere ${asset} für den Zeitraum "${ctx.label}" (${ctx.timeframe}).
+Analysiere ${asset} aus ${ctx.horizon.toLowerCase()}er Sicht (${ctx.window}).
 Fokus: ${ctx.focus}`;
 
     // Kompakter Prompt für groq/compound — Websuche liefert den Kontext,
     // hier nur Regeln + erwartete Abschnittsstruktur, kein Fließtext-Ballast.
-    const searchWindow = RANGE_SEARCH_WINDOW[range || '1T'];
-    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} 2-4 Sätze/Abschnitt. STRUKTUR zwingend: genau ${expectedSections.length} Abschnitte in dieser Reihenfolge, Titel exakt so, GROSSBUCHSTABEN+Doppelpunkt, keine weiteren Überschriften (kein FAZIT), pro Überschrift nur ihr eigenes Thema: ${sections}`;
-    compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\n${compactFacts}`;
+    const searchWindow = hz.search;
+    compoundSystem = `Antworte ausschließlich auf Deutsch, niemals Englisch — auch wenn die gefundenen Quellen englisch sind. Finanzblick, Finanzanalyst DACH. ${levelPrompt} Keine Kursziele/Kaufempfehlungen, kein Markdown, keine Füllsätze.${isCrypto ? ' Krypto ist kein sicherer Hafen.' : ''} HÖCHSTENS 2 Sätze pro Abschnitt — die ganze Analyse ist in 30 Sekunden gelesen. STRUKTUR zwingend: genau ${expectedSections.length} Abschnitte in dieser Reihenfolge, Titel exakt so, GROSSBUCHSTABEN+Doppelpunkt, keine weiteren Überschriften (kein FAZIT), pro Überschrift nur ihr eigenes Thema: ${sections}`;
+    compoundUser = `Suche aktuelle News zu "${asset}" der letzten ${searchWindow}, beziehe sie ein.\nSicht: ${ctx.horizon} (${ctx.window}).\n${compactFacts}`;
   }
 
   try {
@@ -757,6 +807,8 @@ Fokus: ${ctx.focus}`;
         warum: parsedSections[0].content,
         ausblick: parsedSections[parsedSections.length - 1].content,
         range: range || '1T',
+        horizon: horizonKey,
+        horizonLabel: hz.label,
         typ: 'auto',
         fromCache: false,
         model_used: model,
@@ -764,13 +816,16 @@ Fokus: ${ctx.focus}`;
         cacheExpiresIn: Math.round(ttl / 1000),
       };
     } else {
-      const mMatch = clean.match(/MARKTLAGE[\s\S]*?:([\s\S]*?)(?=AUSBLICK|$)/i);
+      // Notfallpfad, falls die Abschnitte gar nicht erkannt wurden.
+      const mMatch = clean.match(/(?:MARKT)?LAGE[\s\S]*?:([\s\S]*?)(?=TREIBER|AUSBLICK|$)/i);
       const aMatch = clean.match(/AUSBLICK[\s\S]*?:([\s\S]*?)$/i);
       result = {
         warum: mMatch ? mMatch[1].trim() : clean,
         ausblick: aMatch ? aMatch[1].trim() : '',
         sections: [],
         range: range || '1T',
+        horizon: horizonKey,
+        horizonLabel: hz.label,
         typ: 'auto',
         fromCache: false,
         model_used: model,

@@ -207,6 +207,12 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
 
 /* ANALYSE */
 .analyse-section{padding:20px}
+/* HORIZONT-AUSWAHL — ersetzt die frueher an den Chart gekoppelte Analyse */
+.hz-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.hz-bar{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:9px;width:fit-content}
+.hz-btn{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:var(--font);color:var(--muted);background:none;transition:all .15s;white-space:nowrap}
+.hz-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.hz-hint{font-size:11px;color:var(--muted);font-weight:600}
 .range-tag{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:4px 12px;border-radius:7px;margin-bottom:14px;border:1.5px solid}
 .rt-short{background:var(--blue-bg);color:var(--blue);border-color:rgba(37,99,235,0.2)}
 .rt-mid{background:var(--purple-bg);color:var(--purple);border-color:rgba(124,58,237,0.2)}
@@ -646,7 +652,14 @@ body.dark{--bg:#111827;--card:#1F2937;--border:#374151;--text:#F9FAFB;--muted:#9
       </div>
     </div>
     <div class="analyse-section">
-      <div class="range-tag rt-short" id="range-tag">Analyse: Heute</div>
+      <div class="hz-head">
+        <div class="hz-bar">
+          <button class="hz-btn active" data-hz="kurz" onclick="changeHorizon('kurz',this)">Kurzfristig</button>
+          <button class="hz-btn" data-hz="mittel" onclick="changeHorizon('mittel',this)">Mittelfristig</button>
+          <button class="hz-btn" data-hz="lang" onclick="changeHorizon('lang',this)">Langfristig</button>
+        </div>
+        <div class="hz-hint" id="hz-hint">Tage bis Wochen</div>
+      </div>
       <div id="auto-analyse"><div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div></div>
       <div class="news-wrap" id="news-wrap" style="display:none">
         <div class="news-hdr">
@@ -756,8 +769,9 @@ function setLevel(lv){
   userLevel = lv;
   localStorage.setItem('fb_level', lv);
   updateLevelUI();
-  // Clear analyse cache and reload
-  if(currentData){ var ck='a_'+(currentData.name||currentSymbol)+'_'+currentRange+'_'+userLevel; delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){} loadAutoAnalyse(currentData.name||currentSymbol, currentRange); }
+  // Anderes Erfahrungsniveau heisst anderer Sprachstil — Analyse neu laden.
+  // (Der frühere Client-Cache-Schlüssel 'a_' existiert nicht mehr.)
+  if(currentData) loadAutoAnalyse(currentData.name||currentSymbol, currentHorizon);
 }
 function setDark(on){
   isDark = on;
@@ -1018,13 +1032,12 @@ async function selectAsset(sym,name){
   await loadQuote(sym,'1T');
   loadEnrich(sym, currentData?.price);
   if(!newsCached) await loadNews(assetName,'1T');
-  await loadAutoAnalyse(assetName,'1T');
+  await loadAutoAnalyse(assetName,currentHorizon);
 }
 
+// Der Chart-Zeitraum beschriftet nur noch den Chart selbst — die Analyse
+// haengt jetzt am Anlagehorizont und wird davon nicht mehr beruehrt.
 function setRangeTag(range){
-  var el=document.getElementById('range-tag');
-  el.className='range-tag '+(RANGE_CLS[range]||'rt-short');
-  el.textContent='Analyse: '+(RANGE_LABELS[range]||range);
   document.getElementById('hover-label').textContent=RANGE_LABELS[range]||range;
 }
 
@@ -1075,17 +1088,16 @@ async function changeRange(range,btn){
   document.getElementById('hover-price').textContent='—';
   var name=currentData?currentData.name:currentSymbol;
 
-  document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
-
   // News: zeige gecachte sofort, verstecke nur wenn kein Cache
   var newsKey='n_'+name+'_'+range;
   var newsCached=cGet(newsKey, cacheMs(range));
   if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
   else { document.getElementById('news-wrap').style.display='none'; }
 
-  // Quote immer frisch laden (Chart aktualisieren)
+  // Quote immer frisch laden (Chart aktualisieren).
+  // Die Analyse bleibt bewusst stehen: sie gehoert zum gewaehlten Horizont,
+  // nicht zum Chart-Zeitraum — ein Klick auf 1M startet keine neue Analyse.
   await Promise.all([loadQuote(currentSymbol,range,true), newsCached?Promise.resolve():loadNews(name,range)]);
-  await loadAutoAnalyse(name,range);
 }
 function fmtBig(n){
   if(!n) return '—';
@@ -1362,8 +1374,11 @@ function scheduleAnalyseRefresh(){}
 // Vorher ging der Kurs als deutsch formatierter String raus ("$1.234,56"),
 // den das Backend nicht zurueckrechnen konnte. Ausserdem wurde nur die
 // Tagesveraenderung gesendet und serverseitig als Zeitraumwert beschriftet.
-function analysePayload(name,range,extra){
-  var cd=currentData||{};
+// quote: Kursdaten des Analyse-Horizonts, nicht die des Charts. Beides kann
+// auseinanderlaufen, seit Chart und Analyse entkoppelt sind — die Zahlen im
+// Prompt muessen zum analysierten Horizont gehoeren, nicht zum Chart-Knopf.
+function analysePayload(name,range,extra,quote){
+  var cd=quote||currentData||{};
   var num=function(v){ return typeof v==='number'&&isFinite(v)?v:null; };
   var p={
     asset:name,
@@ -1385,14 +1400,58 @@ function analysePayload(name,range,extra){
   return JSON.stringify(p);
 }
 
-async function loadAutoAnalyse(name,range,silent){
+// ── ANLAGEHORIZONTE ───────────────────────────────────────────────────────
+// Die Analyse haengt nicht mehr am Chart-Zeitraum. Statt sechs Analysen pro
+// Asset gibt es drei Horizonte; `range` sagt, aus welchem Kursfenster die
+// Zahlen stammen.
+var HORIZONS={
+  kurz:  {label:'Kurzfristig',  hint:'Tage bis Wochen', range:'1W'},
+  mittel:{label:'Mittelfristig',hint:'Monate',          range:'6M'},
+  lang:  {label:'Langfristig',  hint:'Jahre',           range:'5J'}
+};
+var currentHorizon='kurz';
+
+// Kursdaten fuer einen beliebigen Zeitraum holen, ohne den Chart anzufassen.
+// Nutzt denselben Cache wie loadQuote — meist also ohne zusaetzlichen Request.
+async function quoteFor(sym,range){
+  var ck='q2_'+sym+'_'+range;
+  var c=cGet(ck,cacheMs(range));
+  if(c) return c;
+  try{
+    var r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range='+range);
+    var d=await r.json();
+    if(d.error) return null;
+    cSet(ck,d);
+    return d;
+  }catch(e){ return null; }
+}
+
+function changeHorizon(hz,btn){
+  if(!HORIZONS[hz]) return;
+  currentHorizon=hz;
+  document.querySelectorAll('.hz-btn').forEach(function(b){ b.classList.remove('active'); });
+  (btn||document.querySelector('.hz-btn[data-hz="'+hz+'"]')).classList.add('active');
+  document.getElementById('hz-hint').textContent=HORIZONS[hz].hint;
+  if(!currentSymbol) return;
+  var name=currentData?currentData.name||currentSymbol:currentSymbol;
+  loadAutoAnalyse(name,hz);
+}
+
+async function loadAutoAnalyse(name,horizon,silent){
+  var hz=HORIZONS[horizon]?horizon:'kurz';
   if(!silent){
     document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird erstellt...</div>';
   }
   try{
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:analysePayload(name,range)});
+    // Kursdaten des Horizonts holen, damit die Zahlen im Prompt zum
+    // analysierten Zeitfenster passen und nicht zum gerade gewaehlten Chart.
+    var q=await quoteFor(currentSymbol,HORIZONS[hz].range);
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:analysePayload(name,HORIZONS[hz].range,{horizon:hz},q)});
     var data=await r.json();
     if(data.error) throw new Error(data.error);
+    // Nutzer hat waehrenddessen umgeschaltet — Ergebnis verwerfen.
+    if(data.horizon&&data.horizon!==currentHorizon) return;
     renderAnalyse(data,false,silent);
   }catch(e){
     console.error('[Finanzblick] Analyse fehlgeschlagen:',e&&e.message?e.message:e);
@@ -1410,7 +1469,7 @@ function fmtModelName(m){
 // Passendes Icon je Abschnittsüberschrift der Analyse
 function sectionIcon(title){
   var t=(title||'').toUpperCase();
-  if(t.indexOf('MARKTLAGE')>-1) return '📊';
+  if(t.indexOf('LAGE')>-1) return '📊';
   if(t.indexOf('TREIBER')>-1||t.indexOf('KURSTREIBER')>-1) return '⚙️';
   if(t.indexOf('MAKRO')>-1||t.indexOf('LIQUIDIT')>-1) return '🌍';
   if(t.indexOf('AUSBLICK')>-1) return '🔭';
@@ -1454,6 +1513,7 @@ function renderAnalyse(data,cached,silent){
     '</div>';
   }
   var metaParts=[];
+  if(data.horizonLabel) metaParts.push(escHtml(data.horizonLabel));
   if(data.cachedAt) metaParts.push('Erstellt: '+new Date(data.cachedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr');
   if(data.cacheExpiresIn) metaParts.push('Neu in: '+fmtExpiry(data.cacheExpiresIn));
   if(data.model_used) metaParts.push(fmtModelName(data.model_used));
@@ -1538,7 +1598,11 @@ async function askAI(){
   resp.classList.add('show'); resp.textContent='';
   try{
     var cd=currentData||{};
-    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:analysePayload(cd.name||currentSymbol,currentRange,{frage:frage})});
+    // Frage im selben Horizont beantworten, den die Analyse darüber zeigt.
+    var hzRange=HORIZONS[currentHorizon].range;
+    var q=await quoteFor(currentSymbol,hzRange);
+    var r=await fetch('/api/analyse',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:analysePayload(cd.name||currentSymbol,hzRange,{frage:frage,horizon:currentHorizon},q)});
     var data=await r.json();
     var text=data.antwort||'Keine Antwort.';
     var i=0; var iv=setInterval(function(){ resp.textContent+=text[i]; i++; if(i>=text.length){ clearInterval(iv); btn.disabled=false; btn.textContent='Fragen'; } },10);
