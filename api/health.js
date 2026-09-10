@@ -108,6 +108,12 @@ module.exports = async function handler(req, res) {
       note: 'Zweitquelle fuer allgemeine Marktnachrichten.',
     },
     {
+      name: 'Yahoo quoteSummary (Marktkap., Sektor, Profil)', critical: false,
+      url: 'https://query2.finance.yahoo.com/v10/finance/quoteSummary/AAPL?modules=summaryProfile%2CsummaryDetail',
+      check: b => { try { return !!JSON.parse(b)?.quoteSummary?.result?.[0]; } catch(e) { return false; } },
+      note: 'Faellt aus: Aktien zeigen keine Marktkapitalisierung, keinen Sektor und keine Unternehmensbeschreibung — der Analyse fehlt der Geschaeftskontext.',
+    },
+    {
       name: 'Yahoo RSS (Aktien-News)', critical: false,
       url: 'https://finance.yahoo.com/rss/headline?s=AAPL',
       check: b => rssItems(b) >= 3,
@@ -126,12 +132,23 @@ module.exports = async function handler(req, res) {
       {
         name: 'Finnhub Kennzahlen', critical: false,
         url: `https://finnhub.io/api/v1/stock/metric?symbol=AAPL&metric=all&token=${fh}`,
-        check: b => { try { return !!JSON.parse(b)?.metric?.peTTM; } catch(e) { return false; } },
+        // Genau die Felder pruefen, die quote.js auch verwendet. Die fruehere
+        // Pruefung auf peTTM allein meldete einen Ausfall, obwohl die Daten
+        // ueber peExclExtraTTM ankamen — ein Fehlalarm ist schlimmer als keine
+        // Pruefung, weil er echte Ausfaelle im Rauschen untergehen laesst.
+        check: b => {
+          try {
+            const m = JSON.parse(b)?.metric || {};
+            return !!(m.peExclExtraTTM || m.peTTM || m.beta || m['52WeekHigh']);
+          } catch(e) { return false; }
+        },
         note: 'Faellt aus: Fundamentaldaten wie KGV und Margen fehlen.',
       },
       {
         name: 'Finnhub Quartalszahlen-Kalender', critical: false,
-        url: `https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]}&token=${fh}`,
+        // 75 Tage wie in events.js — mit 60 Tagen meldete die Pruefung einen
+        // Ausfall, waehrend der Endpunkt tatsaechlich Termine lieferte.
+        url: `https://finnhub.io/api/v1/calendar/earnings?from=${today}&to=${new Date(Date.now() + 75 * 86400000).toISOString().split('T')[0]}&token=${fh}`,
         check: b => { try { return (JSON.parse(b).earningsCalendar || []).length > 0; } catch(e) { return false; } },
         note: 'Faellt aus: die Ereignisse-Seite bleibt leer.',
       },
