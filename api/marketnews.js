@@ -143,9 +143,13 @@ function fetchSafe(url, ms) {
 function callGroqBatch(articles, apiKey) {
   const headlines = articles.map((a, i) => `${i+1}. "${a.headline}" — ${a.summary || ''}`).join('\n');
 
+  // gpt-oss ist ein Reasoning-Modell: es verbraucht Tokens fuers Denken, bevor
+  // es schreibt. Mit 800 ging das Budget komplett dafuer drauf und der Kontext
+  // kam leer zurueck — live waren alle 8 Artikel ohne Einordnung.
   const body = JSON.stringify({
     model: 'openai/gpt-oss-120b',
-    max_tokens: 800,
+    max_tokens: 2500,
+    reasoning_effort: 'low',
     temperature: 0.1,
     messages: [
       {

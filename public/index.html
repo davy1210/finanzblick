@@ -1024,14 +1024,14 @@ async function selectAsset(sym,name){
   var assetName=name||sym;
   document.getElementById('auto-analyse').innerHTML='<div class="loading-box"><span class="dots"><span></span><span></span><span></span></span> Analyse wird geladen...</div>';
 
-  var newsKey='n_'+assetName+'_1T';
-  var newsCached=cGet(newsKey, cacheMs('1T'));
+  var newsKey='n2_'+assetName+'_'+currentHorizon;
+  var newsCached=cGet(newsKey, NEWS_CACHE_TTL[currentHorizon]);
   if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
   else { document.getElementById('news-wrap').style.display='none'; }
 
   await loadQuote(sym,'1T');
   loadEnrich(sym, currentData?.price);
-  if(!newsCached) await loadNews(assetName,'1T');
+  if(!newsCached) await loadNews(assetName,currentHorizon);
   await loadAutoAnalyse(assetName,currentHorizon);
 }
 
@@ -1088,16 +1088,9 @@ async function changeRange(range,btn){
   document.getElementById('hover-price').textContent='—';
   var name=currentData?currentData.name:currentSymbol;
 
-  // News: zeige gecachte sofort, verstecke nur wenn kein Cache
-  var newsKey='n_'+name+'_'+range;
-  var newsCached=cGet(newsKey, cacheMs(range));
-  if(newsCached){ currentNews=newsCached.articles||[]; renderNews(newsCached); }
-  else { document.getElementById('news-wrap').style.display='none'; }
-
-  // Quote immer frisch laden (Chart aktualisieren).
-  // Die Analyse bleibt bewusst stehen: sie gehoert zum gewaehlten Horizont,
-  // nicht zum Chart-Zeitraum — ein Klick auf 1M startet keine neue Analyse.
-  await Promise.all([loadQuote(currentSymbol,range,true), newsCached?Promise.resolve():loadNews(name,range)]);
+  // Nur der Chart wird neu geladen. Analyse UND Nachrichten bleiben stehen —
+  // beide gehoeren zum gewaehlten Horizont, nicht zum Chart-Zeitraum.
+  await loadQuote(currentSymbol,range,true);
 }
 function fmtBig(n){
   if(!n) return '—';
@@ -1443,6 +1436,8 @@ function changeHorizon(hz,btn){
   document.getElementById('hz-hint').textContent=HORIZONS[hz].hint;
   if(!currentSymbol) return;
   var name=currentData?currentData.name||currentSymbol:currentSymbol;
+  // Nachrichten folgen dem Horizont mit — sie sind Teil derselben Zeitsicht.
+  loadNews(name,hz);
   loadAutoAnalyse(name,hz);
 }
 
@@ -1531,33 +1526,38 @@ function renderAnalyse(data,cached,silent){
 }
 
 // ── NEWS ──────────────────────────────────────────────────────────────────
+// Nachrichten haengen am Analyse-Horizont, nicht am Chart-Zeitraum: ein Klick
+// auf 1M/6M tauscht die Liste nicht mehr aus.
 var newsTimer=null;
-// TTL für Auto-Refresh (etwas kürzer als Server-Cache, um sinnvoll zu refreshen)
-var NEWS_REFRESH_TTL={'1T':20*60*1000,'1W':2*60*60*1000,'1M':4*60*60*1000,'6M':8*60*60*1000,'1J':12*60*60*1000,'5J':24*60*60*1000};
+var NEWS_REFRESH_TTL={kurz:15*60*1000, mittel:3*60*60*1000, lang:8*60*60*1000};
+var NEWS_CACHE_TTL={kurz:15*60*1000, mittel:3*60*60*1000, lang:8*60*60*1000};
 
-async function loadNews(name,range){
-  var ck='n_'+name+'_'+range;
-  var cached=cGet(ck, cacheMs(range));
-  if(cached){ currentNews=cached.articles||[]; renderNews(cached); scheduleNewsRefresh(name,range); return; }
+async function loadNews(name,horizon){
+  var hz=NEWS_CACHE_TTL[horizon]?horizon:'kurz';
+  var ck='n2_'+name+'_'+hz;
+  var cached=cGet(ck, NEWS_CACHE_TTL[hz]);
+  if(cached){ currentNews=cached.articles||[]; renderNews(cached); scheduleNewsRefresh(name,hz); return; }
   try{
-    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&range='+range);
+    var r=await fetch('/api/news?asset='+encodeURIComponent(name)+'&symbol='+encodeURIComponent(currentSymbol||'')+'&horizon='+hz);
     var data=await r.json();
-    currentNews=data.articles||[]; cSet(ck,data,cacheMs(range)); renderNews(data);
-    scheduleNewsRefresh(name,range);
-  }catch(e){}
+    // Leere Antwort nicht cachen — sonst bleibt die Liste bis zum Ablauf leer.
+    currentNews=data.articles||[];
+    if(currentNews.length) cSet(ck,data,NEWS_CACHE_TTL[hz]);
+    renderNews(data);
+    scheduleNewsRefresh(name,hz);
+  }catch(e){ console.error('[Finanzblick] News fehlgeschlagen:',e&&e.message?e.message:e); }
 }
 
-function scheduleNewsRefresh(name,range){
+function scheduleNewsRefresh(name,horizon){
   if(newsTimer) clearTimeout(newsTimer);
-  var delay=NEWS_REFRESH_TTL[range]||NEWS_REFRESH_TTL['1T'];
   newsTimer=setTimeout(function(){
     if(!currentSymbol) return;
     var curName=currentData?currentData.name||currentSymbol:currentSymbol;
-    if(curName!==name||currentRange!==range) return; // Nutzer hat gewechselt
-    var ck='n_'+name+'_'+range;
+    if(curName!==name||currentHorizon!==horizon) return; // Nutzer hat gewechselt
+    var ck='n2_'+name+'_'+horizon;
     delete MEM[ck]; try{localStorage.removeItem('fb_'+ck);}catch(e){}
-    loadNews(name,range); // silent reload — renderNews aktualisiert die Liste
-  },delay);
+    loadNews(name,horizon); // renderNews ergaenzt Neues, Veraltetes faellt serverseitig raus
+  },NEWS_REFRESH_TTL[horizon]||NEWS_REFRESH_TTL.kurz);
 }
 function renderNews(data){
   var arts=data.articles||[];

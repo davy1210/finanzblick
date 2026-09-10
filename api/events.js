@@ -121,10 +121,21 @@ module.exports = async function handler(req, res) {
       fetchJSON(`https://finnhub.io/api/v1/calendar/economic?token=${finnhubKey}`)
     ]);
 
-    // Earnings: alle wichtigen Symbole filtern
-    const allEarnings = (earningsData.earningsCalendar || [])
-      .filter(e => HIGH_IMPACT_SYMBOLS.includes((e.symbol || '').toUpperCase()))
-      .slice(0, 8)
+    // Earnings: erst die Schwergewichte, dann mit den naechstgroessten
+    // auffuellen. Die reine Whitelist liess die Seite zwischen zwei
+    // Berichtssaisons fast leer stehen — live waren es 4 Termine, alle erst
+    // in ueber zwei Monaten.
+    const cal = (earningsData.earningsCalendar || [])
+      .filter(e => e.symbol && e.date);
+    const isTop = e => HIGH_IMPACT_SYMBOLS.includes((e.symbol || '').toUpperCase());
+    const byDate = (a, b) => new Date(a.date) - new Date(b.date);
+    // Auffuellkandidaten: nach erwartetem Umsatz, damit keine Kleinstwerte
+    // die Liste fluten.
+    const filler = cal
+      .filter(e => !isTop(e) && (e.revenueEstimate || 0) > 5e9)
+      .sort((a, b) => (b.revenueEstimate || 0) - (a.revenueEstimate || 0));
+    const allEarnings = [...cal.filter(isTop).sort(byDate), ...filler.sort(byDate)]
+      .slice(0, 10)
       .map(e => {
         const dt = fmtDate(e.date);
         const imp = getImpact(e.symbol);

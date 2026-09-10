@@ -11,12 +11,51 @@ const CACHE_BY_RANGE = {
   '5J': 24 * 60 * 60 * 1000,
 };
 
-// ── REUTERS RSS FEEDS ─────────────────────────────────────────────────────
-const REUTERS_FEEDS = {
-  business:   'https://feeds.reuters.com/reuters/businessNews',
-  technology: 'https://feeds.reuters.com/reuters/technologyNews',
-  markets:    'https://feeds.reuters.com/reuters/marketsNews',
+// ── RSS-QUELLEN ───────────────────────────────────────────────────────────
+// Die frueheren Reuters-Feeds (feeds.reuters.com) sind abgeschaltet — die
+// Domain loest nicht einmal mehr im DNS auf. Sie waren als PRIMAERE Quelle
+// fuer Krypto, Indizes und Rohstoffe eingetragen, weshalb diese Assets
+// ueberhaupt keine Nachrichten mehr bekamen.
+const FEEDS = {
+  crypto:    'https://cointelegraph.com/rss',
+  commodity: 'https://www.investing.com/rss/commodities.rss',
+  markets:   'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258',
+  business:  'https://feeds.content.dowjones.io/public/rss/mw_topstories',
 };
+
+// Welche Feeds passen zu welchem Instrument?
+function feedsForSymbol(symbol, asset) {
+  const s = (symbol || '').toUpperCase();
+  const a = (asset || '').toLowerCase();
+  const isCrypto = s.endsWith('-USD') || /bitcoin|ethereum|krypto|crypto|solana|ripple/.test(a);
+  const isCommodity = s.endsWith('=F') || /gold|silber|silver|öl|oel|oil|kupfer|copper|rohstoff/.test(a);
+  if (isCrypto) return ['crypto', 'markets'];
+  if (isCommodity) return ['commodity', 'markets'];
+  return ['markets', 'business'];
+}
+
+// Nur Artikel behalten, die das Asset wirklich betreffen. Ein allgemeiner
+// Markt-Feed enthaelt sonst 90% Rauschen, das nichts mit dem Wert zu tun hat.
+function buildKeywords(symbol, asset) {
+  const words = new Set();
+  const base = (symbol || '').toUpperCase().replace(/-USD$/, '').replace(/=F$/, '').replace(/^\^/, '');
+  if (base.length >= 2) words.add(base.toLowerCase());
+  (asset || '').toLowerCase().split(/[^a-zä-ü0-9]+/).forEach(w => { if (w.length >= 3) words.add(w); });
+  // Gebraeuchliche Zweitnamen, damit z.B. "BTC" auch "bitcoin" findet
+  const alias = {
+    'btc': ['bitcoin'], 'eth': ['ethereum', 'ether'], 'sol': ['solana'], 'xrp': ['ripple'],
+    'gc': ['gold'], 'si': ['silver', 'silber'], 'cl': ['oil', 'crude', 'öl'], 'hg': ['copper', 'kupfer'],
+    'gold': ['bullion'], 'bitcoin': ['btc'], 'ethereum': ['eth', 'ether'],
+  };
+  [...words].forEach(w => (alias[w] || []).forEach(x => words.add(x)));
+  return [...words];
+}
+
+function isAboutAsset(article, keywords) {
+  if (!keywords.length) return true;
+  const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+  return keywords.some(k => text.includes(k));
+}
 
 // ── CATEGORY DETECTION ────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -79,25 +118,6 @@ function getImpactLevel(text) {
   return 'low';
 }
 
-function isRelevantForRange(article, range) {
-  const impact = article.impactLevel;
-  switch (range) {
-    case '1T': case '1W': return true;
-    case '1M': case '6M': return impact === 'high' || impact === 'medium';
-    case '1J': case '5J': return impact === 'high';
-    default: return true;
-  }
-}
-
-// ── DATE HELPERS ──────────────────────────────────────────────────────────
-function rangeToFromDate(range) {
-  const now = new Date();
-  const map = { '1T': 2, '1W': 8, '1M': 32, '6M': 185, '1J': 370, '5J': 1830 };
-  const days = map[range] || 7;
-  const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  return { from: from.toISOString().split('T')[0], to: now.toISOString().split('T')[0] };
-}
-
 // ── FETCH HELPERS ─────────────────────────────────────────────────────────
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
@@ -131,10 +151,11 @@ function fetchRSSFromUrl(url, sourceName) {
   });
 }
 
-// PRIMARY: Reuters RSS (businessNews, technologyNews, marketsNews)
-function fetchReutersRSS(feedKeys) {
-  const keys = feedKeys || ['business', 'markets'];
-  return Promise.all(keys.map(k => fetchRSSFromUrl(REUTERS_FEEDS[k], 'Reuters')))
+const FEED_LABEL = { crypto: 'Cointelegraph', commodity: 'Investing.com', markets: 'CNBC', business: 'MarketWatch' };
+
+function fetchFeeds(feedKeys) {
+  const keys = feedKeys || ['markets', 'business'];
+  return Promise.all(keys.map(k => fetchRSSFromUrl(FEEDS[k], FEED_LABEL[k] || 'RSS')))
     .then(results => {
       const seen = new Set();
       const merged = [];
@@ -187,17 +208,6 @@ function stripHTML(str) {
     .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-// ── REUTERS FEED SELECTION ────────────────────────────────────────────────
-function selectReutersFeeds(symbol) {
-  if (!symbol) return ['business', 'markets'];
-  const isCrypto = symbol.endsWith('-USD');
-  const isIndex = symbol.startsWith('^');
-  const isCommodity = symbol.endsWith('=F');
-  if (isCrypto || isIndex || isCommodity) return ['business', 'markets'];
-  // For stocks: include technology feed for broader coverage
-  return ['business', 'technology', 'markets'];
-}
-
 // ── HANDLER ───────────────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -205,15 +215,30 @@ module.exports = async function handler(req, res) {
 
   const { asset, symbol, range } = req.query;
   const now = Date.now();
-  const cacheKey = (symbol || asset || 'general') + '_' + (range || '1T');
-  const cacheDuration = CACHE_BY_RANGE[range] || CACHE_BY_RANGE['1T'];
+
+  // Nachrichten richten sich nach dem Analyse-Horizont, nicht mehr nach dem
+  // Chart-Zeitraum: ein Klick auf 1M/6M tauscht die Nachrichtenliste nicht aus.
+  const RANGE_TO_HORIZON = { '1T':'kurz','1W':'kurz','1M':'mittel','6M':'mittel','1J':'lang','5J':'lang' };
+  const HZ = {
+    kurz:   { windowDays: 7,   cache: 20 * 60 * 1000 },
+    mittel: { windowDays: 60,  cache: 4 * 60 * 60 * 1000 },
+    lang:   { windowDays: 180, cache: 12 * 60 * 60 * 1000 },
+  };
+  const horizon = HZ[req.query.horizon] ? req.query.horizon : (RANGE_TO_HORIZON[range] || 'kurz');
+  const hz = HZ[horizon];
+
+  const cacheKey = (symbol || asset || 'general') + '_' + horizon;
+  const cacheDuration = hz.cache;
 
   if (assetCache[cacheKey] && (now - assetCache[cacheKey].time) < cacheDuration) {
     return res.status(200).json({ articles: assetCache[cacheKey].articles, cachedAt: new Date(assetCache[cacheKey].time).toISOString(), fromCache: true, range: range || '1T' });
   }
 
   const finnhubKey = process.env.FINNHUB_API_KEY;
-  const { from, to } = rangeToFromDate(range || '1T');
+  const toD = new Date();
+  const fromD = new Date(toD.getTime() - hz.windowDays * 86400000);
+  const from = fromD.toISOString().split('T')[0];
+  const to = toD.toISOString().split('T')[0];
 
   try {
     let articles = [];
@@ -244,12 +269,15 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // ── SECONDARY: Reuters RSS (wenn Finnhub < 3 Artikel liefert) ──────────
-    if (articles.length < 3) {
-      const feedKeys = selectReutersFeeds(symbol);
-      const reutersArticles = await fetchReutersRSS(feedKeys);
+    // ── SECONDARY: passende RSS-Feeds, auf das Asset gefiltert ─────────────
+    // Krypto und Rohstoffe bekommen hier ihre eigentlichen Nachrichten: fuer
+    // sie liefert Finnhub company-news nichts und Yahoos Symbol-Feed ist von
+    // Vercel aus leer.
+    const keywords = buildKeywords(symbol, asset);
+    if (articles.length < 5) {
+      const feedArticles = await fetchFeeds(feedsForSymbol(symbol, asset));
       const seen = new Set(articles.map(a => a.title.slice(0, 50).toLowerCase()));
-      reutersArticles.forEach(a => {
+      feedArticles.filter(a => isAboutAsset(a, keywords)).forEach(a => {
         const key = a.title.slice(0, 50).toLowerCase();
         if (!seen.has(key)) { seen.add(key); articles.push(a); }
       });
@@ -286,8 +314,11 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    // ── FILTER BY RANGE ────────────────────────────────────────────────────
-    const relevant = enriched.filter(a => isRelevantForRange(a, range || '1T'));
+    // ── FILTER: nur kursrelevante Meldungen im Zeitfenster ─────────────────
+    // Bei laengeren Horizonten zaehlt nur, was wirklich Gewicht hat — sonst
+    // fuellt sich die Liste mit Tagesrauschen, das langfristig nichts erklaert.
+    const minImpact = { kurz: null, mittel: ['high','medium'], lang: ['high'] }[horizon];
+    const relevant = enriched.filter(a => !minImpact || minImpact.includes(a.impactLevel));
 
     // ── SORT: impact first, then date ─────────────────────────────────────
     relevant.sort((a, b) => {
@@ -300,12 +331,38 @@ module.exports = async function handler(req, res) {
     // ── PREFER NON-NEUTRAL ─────────────────────────────────────────────────
     const nonNeutral = relevant.filter(a => a.sentiment !== 'neutral');
     const neutral = relevant.filter(a => a.sentiment === 'neutral');
-    const result = [...nonNeutral, ...neutral.slice(0, 2)].slice(0, 7);
-    const final = result.length >= 2 ? result : relevant.slice(0, 6);
+    const result = [...nonNeutral, ...neutral.slice(0, 2)];
+    const fresh = result.length >= 2 ? result : relevant;
 
-    assetCache[cacheKey] = { articles: final, time: now };
+    // ── MERGE: Neues dazu, Veraltetes raus ─────────────────────────────────
+    // Bereits bekannte Meldungen bleiben erhalten, solange sie im Zeitfenster
+    // liegen. Ohne das verschwaende die Liste, sobald eine Quelle bei einem
+    // einzelnen Abruf nichts liefert.
+    const cutoff = now - hz.windowDays * 86400000;
+    const prev = (assetCache[cacheKey] && assetCache[cacheKey].articles) || [];
+    const mergedSeen = new Set();
+    const merged = [];
+    for (const a of [...fresh, ...prev]) {
+      const key = a.title.slice(0, 50).toLowerCase();
+      if (mergedSeen.has(key)) continue;
+      const ts = new Date(a.publishedAt).getTime();
+      if (isFinite(ts) && ts < cutoff) continue;   // veraltet
+      mergedSeen.add(key);
+      merged.push(a);
+    }
+    merged.sort((a, b) => {
+      const ord = { high: 0, medium: 1, low: 2 };
+      const d = (ord[a.impactLevel] || 2) - (ord[b.impactLevel] || 2);
+      return d !== 0 ? d : new Date(b.publishedAt) - new Date(a.publishedAt);
+    });
+    const final = merged.slice(0, 7);
 
-    return res.status(200).json({ articles: final, cachedAt: new Date(now).toISOString(), fromCache: false, range: range || '1T', total: unique.length });
+    // Leere Ergebnisse NICHT cachen — sonst wird ein einzelner Fehlschlag
+    // stundenlang als "keine Nachrichten" ausgeliefert. Genau das liess
+    // Bitcoin und Gold dauerhaft leer erscheinen.
+    if (final.length > 0) assetCache[cacheKey] = { articles: final, time: now };
+
+    return res.status(200).json({ articles: final, cachedAt: new Date(now).toISOString(), fromCache: false, horizon, total: unique.length });
 
   } catch(e) {
     if (assetCache[cacheKey]) {
