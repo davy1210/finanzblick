@@ -167,6 +167,26 @@ module.exports = async function handler(req, res) {
   // Makro separat: eigener Endpunkt, aber inhaltliche Pruefung.
   // FRED zusaetzlich DIREKT pruefen. Ueber /api/macro allein laesst sich ein
   // ungueltiger Key nicht von veralteten Cache-Werten unterscheiden.
+  // Schluessel-Diagnose ohne den Wert selbst preiszugeben. Finnhub vergibt
+  // zwei Token: der Sandbox-Token funktioniert nur gegen sandbox.finnhub.io
+  // und liefert gegen die normale API leere Antworten — genau das Muster bei
+  // Kennzahlen und Quartalszahlen-Kalender.
+  const fhRaw = process.env.FINNHUB_API_KEY || '';
+  const fhKey = fhRaw.trim();
+  const istSandbox = /sandbox/i.test(fhKey);
+  results.push({
+    name: 'Finnhub Schluessel-Typ',
+    ok: !!fhKey && !istSandbox,
+    detail: !fhKey
+      ? 'FINNHUB_API_KEY ist nicht gesetzt'
+      : istSandbox
+        ? 'SANDBOX-Token erkannt — liefert gegen die normale API keine echten Daten'
+        : `sieht nach dem Default-Token aus (${fhKey.length} Zeichen)`
+        + (fhRaw !== fhKey ? ' | ACHTUNG: Wert enthaelt Leerzeichen oder Zeilenumbruch' : ''),
+    critical: false,
+    note: 'Im Finnhub-Dashboard den "Default token" verwenden, nicht den "Sandbox API token".',
+  });
+
   const fredRaw = process.env.FRED_API_KEY || '';
   const fredKey = fredRaw.trim();
   // Beim Einfuegen ins Dashboard rutschen leicht Leerzeichen oder ein
