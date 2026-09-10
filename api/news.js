@@ -21,6 +21,11 @@ const FEEDS = {
   commodity: 'https://www.investing.com/rss/commodities.rss',
   markets:   'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258',
   business:  'https://feeds.content.dowjones.io/public/rss/mw_topstories',
+  // Deutsche Quellen: Finnhubs Unternehmensnews decken nur US-Titel ab, und
+  // die englischen Feeds erwaehnen deutsche Werte kaum — Siemens und Allianz
+  // hatten deshalb null Meldungen.
+  deutsch:   'https://www.wallstreet-online.de/rss/nachrichten-alle.xml',
+  deutsch2:  'https://www.handelsblatt.com/contentexport/feed/finanzen',
 };
 
 // Welche Feeds passen zu welchem Instrument?
@@ -29,8 +34,11 @@ function feedsForSymbol(symbol, asset) {
   const a = (asset || '').toLowerCase();
   const isCrypto = s.endsWith('-USD') || /bitcoin|ethereum|krypto|crypto|solana|ripple/.test(a);
   const isCommodity = s.endsWith('=F') || /gold|silber|silver|öl|oel|oil|kupfer|copper|rohstoff/.test(a);
+  // Europaeische Notierungen an der Endung erkennen
+  const isEuropa = /\.(DE|PA|SW|L|AS|MI|MC|VI|BR|HE|ST|CO|OL)$/.test(s);
   if (isCrypto) return ['crypto', 'markets'];
   if (isCommodity) return ['commodity', 'markets'];
+  if (isEuropa) return ['deutsch', 'deutsch2', 'markets'];
   return ['markets', 'business'];
 }
 
@@ -38,7 +46,11 @@ function feedsForSymbol(symbol, asset) {
 // Markt-Feed enthaelt sonst 90% Rauschen, das nichts mit dem Wert zu tun hat.
 function buildKeywords(symbol, asset) {
   const words = new Set();
-  const base = (symbol || '').toUpperCase().replace(/-USD$/, '').replace(/=F$/, '').replace(/^\^/, '');
+  // Boersenkuerzel abschneiden: aus "SIE.DE" wird "SIE", sonst waere das
+  // Stichwort "sie.de" und wuerde in keinem Artikel vorkommen.
+  const base = (symbol || '').toUpperCase()
+    .replace(/-USD$/, '').replace(/=F$/, '').replace(/^\^/, '')
+    .replace(/\.(DE|PA|SW|L|AS|MI|MC|VI|BR|HE|ST|CO|OL)$/, '');
   if (base.length >= 2) words.add(base.toLowerCase());
   (asset || '').toLowerCase().split(/[^a-zä-ü0-9]+/).forEach(w => { if (w.length >= 3) words.add(w); });
   // Gebraeuchliche Zweitnamen, damit z.B. "BTC" auch "bitcoin" findet
@@ -149,6 +161,12 @@ const NOISE_PATTERNS = [
   // Sammelartikel ueber viele Werte erklaeren keinen einzelnen Kurs
   /and more stocks/i, /stocks that (explain|moved|are moving)/i,
   /\bmovers\b/i, /\b(winners|losers) (and|&)\b/i,
+  // Deutsche Entsprechungen — die Sperrliste kannte bisher nur englische
+  // Formate, die deutschen Feeds bringen ihre eigenen mit.
+  /diese (\d+ )?aktien/i, /top-?aktien/i, /aktien-?tipp/i, /anlegertipp/i,
+  /\bkolumne\b/i, /^kommentar:/i, /^gastbeitrag/i, /\bdepot-?check\b/i,
+  /\b\d+ (gruende|dinge|aktien|tipps)\b/i, /lohnt sich (der|die|das)\b/i,
+  /\bchartanalyse\b/i, /\bwochenausblick\b/i, /boersen-?ticker/i,
 ];
 
 function isNoise(article) {
@@ -204,7 +222,10 @@ function fetchRSSFromUrl(url, sourceName, depth) {
   });
 }
 
-const FEED_LABEL = { crypto: 'Cointelegraph', commodity: 'Investing.com', markets: 'CNBC', business: 'MarketWatch' };
+const FEED_LABEL = {
+  crypto: 'Cointelegraph', commodity: 'Investing.com', markets: 'CNBC',
+  business: 'MarketWatch', deutsch: 'wallstreet-online', deutsch2: 'Handelsblatt',
+};
 
 function fetchFeeds(feedKeys) {
   const keys = feedKeys || ['markets', 'business'];
