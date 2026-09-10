@@ -373,7 +373,14 @@ module.exports = async function handler(req, res) {
         const key = a.title.slice(0, 50).toLowerCase();
         if (!seen.has(key)) { seen.add(key); articles.push(a); }
       });
-      add(feedArticles.filter(a => isAboutAsset(a, keywords)));
+      // Bei allgemeinen Feeds muss der Name in der UEBERSCHRIFT stehen, nicht
+      // nur irgendwo im Text. Sonst trifft "Allianz" auch dort, wo das Wort
+      // im Sinne von Buendnis vorkommt ("China greift nach Silber ...").
+      // Finnhubs Unternehmensnews sind bereits dem Wert zugeordnet und
+      // durchlaufen diese schaerfere Pruefung nicht.
+      add(feedArticles.filter(a =>
+        keywords.some(k => trefferIn((a.title || '').toLowerCase(), k))
+      ));
 
       // Greift der Stichwortfilter zu scharf, duerfen themenverwandte
       // Meldungen aus dem Fachfeed ergaenzen — aber nur solche, die die
