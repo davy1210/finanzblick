@@ -207,6 +207,27 @@ module.exports = async function handler(req, res) {
   // Laengeres Limit: ?fresh=1 umgeht den Cache und holt fuenf FRED-Reihen neu,
   // FRED braucht dafuer rund 2,5s je Abfrage. Mit den Standard-8s meldete der
   // Check faelschlich "nicht erreichbar".
+  // FREDs Release-Kalender: moeglicher Ersatz fuer Finnhubs kostenpflichtigen
+  // Wirtschaftskalender. Mit dem alten, ungueltigen Key kam hier HTTP 400.
+  if (fredKey) {
+    const heute = new Date().toISOString().split('T')[0];
+    const in45 = new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0];
+    const kal = await probe(`https://api.stlouisfed.org/fred/releases/dates?api_key=${fredKey}&file_type=json&realtime_start=${heute}&realtime_end=${in45}&include_release_dates_with_no_data=true&sort_order=asc&limit=30`, { timeout: 12000 });
+    let kalOk = false, kalDetail = kal.error ? `keine Verbindung: ${kal.error}` : `HTTP ${kal.status}`;
+    let beispiele = [];
+    try {
+      const d = JSON.parse(kal.body)?.release_dates || [];
+      kalOk = d.length > 0;
+      beispiele = d.slice(0, 5).map(x => `${x.date} ${x.release_name || ''}`.trim());
+      if (kalOk) kalDetail = `${d.length} Termine in 45 Tagen`;
+    } catch(e) {}
+    results.push({
+      name: 'FRED Release-Kalender', ok: kalOk, httpStatus: kal.status || null, ms: kal.ms,
+      detail: kalDetail, critical: false, beispiele,
+      note: 'Kaeme als Ersatz fuer Finnhubs kostenpflichtigen Wirtschaftskalender infrage.',
+    });
+  }
+
   const macro = await probe('https://finanzblick.vercel.app/api/macro?fresh=1', { timeout: 20000 });
   let macroOk = false;
   let macroDetail = macro.error ? `nicht erreichbar: ${macro.error}` : 'nicht erreichbar';
