@@ -212,14 +212,16 @@ module.exports = async function handler(req, res) {
   if (fredKey) {
     const heute = new Date().toISOString().split('T')[0];
     const in45 = new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0];
-    const kal = await probe(`https://api.stlouisfed.org/fred/releases/dates?api_key=${fredKey}&file_type=json&realtime_start=${heute}&realtime_end=${in45}&include_release_dates_with_no_data=true&sort_order=asc&limit=30`, { timeout: 12000 });
+    const kal = await probe(`https://api.stlouisfed.org/fred/releases/dates?api_key=${fredKey}&file_type=json&realtime_start=${heute}&realtime_end=${in45}&include_release_dates_with_no_data=true&sort_order=asc&limit=400`, { timeout: 12000 });
     let kalOk = false, kalDetail = kal.error ? `keine Verbindung: ${kal.error}` : `HTTP ${kal.status}`;
     let beispiele = [];
     try {
       const d = JSON.parse(kal.body)?.release_dates || [];
       kalOk = d.length > 0;
-      beispiele = d.slice(0, 5).map(x => `${x.date} ${x.release_name || ''}`.trim());
-      if (kalOk) kalDetail = `${d.length} Termine in 45 Tagen`;
+      // Eindeutige Release-Namen: daraus laesst sich die Auswahl der wirklich
+      // kursbewegenden Termine ableiten.
+      beispiele = [...new Set(d.map(x => x.release_name).filter(Boolean))].sort();
+      if (kalOk) kalDetail = `${d.length} Termine, ${beispiele.length} verschiedene Veroeffentlichungen in 45 Tagen`;
     } catch(e) {}
     results.push({
       name: 'FRED Release-Kalender', ok: kalOk, httpStatus: kal.status || null, ms: kal.ms,
