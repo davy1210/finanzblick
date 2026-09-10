@@ -138,6 +138,11 @@ const NOISE_PATTERNS = [
   /watchlist/i, /daily briefing|morning brief|evening brief|week in review/i,
   /\bexplore the\b/i, /\bhere are\b/i, /\bpodcast\b|\bwebinar\b/i,
   /sponsored|anzeige|werbung/i,
+  // Spekulative Frage-Ueberschriften sind Meinung, keine Nachricht. Echte
+  // Meldungen sind Aussagesaetze ("Nvidia hebt Dividende an"), nicht Fragen
+  // ("Can Apple's Foldable iPhone Fuel the Next Growth Cycle?").
+  /^\s*(is|are|can|could|should|will|would|why|what|how|does|do|has|have)\b[^?]*\?/i,
+  /does it even matter|is it time to|the next big|worth buying|worth a look|too late to/i,
 ];
 
 function isNoise(article) {
@@ -300,8 +305,11 @@ module.exports = async function handler(req, res) {
         );
         if (Array.isArray(data) && data.length > 0) {
           articles = data
+            // 30 statt 15: der Qualitaetsfilter siebt anschliessend stark aus
+            // (bei Apple blieb von 15 nur 1 uebrig). Mehr Rohmaterial heisst
+            // mehr echte Treffer, ohne die Huerden zu senken.
             .filter(a => a.headline && a.headline.length > 15 && a.url)
-            .slice(0, 15)
+            .slice(0, 30)
             .map(a => ({
               title: a.headline,
               source: a.source || 'Finnhub',
