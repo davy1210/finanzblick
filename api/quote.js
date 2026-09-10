@@ -97,11 +97,34 @@ module.exports = async function handler(req, res) {
     const yhUrl = !isCryptoMeta && !isIndexOrFuture
       ? `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=summaryProfile%2CdefaultKeyStatistics%2CfinancialData%2CsummaryDetail`
       : null;
+    // Finnhub profile2: liefert Marktkapitalisierung, Branche und Land und ist
+    // im kostenlosen Tarif enthalten. Noetig, weil Yahoos quoteSummary von
+    // Vercel aus mit HTTP 401 abgewiesen wird — genau diese Felder fehlten
+    // dadurch bei Aktien (bei Krypto liefert sie CoinGecko).
+    const profUrl = finnhubKey && !isCryptoMeta && !isIndexOrFuture
+      ? `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${finnhubKey}`
+      : null;
 
-    const [fhRaw, yhRaw] = await Promise.all([
+    const [fhRaw, yhRaw, profRaw] = await Promise.all([
       fhUrl ? fetchUrl(fhUrl).catch(() => null) : Promise.resolve(null),
       yhUrl ? fetchUrl(yhUrl).catch(() => null) : Promise.resolve(null),
+      profUrl ? fetchUrl(profUrl).catch(() => null) : Promise.resolve(null),
     ]);
+
+    // Unternehmensprofil verarbeiten
+    if (profRaw) {
+      try {
+        const p = JSON.parse(profRaw) || {};
+        // marketCapitalization kommt in MILLIONEN USD — ohne die Umrechnung
+        // stuende Apple mit rund 3.900 statt 3,9 Billionen in der Anzeige.
+        if (p.marketCapitalization > 0) fundamentals.marketCap = Math.round(p.marketCapitalization * 1e6);
+        if (p.finnhubIndustry) fundamentals.industry = p.finnhubIndustry;
+        if (p.country) fundamentals.country = p.country;
+        if (p.shareOutstanding > 0) fundamentals.sharesOutstanding = Math.round(p.shareOutstanding * 1e6);
+        if (p.name) fundamentals.companyName = p.name;
+        if (p.weburl) fundamentals.website = p.weburl;
+      } catch(e) {}
+    }
 
     // Finnhub verarbeiten (Priorität bei Metriken)
     if (fhRaw) {

@@ -130,6 +130,12 @@ module.exports = async function handler(req, res) {
         note: 'Faellt aus: US-Aktien verlieren ihre wichtigste Nachrichtenquelle.',
       },
       {
+        name: 'Finnhub Unternehmensprofil (Marktkap., Branche)', critical: false,
+        url: `https://finnhub.io/api/v1/stock/profile2?symbol=AAPL&token=${fh}`,
+        check: b => { try { return JSON.parse(b)?.marketCapitalization > 0; } catch(e) { return false; } },
+        note: 'Faellt aus: Aktien zeigen keine Marktkapitalisierung und keine Branche.',
+      },
+      {
         name: 'Finnhub Kennzahlen', critical: false,
         url: `https://finnhub.io/api/v1/stock/metric?symbol=AAPL&metric=all&token=${fh}`,
         // Genau die Felder pruefen, die quote.js auch verwendet. Die fruehere
