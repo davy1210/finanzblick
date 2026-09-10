@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
     macroOk = gefuellt.length > 0;
     macroDetail = macroOk
       ? `${gefuellt.length} von ${felder.length} Werten vorhanden`
-      : 'antwortet, aber alle Werte sind null — FRED-Key vermutlich ungueltig';
+      : 'antwortet, aber alle Werte sind null — FRED_API_KEY fehlt oder ist ungueltig';
   } catch(e) {}
   results.push({
     name: 'FRED / Makrodaten', ok: macroOk, httpStatus: macro.status || null, ms: macro.ms,

@@ -20,10 +20,15 @@ function fetchJSON(url) {
   });
 }
 
-// FRED API - kostenlos, kein Key nötig für public data
+// FRED-Key kommt aus der Umgebung. Er stand frueher fest im Code — in einem
+// oeffentlichen Repository ist das ein offengelegtes Geheimnis, und ein
+// abgelaufener Key liess sich nur per Deploy austauschen.
+const FRED_KEY = process.env.FRED_API_KEY || '';
+
 async function fetchFredSeries(seriesId) {
+  if (!FRED_KEY) return null;
   try {
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=1c6432b0b2c18f046fd6ed93eb3d8abb&file_type=json&sort_order=desc&limit=1`;
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=1`;
     const data = await fetchJSON(url);
     const obs = data?.observations?.[0];
     return obs ? parseFloat(obs.value) : null;
@@ -52,7 +57,8 @@ module.exports = async function handler(req, res) {
     // CPI YoY berechnen (braucht 2 Datenpunkte)
     let cpiYoy = null;
     try {
-      const cpiUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&api_key=1c6432b0b2c18f046fd6ed93eb3d8abb&file_type=json&sort_order=desc&limit=13`;
+      if (!FRED_KEY) throw new Error('kein FRED_API_KEY gesetzt');
+      const cpiUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&api_key=${FRED_KEY}&file_type=json&sort_order=desc&limit=13`;
       const cpiData = await fetchJSON(cpiUrl);
       const obs = cpiData?.observations || [];
       if (obs.length >= 13) {
