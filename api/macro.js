@@ -40,7 +40,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   const now = Date.now();
-  if (macroCache && cacheTime && (now - cacheTime) < CACHE_DURATION) {
+  // ?fresh=1 umgeht den 6h-Cache. Ohne das laesst sich nach einem Key-Wechsel
+  // nicht pruefen, ob es wieder funktioniert — die alten Nullwerte kaemen
+  // stundenlang weiter aus dem Speicher.
+  const bypass = req.query && req.query.fresh;
+  if (!bypass && macroCache && cacheTime && (now - cacheTime) < CACHE_DURATION) {
     return res.status(200).json({ ...macroCache, fromCache: true });
   }
 
