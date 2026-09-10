@@ -13,12 +13,22 @@ const https = require('https');
 const CHECK_TIMEOUT = 8000;
 
 function probe(url, opts = {}) {
+  const started = opts._started || Date.now();
+  const hop = opts._hop || 0;
   return new Promise(resolve => {
-    const started = Date.now();
     const req = https.get(url, {
-      headers: { 'User-Agent': 'Finanzblick-Health/1.0', ...(opts.headers || {}) },
+      headers: { 'User-Agent': 'Mozilla/5.0', ...(opts.headers || {}) },
       timeout: CHECK_TIMEOUT,
     }, res => {
+      // Weiterleitungen folgen, sonst meldet die Pruefung einen Ausfall,
+      // wo die Quelle nur umgezogen ist.
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hop < 3) {
+        const next = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).toString();
+        res.resume();
+        return resolve(probe(next, { ...opts, _hop: hop + 1, _started: started }));
+      }
       let raw = '';
       res.on('data', c => { if (raw.length < 200000) raw += c; });
       res.on('end', () => resolve({

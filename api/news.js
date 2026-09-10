@@ -172,10 +172,20 @@ function fetchSafe(url, ms) {
 }
 
 // ── RSS FETCH ─────────────────────────────────────────────────────────────
-function fetchRSSFromUrl(url, sourceName) {
+// Folgt Weiterleitungen: Yahoos RSS antwortet von Vercel aus mit 301, und der
+// frühere Abbruch bei allem ausser 200 liess die Quelle still ins Leere laufen.
+function fetchRSSFromUrl(url, sourceName, depth) {
+  const hop = depth || 0;
   return new Promise(resolve => {
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }, res => {
-      if (res.statusCode !== 200) { resolve([]); return; }
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hop < 3) {
+        const next = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : new URL(res.headers.location, url).toString();
+        res.resume();
+        return resolve(fetchRSSFromUrl(next, sourceName, hop + 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); resolve([]); return; }
       let raw = '';
       res.on('data', c => raw += c);
       res.on('end', () => { try { resolve(parseRSS(raw, sourceName)); } catch(e) { resolve([]); } });
