@@ -21,9 +21,10 @@ function probe(url, opts = {}) {
     // enthaelt. Ohne dieses try/catch reisst das den ganzen Endpunkt mit.
     let req;
     try {
+      const limit = opts.timeout || CHECK_TIMEOUT;
       req = https.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0', ...(opts.headers || {}) },
-      timeout: CHECK_TIMEOUT,
+      timeout: limit,
     }, res => {
       // Weiterleitungen folgen, sonst meldet die Pruefung einen Ausfall,
       // wo die Quelle nur umgezogen ist.
@@ -43,7 +44,7 @@ function probe(url, opts = {}) {
       }));
     });
       req.on('error', e => resolve({ status: 0, ms: Date.now() - started, error: e.message, body: '' }));
-      req.on('timeout', function() { this.destroy(); resolve({ status: 0, ms: CHECK_TIMEOUT, error: 'timeout', body: '' }); });
+      req.on('timeout', function() { this.destroy(); resolve({ status: 0, ms: limit, error: 'timeout', body: '' }); });
     } catch(e) {
       resolve({ status: 0, ms: Date.now() - started, error: 'ungueltige URL/Zeichen: ' + e.message, body: '' });
     }
@@ -203,7 +204,10 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const macro = await probe('https://finanzblick.vercel.app/api/macro?fresh=1');
+  // Laengeres Limit: ?fresh=1 umgeht den Cache und holt fuenf FRED-Reihen neu,
+  // FRED braucht dafuer rund 2,5s je Abfrage. Mit den Standard-8s meldete der
+  // Check faelschlich "nicht erreichbar".
+  const macro = await probe('https://finanzblick.vercel.app/api/macro?fresh=1', { timeout: 20000 });
   let macroOk = false;
   let macroDetail = macro.error ? `nicht erreichbar: ${macro.error}` : 'nicht erreichbar';
   try {
