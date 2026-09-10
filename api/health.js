@@ -175,7 +175,10 @@ module.exports = async function handler(req, res) {
   const formatOk = /^[a-z0-9]{32}$/.test(fredKey);
   if (fredKey) {
     const fr = await probe(`https://api.stlouisfed.org/fred/series/observations?series_id=FEDFUNDS&api_key=${fredKey}&file_type=json&sort_order=desc&limit=1`);
-    let fredOk = false, fredDetail = `HTTP ${fr.status}`;
+    // Fehlertext mit ausgeben: "HTTP 0" allein sagt nicht, ob DNS, TLS,
+    // Zeitueberschreitung oder ein ungueltiges Zeichen die Ursache ist.
+    let fredOk = false;
+    let fredDetail = fr.error ? `keine Verbindung: ${fr.error}` : `HTTP ${fr.status}`;
     try {
       const wert = JSON.parse(fr.body)?.observations?.[0]?.value;
       fredOk = !!wert && wert !== '.';
@@ -201,7 +204,8 @@ module.exports = async function handler(req, res) {
   }
 
   const macro = await probe('https://finanzblick.vercel.app/api/macro?fresh=1');
-  let macroOk = false, macroDetail = 'nicht erreichbar';
+  let macroOk = false;
+  let macroDetail = macro.error ? `nicht erreichbar: ${macro.error}` : 'nicht erreichbar';
   try {
     const m = JSON.parse(macro.body);
     const felder = ['fedRate', 'cpiYoy', 'unemployment', 'gdpGrowth'];
