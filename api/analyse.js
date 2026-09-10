@@ -67,13 +67,21 @@ function buildMacroContext(macro) {
   return parts.join('\n');
 }
 
+// Ersatzwerte, wenn FRED keine Daten liefert. Ausdruecklich als veraltet
+// gekennzeichnet: der FRED-Key war ueber Monate ungueltig, das Modell hat
+// diese Zahlen aber als aktuellen Stand praesentiert. Lieber nennt es die
+// Unsicherheit, als eine falsche Genauigkeit vorzutaeuschen.
 const MACRO_FALLBACK = `
-Aktueller Makro-Kontext (Mai 2026):
-- Fed Leitzins: ~4.25-4.50% (restriktiv — dämpft Wirtschaft und Inflation)
-- EZB Leitzins: ~2.65% (Zinssenkungszyklus läuft seit 2024)
-- US Inflation (CPI): ~2.4% (nahe Fed-Ziel von 2%)
-- US Wirtschaft: Moderates Wachstum, Arbeitsmarkt stabil (~4% Arbeitslosigkeit)
+Makro-Kontext — ACHTUNG, LETZTER GESICHERTER STAND VON MAI 2026, NICHT TAGESAKTUELL:
+- Fed Leitzins: ~4.25-4.50% (restriktiv)
+- EZB Leitzins: ~2.65%
+- US Inflation (CPI): ~2.4%
+- US Arbeitslosigkeit: ~4%
 - Globale Themen: KI-Revolution, Handelsspannungen USA-China, Energiewende
+REGEL: Diese Werte sind mehrere Monate alt. Nenne sie NICHT als aktuelle Zahl
+und leite daraus keine Aussage ueber die heutige Geldpolitik ab. Wenn Zinsen
+oder Inflation fuer die Analyse wichtig waeren, schreibe stattdessen, dass dazu
+keine tagesaktuellen Daten vorliegen.
 `;
 
 async function getLiveMacro() {

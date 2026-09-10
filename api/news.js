@@ -100,22 +100,54 @@ function getSentiment(text) {
 }
 
 // ── IMPACT LEVEL ──────────────────────────────────────────────────────────
+// Nur kursbewegende Ereignisse. Quartalszahlen und Rating-Aenderungen stehen
+// jetzt bewusst hier drin: fuer eine Aktie sind sie der staerkste Kurstreiber
+// ueberhaupt und gehoerten nie in eine zweite Liga.
 const HIGH_KW = [
-  'federal reserve','fed rate','fomc','rate cut','rate hike','ecb','interest rate','zinsentscheid',
-  'inflation','cpi','recession','gdp','etf approval','bitcoin etf','sec','regulation','ban','lawsuit',
-  'breakthrough','acquisition','merger','ipo','restructuring','bankruptcy','default','crisis',
-  'war','tariff','sanction','trade war','export control',
+  // Geldpolitik & Makro
+  'federal reserve','fed rate','fomc','rate cut','rate hike','ecb','ezb','interest rate','zinsentscheid',
+  'inflation','cpi','ppi','recession','rezession','gdp','bip','payroll','jobs report','unemployment',
+  // Regulierung, Recht, Aufsicht
+  'sec ','regulation','regulator','antitrust','kartell','lawsuit','klage','investigation','ermittlung',
+  'ban','verbot','approval','zulassung','etf approval',
+  // Unternehmensereignisse
+  'earnings','quartalszahlen','quarterly results','guidance','prognose','profit warning','gewinnwarnung',
+  'acquisition','uebernahme','übernahme','merger','takeover','ipo','buyback','aktienrueckkauf',
+  'dividend','dividende','restructuring','bankruptcy','insolvenz','default','layoff','stellenabbau',
+  'upgrade','downgrade','price target','kursziel','beats','misses','recall','rueckruf',
+  // Geopolitik & Angebot
+  'war','krieg','tariff','zoll','sanction','sanktion','trade war','export control','crisis','krise',
+  'opec','supply cut','foerderkuerzung','embargo',
+  // Krypto-spezifisch
+  'halving','etf inflow','etf outflow','zufluss','abfluss','hack','exploit','hard fork','staking',
+  'liquidation','whale',
 ];
-const MEDIUM_KW = [
-  'earnings','quarterly','revenue','profit','guidance','upgrade','downgrade','price target',
-  'analyst','rating','q1','q2','q3','q4','quartalszahlen','ausblick','umsatz',
+
+// Harte Sperrliste: Formate, die per Bauart keine Kursinformation tragen.
+// Kalibriert an dem, was live tatsaechlich durchkam ("Explore the top gainers
+// and losers...", "Is Microsoft Stock Overvalued At 28x Earnings?",
+// "Here's what happened in crypto today").
+const NOISE_PATTERNS = [
+  /top (gainers|losers|movers)/i, /gainers and losers/i, /sector update/i,
+  /stock market (today|midday|open|close|now)/i, /market (recap|wrap|roundup|snapshot)/i,
+  /here'?s what happened/i, /what happened in .+ today/i, /things to know/i,
+  /\b\d+\s+(stocks|things|reasons|charts|picks)\b/i, /stocks? to (buy|watch|avoid|consider)/i,
+  /best (stocks|etfs|funds)/i, /should you (buy|sell|own)/i,
+  /\b(is|are)\b.+\b(overvalued|undervalued|a buy|worth it)\b/i,
+  /motley fool|zacks|jim cramer|seeking alpha premium/i,
+  /watchlist/i, /daily briefing|morning brief|evening brief|week in review/i,
+  /\bexplore the\b/i, /\bhere are\b/i, /\bpodcast\b|\bwebinar\b/i,
+  /sponsored|anzeige|werbung/i,
 ];
+
+function isNoise(article) {
+  const t = (article.title || '') + ' ' + (article.description || '');
+  return NOISE_PATTERNS.some(p => p.test(t));
+}
 
 function getImpactLevel(text) {
   const l = (text || '').toLowerCase();
-  if (HIGH_KW.some(k => l.includes(k))) return 'high';
-  if (MEDIUM_KW.some(k => l.includes(k))) return 'medium';
-  return 'low';
+  return HIGH_KW.some(k => l.includes(k)) ? 'high' : 'low';
 }
 
 // ── FETCH HELPERS ─────────────────────────────────────────────────────────
@@ -286,11 +318,16 @@ module.exports = async function handler(req, res) {
       });
       add(feedArticles.filter(a => isAboutAsset(a, keywords)));
 
-      // Greift der Stichwortfilter zu scharf, lieber themenverwandte Meldungen
-      // aus dem Fachfeed zeigen als eine leere Liste: der Krypto- bzw.
-      // Rohstoff-Feed ist auch ungefiltert noch nah am Asset.
+      // Greift der Stichwortfilter zu scharf, duerfen themenverwandte
+      // Meldungen aus dem Fachfeed ergaenzen — aber nur solche, die die
+      // Qualitaetshuerden ebenfalls nehmen. Lieber eine kurze Liste als
+      // Fuellmaterial.
       if (articles.length < 2 && (feedKeys[0] === 'crypto' || feedKeys[0] === 'commodity')) {
-        add(feedArticles.filter(a => a.source === FEED_LABEL[feedKeys[0]]));
+        add(feedArticles.filter(a =>
+          a.source === FEED_LABEL[feedKeys[0]] &&
+          !isNoise(a) &&
+          getImpactLevel(a.title + ' ' + (a.description || '')) === 'high'
+        ));
       }
     }
 
@@ -325,11 +362,15 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    // ── FILTER: nur kursrelevante Meldungen im Zeitfenster ─────────────────
-    // Bei laengeren Horizonten zaehlt nur, was wirklich Gewicht hat — sonst
-    // fuellt sich die Liste mit Tagesrauschen, das langfristig nichts erklaert.
-    const minImpact = { kurz: null, mittel: ['high','medium'], lang: ['high'] }[horizon];
-    const relevant = enriched.filter(a => !minImpact || minImpact.includes(a.impactLevel));
+    // ── FILTER: drei Huerden, alle drei muessen genommen werden ────────────
+    // 1. Kein Listicle/Meinungsstueck/Marktbericht (Sperrliste)
+    // 2. Nur 'high' — also ein tatsaechlich kursbewegendes Ereignis
+    // 3. Muss dieses Asset betreffen, auch bei Finnhub company-news: dort kam
+    //    unter Apple eine Microsoft-Schlagzeile durch, weil die Relevanzpruefung
+    //    frueher nur fuer RSS-Feeds galt.
+    const relevant = enriched.filter(a =>
+      !isNoise(a) && a.impactLevel === 'high' && isAboutAsset(a, keywords)
+    );
 
     // ── SORT: impact first, then date ─────────────────────────────────────
     relevant.sort((a, b) => {
